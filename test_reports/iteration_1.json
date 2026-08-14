@@ -1,0 +1,47 @@
+{
+  "summary": "Tested Utility Contract Hub Expo/React Native app (3 screens: /signin, /dashboard, /scan) against LIVE external backend at https://utility-contract-hub.emergent.host. Backend: 9/9 pytest tests pass (login OK/wrong/missing, /me auth-gated, dashboard/overview, renewals/urgent, my/audits-in-progress all 200 with expected shape; test account has 0 contracts as expected). Frontend: signin validation (empty, invalid email) works with inline errors; wrong creds show 'Invalid credentials' error; valid login navigates to /dashboard; empty state (dashboard-empty) with 'Scan a bill' CTA renders correctly; scan primer shows scan-permission-primer with scan-enable-camera and scan-pick-gallery-primer; scan-back-button returns to /dashboard; token stored under key 'uch_auth_token'; root '/' correctly redirects unauthed users to /signin. All 12 captured API requests use the FULL external URL https://utility-contract-hub.emergent.host/api/... (login, me, dashboard/overview, renewals/urgent, my/audits-in-progress). BUG: signout clears the token and user state (verified: localStorage token null, greeting becomes 'Hi, there') but does NOT navigate back to /signin — user is left visually on the dashboard.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Dashboard signout",
+        "issue": "Clicking dashboard-signout-button clears the auth token and sets user=null, but the app remains on /dashboard instead of navigating to /signin. Greeting collapses to 'Hi, there' and the empty state still renders because dashboard.tsx does not watch the user state, and signOut() in auth-context.tsx does not call router.replace('/signin').",
+        "testID": "dashboard-signout-button",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "shadow* style props",
+        "issue": "Console warning on every render: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Likely originates from shadow.card in /app/frontend/src/theme/theme.ts (used in dashboard.tsx scanTile). Consider migrating to boxShadow for web / keep shadow* only for native platforms."
+      },
+      {
+        "component": "props.pointerEvents",
+        "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Emitted after toast animation triggers; likely inside the toast component or a dependency."
+      },
+      {
+        "component": "useNativeDriver",
+        "issue": "Console warning: 'Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation.' Expected on web preview, but confirms Animated is used somewhere (probably toast) — informational only."
+      }
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_uch_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix signout navigation: in /app/frontend/app/dashboard.tsx, wrap signOut in a handler that also calls router.replace('/signin'), OR add a useEffect in dashboard.tsx that watches useAuth().user and redirects to /signin when it becomes null. Simpler: change the Pressable to onPress={async () => { await signOut(); router.replace('/signin'); }}.",
+    "Migrate shadow.card in /app/frontend/src/theme/theme.ts to use boxShadow for web (or gate shadow* usage to Platform.OS !== 'web') to remove the deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "auth-context.tsx signOut() has no side-effect on navigation; either it should router.replace('/signin') itself, or every screen behind auth must redirect on user=null (currently only app/index.tsx does).",
+    "client.ts correctly builds API_URL = `${EXPO_PUBLIC_BACKEND_URL}/api` and uses fetch(`${API_URL}${path}`) — verified all requests go to the full external URL.",
+    "dashboard.tsx: useFocusEffect + initial useEffect both call load() on mount, causing a duplicate fetch of dashboard/overview, renewals/urgent, my/audits-in-progress on first render (observed 2x back-to-back in network capture). Consider guarding useFocusEffect for first mount."
+  ],
+  "updated_files": ["/app/backend/tests/test_uch_api.py (new)", "/app/test_reports/pytest/pytest_results.xml (new)"],
+  "success_rate": { "backend": "100%", "frontend": "~92% (1 HIGH bug: signout no-nav)" },
+  "seed_data_creation": "None. Used existing test account e2e_test_1786703401@example.com from /app/memory/test_credentials.md.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend is external and stable. Test account has 0 contracts by design (broker-gated), so empty state on dashboard is CORRECT. Only 3 screens are in scope (/signin, /dashboard, /scan). Scan camera capture / gallery picker cannot be exercised on the headless web preview — only the primer UI is testable. After main agent fixes the signout navigation, re-run the frontend playwright script and confirm URL goes to /signin after clicking dashboard-signout-button.",
+  "rca_of_issue": "BUG: Signout does not navigate.\nReproduction: 1) Login with test account, 2) On /dashboard tap dashboard-signout-button, 3) Observe URL still /dashboard, greeting shows 'Hi, there', localStorage key uch_auth_token = null.\nRoot cause: signOut() in /app/frontend/src/auth/auth-context.tsx only clears secure storage and resets user state. It does NOT trigger navigation. /app/frontend/app/dashboard.tsx does not observe user and does not redirect when user is null; only /app/frontend/app/index.tsx handles auth-based redirection.\nMitigation options (main agent to pick one):\n  (a) In dashboard.tsx replace `onPress={signOut}` with `onPress={async () => { await signOut(); router.replace('/signin'); }}` — smallest change.\n  (b) In auth-context.tsx's signOut, import router from expo-router and call router.replace('/signin') after clearing state — centralised fix.\n  (c) Add a useEffect in dashboard.tsx: `useEffect(() => { if (!user) router.replace('/signin'); }, [user, router]);` — declarative, protects any future authed screen if pattern is reused."
+}

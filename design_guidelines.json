@@ -1,0 +1,146 @@
+{
+  "app_name": "Utility Contract Hub",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A sharp, high-contrast, professional B2B command center anchored in strict black-and-white, designed for absolute utility and operational clarity.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#111111",
+    "surfaceSecondary": "#F5F5F5",
+    "onSurfaceSecondary": "#404040",
+    "surfaceTertiary": "#EBEBEB",
+    "onSurfaceTertiary": "#111111",
+    "surfaceInverse": "#111111",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#000000",
+    "brandPrimary": "#000000",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#0A5C36",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#E6F2ED",
+    "onBrandTertiary": "#0A5C36",
+    "success": "#16A34A",
+    "onSuccess": "#FFFFFF",
+    "warning": "#F59E0B",
+    "onWarning": "#FFFFFF",
+    "error": "#DC2626",
+    "onError": "#FFFFFF",
+    "info": "#475569",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E5E5",
+    "borderStrong": "#A3A3A3",
+    "divider": "#EBEBEB",
+    "utilityUrgency": {
+      "critical": "#DC2626",
+      "high": "#EA580C",
+      "medium": "#F59E0B",
+      "renewable": "#16A34A",
+      "low": "#475569",
+      "normal": "#111111"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Geist",
+    "textFontFamily": "Geist",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical breathing room. Cards and sections have md/lg gaps. Whitespace is used structurally to separate B2B KPI blocks.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Use frosted glass on the bottom tab bar and sticky headers.",
+      "Apply subtle glass on the 'Audit in progress' banner if it floats over scrolling content."
+    ],
+    "dont's": [
+      "Never use glass on data/KPI cards.",
+      "Avoid heavy blurs that reduce the stark B2B contrast."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Sign In",
+      "purpose": "A trustworthy, hyper-clean entry point for business owners.",
+      "states": {
+        "loading": "Spinner overlaid on brandPrimary button.",
+        "empty": "N/A",
+        "error": "Standard inline text validation (error text color) below inputs."
+      },
+      "layout": "Centered PriceBuddy logo at top. Single-column form layout. Labels strictly above inputs (no floating). Inputs have border scale (1pt). Sticky brandPrimary (Black) CTA at the bottom inside a KeyboardAvoidingView. Minimalist, high-contrast, no distracting background imagery."
+    },
+    {
+      "name": "Dashboard",
+      "purpose": "The main B2B operational center summarizing contract health, upcoming renewals, and quick actions.",
+      "states": {
+        "loading": "Skeleton loaders for KPI cards and upcoming renewal.",
+        "empty": "Clean illustration of an office desk (empty_desk image) with a short message 'No contracts uploaded yet' and a prominent 'Scan a bill' CTA.",
+        "error": "Readable text block offering a retry."
+      },
+      "layout": "Top section: 'Audit in progress' banner (surfaceSecondary with warning accent line or border). Below banner: Hero Metric (Utility Health Summary) using the utilityUrgency colors as status dots or colored metric counters. Next: 'Upcoming Renewal' featured card with a clear date and CTA. Bottom area: Grid of Quick Actions (Scan Bill, View Renewals) represented as tactile tiles with Phosphor icons."
+    },
+    {
+      "name": "Bill Scanning",
+      "purpose": "Camera capture interface optimized for extracting document edges.",
+      "states": {
+        "loading": "OCR Processing State: A dark, translucent overlay covering the screen with a centered spinner and 'Extracting document details (this may take up to 60s)...'",
+        "empty": "Camera feed searching for edges (subtle corner frames).",
+        "error": "Retry modal if OCR fails or camera permission is denied."
+      },
+      "layout": "Full-screen camera view. A dark semi-transparent overlay (surfaceInverse at 70% opacity) masks the background, leaving a bright central rectangular 'scan frame'. Shutter button anchored inside a bottom container. Secondary 'Pick from Gallery' action placed next to the shutter. Once captured, a clear success toast or transition occurs before returning to dashboard."
+    }
+  ],
+  "images": {
+    "empty_desk": {
+      "url": "https://images.unsplash.com/photo-1683921055230-c3ba01e70131?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzF8MHwxfHNlYXJjaHwxfHxjbGVhbiUyMG1vZGVybiUyMG9mZmljZSUyMGRlc2slMjBmbGF0bGF5fGVufDB8fHx8MTc4NjcwMzUzMnww&ixlib=rb-4.1.0&q=85",
+      "alt": "Clean modern office desk flatlay representing an empty state for document uploads"
+    },
+    "abstract_energy_bg": {
+      "url": "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzV8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGVuZXJneSUyMGJhY2tncm91bmQlMjB3aGl0ZXxlbnwwfHx8fDE3ODY3MDM1MzJ8MA&ixlib=rb-4.1.0&q=85",
+      "dark": "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzV8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGVuZXJneSUyMGJhY2tncm91bmQlMjB3aGl0ZXxlbnwwfHx8fDE3ODY3MDM1MzJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract clean background pattern for hero moments or banners"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Follow the strict black-and-white theme with the requested iOS-Native Clean layout principles. The brand identity of PriceBuddy is heavily reliant on a stark #000000 primary canvas.",
+    "Implement the 'utilityUrgency' colors precisely for dashboard KPI counters, dots, or status pills. This is critical for B2B operational scanning.",
+    "Ensure the '/scan' screen has a camera-mask overlay (dark with a clear center cutout) to guide users framing the utility bill.",
+    "Implement an explicit OCR loading state for the scan screen that communicates a 30-60s wait time to avoid user frustration.",
+    "Ensure 'Scan a bill' and 'View renewals' are easily accessible on the dashboard through large, tactile hit targets.",
+    "Do NOT use blue tokens anywhere; rely on the provided utilityUrgency dictionary and slate/emerald accents.",
+    "Ensure sticky buttons use KeyboardAvoidingView correctly on the Sign In screen."
+  ]
+}
