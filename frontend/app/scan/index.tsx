@@ -42,9 +42,7 @@ export default function Scan() {
 
   const askCamera = async () => {
     const res = await requestPermission();
-    if (!res.granted && !res.canAskAgain) {
-      Linking.openSettings();
-    }
+    if (!res.granted && !res.canAskAgain) Linking.openSettings();
   };
 
   const takePhoto = async () => {
@@ -52,9 +50,7 @@ export default function Scan() {
     setBusy(true);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
-      if (photo?.uri) {
-        setCaptured({ uri: photo.uri, name: "bill.jpg", type: "image/jpeg" });
-      }
+      if (photo?.uri) setCaptured({ uri: photo.uri, name: "bill.jpg", type: "image/jpeg" });
     } catch {
       toast("Couldn't capture the photo. Try again.", "error");
     } finally {
@@ -76,18 +72,11 @@ export default function Scan() {
         }
         return;
       }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        quality: 0.7,
-      });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
       if (!result.canceled && result.assets?.[0]) {
         const a = result.assets[0];
         const name = a.fileName || a.uri.split("/").pop() || "bill.jpg";
-        setCaptured({
-          uri: a.uri,
-          name,
-          type: a.mimeType || "image/jpeg",
-        });
+        setCaptured({ uri: a.uri, name, type: a.mimeType || "image/jpeg" });
       }
     } catch {
       toast("Couldn't open your photos. Try again.", "error");
@@ -101,28 +90,22 @@ export default function Scan() {
     setUploading(true);
     try {
       const form = new FormData();
-      form.append("file", {
-        uri: captured.uri,
-        name: captured.name,
-        type: captured.type,
-      } as any);
-      await apiRequest("/scans", {
-        method: "POST",
-        body: form,
-        timeoutMs: 120000,
-      });
-      setDone(true);
+      form.append("file", { uri: captured.uri, name: captured.name, type: captured.type } as any);
+      const res = await apiRequest<any>("/scans", { method: "POST", body: form, timeoutMs: 120000 });
+      const id = res?.id || res?.scan_id || res?._id;
+      if (id) {
+        router.replace(`/scan/review/${id}`);
+      } else {
+        setDone(true);
+      }
     } catch (e) {
-      toast(
-        e instanceof ApiError ? e.message : "Upload failed. Please try again.",
-        "error",
-      );
+      toast(e instanceof ApiError ? e.message : "Upload failed. Please try again.", "error");
     } finally {
       setUploading(false);
     }
-  }, [captured, uploading, toast]);
+  }, [captured, uploading, toast, router]);
 
-  /* ---------- Success state ---------- */
+  /* Success */
   if (done) {
     return (
       <View style={styles.lightRoot}>
@@ -130,12 +113,10 @@ export default function Scan() {
           <View style={styles.successIcon}>
             <Ionicons name="checkmark" size={44} color="#fff" />
           </View>
-          <Text testID="scan-success-title" style={styles.successTitle}>
-            Bill received
-          </Text>
+          <Text testID="scan-success-title" style={styles.successTitle}>Bill received</Text>
           <Text style={styles.successSub}>
-            Our team will verify the details and update your contracts within a day.
-            You&apos;ll see it under &quot;Audit in progress&quot; on your dashboard.
+            Our team will verify the details and update your contracts within a day. You&apos;ll
+            see it under &quot;Audit in progress&quot; on your dashboard.
           </Text>
           <View style={styles.successActions}>
             <Button
@@ -158,7 +139,7 @@ export default function Scan() {
     );
   }
 
-  /* ---------- Preview + upload state ---------- */
+  /* Preview + upload */
   if (captured) {
     return (
       <View style={styles.darkRoot}>
@@ -202,21 +183,27 @@ export default function Scan() {
     );
   }
 
-  /* ---------- Permission primer ---------- */
+  /* Permission primer */
   const needsPrimer = !permission || !permission.granted;
   if (needsPrimer) {
     const blocked = permission && !permission.granted && !permission.canAskAgain;
     return (
       <View style={styles.lightRoot}>
-        <Header insetsTop={insets.top} onBack={goBack} />
+        <View style={[styles.lightHeader, { paddingTop: insets.top + spacing.sm }]}>
+          <Pressable testID="scan-back-button" onPress={goBack} hitSlop={10} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={24} color={colors.heading} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Scan a bill</Text>
+          <View style={{ width: 40 }} />
+        </View>
         <View style={styles.primerWrap} testID="scan-permission-primer">
           <View style={styles.primerIcon}>
             <Ionicons name="camera-outline" size={40} color={colors.brandPrimary} />
           </View>
           <Text style={styles.primerTitle}>Scan your utility bill</Text>
           <Text style={styles.primerSub}>
-            Allow camera access to snap a photo of your bill. We&apos;ll read the supplier,
-            rates and dates for you — no typing needed.
+            Allow camera access to snap a photo of your bill. We&apos;ll read the supplier, rates
+            and dates for you — no typing needed.
           </Text>
           <View style={styles.primerActions}>
             <Button
@@ -239,7 +226,7 @@ export default function Scan() {
     );
   }
 
-  /* ---------- Live camera ---------- */
+  /* Live camera */
   return (
     <View style={styles.darkRoot}>
       {Platform.OS !== "web" ? (
@@ -250,7 +237,6 @@ export default function Scan() {
         </View>
       )}
 
-      {/* Mask overlay */}
       <View style={styles.maskTop} pointerEvents="none">
         <Text style={styles.frameHint}>Fit the whole bill inside the frame</Text>
       </View>
@@ -266,7 +252,6 @@ export default function Scan() {
       </View>
       <View style={styles.maskBottom} pointerEvents="none" />
 
-      {/* Top bar */}
       <Pressable
         testID="scan-close-button"
         onPress={goBack}
@@ -275,21 +260,11 @@ export default function Scan() {
         <Ionicons name="close" size={24} color="#fff" />
       </Pressable>
 
-      {/* Controls */}
       <View style={[styles.controls, { paddingBottom: insets.bottom + spacing.xl }]}>
-        <Pressable
-          testID="scan-gallery-button"
-          onPress={pickFromGallery}
-          style={styles.galleryBtn}
-        >
+        <Pressable testID="scan-gallery-button" onPress={pickFromGallery} style={styles.galleryBtn}>
           <Ionicons name="images-outline" size={24} color="#fff" />
         </Pressable>
-        <Pressable
-          testID="scan-shutter-button"
-          onPress={takePhoto}
-          disabled={busy}
-          style={styles.shutterOuter}
-        >
+        <Pressable testID="scan-shutter-button" onPress={takePhoto} disabled={busy} style={styles.shutterOuter}>
           <View style={styles.shutterInner}>
             {busy && <ActivityIndicator color={colors.brandPrimary} />}
           </View>
@@ -300,23 +275,10 @@ export default function Scan() {
   );
 }
 
-function Header({ insetsTop, onBack }: { insetsTop: number; onBack: () => void }) {
-  return (
-    <View style={[styles.lightHeader, { paddingTop: insetsTop + spacing.sm }]}>
-      <Pressable testID="scan-back-button" onPress={onBack} hitSlop={10} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
-      </Pressable>
-      <Text style={styles.headerTitle}>Scan a bill</Text>
-      <View style={{ width: 40 }} />
-    </View>
-  );
-}
-
 const FRAME_H = 380;
 const styles = StyleSheet.create({
   darkRoot: { flex: 1, backgroundColor: "#000" },
   lightRoot: { flex: 1, backgroundColor: colors.surface },
-
   lightHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -329,14 +291,13 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceSecondary,
   },
-  headerTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.onSurface },
+  headerTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading },
 
-  /* Mask */
   maskTop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -347,21 +308,12 @@ const styles = StyleSheet.create({
   maskMiddle: { flexDirection: "row", height: FRAME_H },
   maskSide: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
   maskBottom: { flex: 1.4, backgroundColor: "rgba(0,0,0,0.6)" },
-  frame: {
-    width: "82%",
-    height: FRAME_H,
-    borderRadius: radius.md,
-  },
-  corner: {
-    position: "absolute",
-    width: 28,
-    height: 28,
-    borderColor: "#fff",
-  },
-  cTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: radius.md },
-  cTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: radius.md },
-  cBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: radius.md },
-  cBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: radius.md },
+  frame: { width: "82%", height: FRAME_H, borderRadius: radius.sm },
+  corner: { position: "absolute", width: 28, height: 28, borderColor: "#fff" },
+  cTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: radius.sm },
+  cTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: radius.sm },
+  cBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: radius.sm },
+  cBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: radius.sm },
   frameHint: {
     color: "#fff",
     fontFamily: font.medium,
@@ -371,7 +323,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
   },
-
   closeBtn: {
     position: "absolute",
     left: spacing.lg,
@@ -382,7 +333,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   controls: {
     position: "absolute",
     left: 0,
@@ -397,7 +347,7 @@ const styles = StyleSheet.create({
   galleryBtn: {
     width: 52,
     height: 52,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
@@ -419,13 +369,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   webCam: { backgroundColor: "#1a1a1a", alignItems: "center", justifyContent: "center" },
   webCamText: { color: "#fff", fontFamily: font.medium, fontSize: type.base },
-
   uploadOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(17,17,17,0.82)",
+    backgroundColor: "rgba(31,42,68,0.85)",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.lg,
@@ -449,29 +397,17 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     backgroundColor: "rgba(0,0,0,0.35)",
   },
-
-  /* Primer */
-  primerWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-  },
+  primerWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xl },
   primerIcon: {
     width: 88,
     height: 88,
-    borderRadius: 24,
+    borderRadius: radius.md,
     backgroundColor: colors.brandTertiary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xl,
   },
-  primerTitle: {
-    fontFamily: font.bold,
-    fontSize: type["2xl"],
-    color: colors.onSurface,
-    textAlign: "center",
-  },
+  primerTitle: { fontFamily: font.bold, fontSize: type["2xl"], color: colors.heading, textAlign: "center" },
   primerSub: {
     fontFamily: font.regular,
     fontSize: type.lg,
@@ -481,8 +417,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   primerActions: { alignSelf: "stretch", gap: spacing.md, marginTop: spacing["2xl"] },
-
-  /* Success */
   successWrap: { flex: 1, alignItems: "center", paddingHorizontal: spacing.xl },
   successIcon: {
     width: 88,
@@ -493,12 +427,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: spacing.xl,
   },
-  successTitle: {
-    fontFamily: font.bold,
-    fontSize: type["2xl"],
-    color: colors.onSurface,
-    textAlign: "center",
-  },
+  successTitle: { fontFamily: font.bold, fontSize: type["2xl"], color: colors.heading, textAlign: "center" },
   successSub: {
     fontFamily: font.regular,
     fontSize: type.lg,

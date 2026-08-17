@@ -1,36 +1,42 @@
-// Design tokens derived from /app/design_guidelines.json
-// PriceBuddy "iOS-Native Clean" — strict black/white with an emerald accent.
+// Design tokens — Utility Contract Hub / PriceBuddy branding.
+// Accent orange #F25028, navy text/headings, soft off-white background.
 
 export const colors = {
-  surface: "#FFFFFF",
-  onSurface: "#111111",
-  surfaceSecondary: "#F5F5F5",
-  onSurfaceSecondary: "#404040",
-  surfaceTertiary: "#EBEBEB",
-  surfaceInverse: "#111111",
+  surface: "#FFFFFF", // cards
+  onSurface: "#1A1F36", // main text
+  heading: "#1F2A44", // headings
+  surfaceSecondary: "#F8F9FC", // app background
+  onSurfaceSecondary: "#4A5169",
+  surfaceTertiary: "#EEF0F6",
+  surfaceInverse: "#1F2A44",
   onSurfaceInverse: "#FFFFFF",
-  brand: "#000000",
-  brandPrimary: "#000000",
+
+  brand: "#F25028",
+  brandPrimary: "#F25028",
+  brandPrimaryPressed: "#DD3F1B",
   onBrandPrimary: "#FFFFFF",
-  brandSecondary: "#0A5C36",
+  brandSecondary: "#1F2A44",
   onBrandSecondary: "#FFFFFF",
-  brandTertiary: "#E6F2ED",
-  onBrandTertiary: "#0A5C36",
-  success: "#16A34A",
+  brandTertiary: "#FDE7DF", // light accent tint
+  onBrandTertiary: "#F25028",
+
+  success: "#10B981",
   warning: "#F59E0B",
-  error: "#DC2626",
-  info: "#475569",
-  border: "#E5E5E5",
-  borderStrong: "#A3A3A3",
-  divider: "#EBEBEB",
-  muted: "#737373",
+  error: "#EF4444",
+  info: "#4A5169",
+
+  border: "#E6E8F0",
+  borderStrong: "#C3C8D8",
+  divider: "#EEF0F6",
+  muted: "#8A90A6",
+
   urgency: {
-    critical: "#DC2626",
-    high: "#EA580C",
+    critical: "#EF4444",
+    high: "#F97316",
     medium: "#F59E0B",
-    renewable: "#16A34A",
-    low: "#475569",
-    normal: "#111111",
+    renewable: "#10B981",
+    low: "#6B7280",
+    normal: "#1F2A44",
   } as Record<string, string>,
 };
 
@@ -45,9 +51,9 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 6,
-  md: 12,
-  lg: 20,
+  sm: 14,
+  md: 20,
+  lg: 28,
   pill: 999,
 };
 
@@ -69,10 +75,10 @@ export const type = {
 
 export const shadow = {
   card: {
-    shadowColor: "#000000",
+    shadowColor: "#1F2A44",
     shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
 };

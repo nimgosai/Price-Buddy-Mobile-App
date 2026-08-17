@@ -73,6 +73,12 @@ export async function apiRequest<T = any>(
 
   const parsed = await parseBody(res);
   if (!res.ok) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new ApiError(
+        "This is taking longer than usual. Please try again in a moment.",
+        res.status,
+      );
+    }
     throw new ApiError(
       messageFromBody(parsed, `Something went wrong (${res.status}).`),
       res.status,

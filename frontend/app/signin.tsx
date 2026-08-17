@@ -1,12 +1,12 @@
 import { useState, useRef } from "react";
 import { StyleSheet, Text, View, TextInput, Pressable } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   KeyboardAwareScrollView,
   KeyboardStickyView,
 } from "react-native-keyboard-controller";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
 import { Button, TextField } from "@/src/components/ui";
 import { useToast } from "@/src/components/toast";
@@ -64,10 +64,11 @@ export default function SignIn() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandRow}>
-          <View style={styles.logoMark}>
-            <Ionicons name="flash" size={22} color={colors.onBrandPrimary} />
-          </View>
-          <Text style={styles.wordmark}>PriceBuddy</Text>
+          <Image
+            source={require("../assets/images/pricebuddy-logo.webp")}
+            style={styles.logoImg}
+            contentFit="contain"
+          />
         </View>
 
         <Text testID="signin-title" style={styles.title}>
@@ -146,23 +147,10 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing["3xl"],
-  },
-  logoMark: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.brandPrimary,
-    alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing["2xl"],
   },
-  wordmark: {
-    fontFamily: font.bold,
-    fontSize: type.xl,
-    color: colors.onSurface,
-    letterSpacing: -0.5,
-  },
+  logoImg: { width: 120, height: 100 },
   title: {
     fontFamily: font.bold,
     fontSize: type["3xl"],

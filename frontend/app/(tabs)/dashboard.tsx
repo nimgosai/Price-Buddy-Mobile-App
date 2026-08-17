@@ -50,7 +50,6 @@ function daysUntil(dateStr?: string): number | null {
 
 function urgencyForDays(days: number | null): string {
   if (days === null) return "normal";
-  if (days < 0) return "critical";
   if (days <= 14) return "critical";
   if (days <= 30) return "high";
   if (days <= 60) return "medium";
@@ -62,11 +61,7 @@ export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
-  const { user, signOut } = useAuth();
-
-  useEffect(() => {
-    if (!user) router.replace("/signin");
-  }, [user, router]);
+  const { user } = useAuth();
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [renewals, setRenewals] = useState<any[]>([]);
@@ -88,9 +83,7 @@ export default function Dashboard() {
       setRenewals(Array.isArray(rn?.items) ? rn.items : []);
       setAudits(Array.isArray(au) ? au : []);
     } catch (e) {
-      setError(
-        e instanceof ApiError ? e.message : "Couldn't load your dashboard.",
-      );
+      setError(e instanceof ApiError ? e.message : "Couldn't load your dashboard.");
     }
   }, []);
 
@@ -132,27 +125,32 @@ export default function Dashboard() {
 
   const totalContracts = overview?.total_contracts ?? 0;
   const isEmpty = !loading && !error && totalContracts === 0;
-
-  // Prefer server renewals list; fall back to expiring contracts from overview.
   const renewalList = renewals.length > 0 ? renewals : overview?.expiring_contracts ?? [];
 
   return (
     <View style={styles.root}>
       {/* Sticky header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <View>
-          <Text style={styles.headerKicker}>PriceBuddy</Text>
-          <Text testID="dashboard-greeting" style={styles.headerTitle} numberOfLines={1}>
-            Hi, {greetingName}
-          </Text>
+        <View style={styles.headerLeft}>
+          <Image
+            source={require("../../assets/images/pricebuddy-logo.webp")}
+            style={styles.logo}
+            contentFit="contain"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerKicker}>Welcome back</Text>
+            <Text testID="dashboard-greeting" style={styles.headerTitle} numberOfLines={1}>
+              Hi, {greetingName}
+            </Text>
+          </View>
         </View>
         <Pressable
-          testID="dashboard-signout-button"
-          onPress={signOut}
+          testID="dashboard-scan-icon"
+          onPress={() => router.push("/scan")}
           hitSlop={10}
           style={styles.iconBtn}
         >
-          <Ionicons name="log-out-outline" size={22} color={colors.onSurface} />
+          <Ionicons name="scan-outline" size={22} color={colors.brandPrimary} />
         </Pressable>
       </View>
 
@@ -168,9 +166,7 @@ export default function Dashboard() {
             { paddingBottom: insets.bottom + spacing["2xl"] },
           ]}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {error ? (
             <Card testID="dashboard-error" style={styles.errorCard}>
@@ -180,7 +176,6 @@ export default function Dashboard() {
             </Card>
           ) : (
             <>
-              {/* Audit in progress banner */}
               {audits.map((a, i) => {
                 const scanId = a?.id || a?.scan_id || a?._id || "";
                 return (
@@ -236,7 +231,6 @@ export default function Dashboard() {
                 </View>
               ) : (
                 <>
-                  {/* Utility health summary */}
                   <Text style={styles.sectionTitle}>Utility health</Text>
                   <Card testID="utility-health-card">
                     <View style={styles.healthTop}>
@@ -259,33 +253,29 @@ export default function Dashboard() {
                         (k) => (overview?.urgency_summary?.[k] ?? 0) > 0,
                       ).map((k) => (
                         <View key={k} style={styles.urgencyStat} testID={`urgency-${k}`}>
-                          <View
-                            style={[styles.urgencyDot, { backgroundColor: colors.urgency[k] }]}
-                          />
-                          <Text style={styles.urgencyNum}>
-                            {overview?.urgency_summary?.[k]}
-                          </Text>
+                          <View style={[styles.urgencyDot, { backgroundColor: colors.urgency[k] }]} />
+                          <Text style={styles.urgencyNum}>{overview?.urgency_summary?.[k]}</Text>
                           <Text style={styles.urgencyName}>{URGENCY_LABEL[k]}</Text>
                         </View>
                       ))}
                     </View>
                   </Card>
 
-                  {/* Renewals */}
                   {renewalList.length > 0 && (
                     <>
-                      <Text style={styles.sectionTitle}>Upcoming renewals</Text>
-                      {renewalList.slice(0, 6).map((c: any, i: number) => {
+                      <View style={styles.sectionRow}>
+                        <Text style={styles.sectionTitle}>Upcoming renewals</Text>
+                        <Pressable testID="dashboard-see-renewals" onPress={() => router.push("/renewals")}>
+                          <Text style={styles.sectionLink}>See all</Text>
+                        </Pressable>
+                      </View>
+                      {renewalList.slice(0, 4).map((c: any, i: number) => {
                         const end = c.end_date || c.contract_end_date || c.renewal_date;
                         const days = daysUntil(end);
                         const urg = c.urgency || urgencyForDays(days);
                         const color = colors.urgency[urg] || colors.urgency.normal;
                         return (
-                          <Card
-                            key={c.id || c._id || i}
-                            testID={`renewal-card-${i}`}
-                            style={styles.renewalCard}
-                          >
+                          <Card key={c.id || c._id || i} testID={`renewal-card-${i}`} style={styles.renewalCard}>
                             <View style={styles.renewalTop}>
                               <View style={{ flex: 1 }}>
                                 <Text style={styles.renewalSupplier} numberOfLines={1}>
@@ -308,9 +298,7 @@ export default function Dashboard() {
                               />
                             </View>
                             {end && (
-                              <Text style={styles.renewalDate}>
-                                Ends {dayjs(end).format("D MMM YYYY")}
-                              </Text>
+                              <Text style={styles.renewalDate}>Ends {dayjs(end).format("D MMM YYYY")}</Text>
                             )}
                           </Card>
                         );
@@ -318,7 +306,6 @@ export default function Dashboard() {
                     </>
                   )}
 
-                  {/* Scan CTA */}
                   <Pressable
                     testID="dashboard-scan-tile"
                     onPress={() => router.push("/scan")}
@@ -329,9 +316,7 @@ export default function Dashboard() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.scanTileTitle}>Scan a bill</Text>
-                      <Text style={styles.scanTileSub}>
-                        Snap a utility bill to add or update a contract
-                      </Text>
+                      <Text style={styles.scanTileSub}>Snap a utility bill to add or update a contract</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={colors.onBrandPrimary} />
                   </Pressable>
@@ -351,32 +336,33 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 },
+  logo: { width: 40, height: 40 },
   headerKicker: {
-    fontFamily: font.semibold,
+    fontFamily: font.medium,
     fontSize: type.sm,
     color: colors.muted,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
   headerTitle: {
     fontFamily: font.bold,
     fontSize: type.xl,
-    color: colors.onSurface,
+    color: colors.heading,
     letterSpacing: -0.4,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.brandTertiary,
   },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: { padding: spacing.lg, gap: spacing.md },
@@ -392,22 +378,22 @@ const styles = StyleSheet.create({
   auditBanner: {
     flexDirection: "row",
     gap: spacing.md,
-    backgroundColor: "#FFF8EC",
+    backgroundColor: "#FFF7ED",
     borderWidth: 1,
-    borderColor: "#F5D999",
-    borderRadius: radius.lg,
+    borderColor: "#FCD9A8",
+    borderRadius: radius.md,
     padding: spacing.lg,
   },
   auditIconWrap: {
     width: 36,
     height: 36,
-    borderRadius: radius.md,
-    backgroundColor: "#FCEFD0",
+    borderRadius: radius.sm,
+    backgroundColor: "#FDEBCF",
     alignItems: "center",
     justifyContent: "center",
   },
   auditBody: { flex: 1, gap: spacing.xs },
-  auditTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.onSurface },
+  auditTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
   auditText: {
     fontFamily: font.regular,
     fontSize: type.base,
@@ -426,39 +412,33 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
   },
-  auditCtaText: {
-    fontFamily: font.semibold,
-    fontSize: type.base,
-    color: colors.brandPrimary,
-  },
+  auditCtaText: { fontFamily: font.semibold, fontSize: type.base, color: colors.brandPrimary },
 
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
   sectionTitle: {
     fontFamily: font.bold,
     fontSize: type.lg,
-    color: colors.onSurface,
+    color: colors.heading,
+    marginTop: spacing.sm,
+  },
+  sectionLink: {
+    fontFamily: font.semibold,
+    fontSize: type.base,
+    color: colors.brandPrimary,
     marginTop: spacing.sm,
   },
 
-  healthTop: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-  },
-  healthCount: {
-    fontFamily: font.bold,
-    fontSize: 40,
-    color: colors.onSurface,
-    letterSpacing: -1,
-  },
+  healthTop: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  healthCount: { fontFamily: font.bold, fontSize: 40, color: colors.heading, letterSpacing: -1 },
   healthLabel: { fontFamily: font.medium, fontSize: type.base, color: colors.muted },
   healthProps: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   healthPropsText: { fontFamily: font.medium, fontSize: type.base, color: colors.muted },
-  urgencyGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
+  urgencyGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.lg },
   urgencyStat: {
     flexDirection: "row",
     alignItems: "center",
@@ -466,15 +446,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSecondary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
   },
   urgencyDot: { width: 8, height: 8, borderRadius: 4 },
-  urgencyNum: { fontFamily: font.bold, fontSize: type.lg, color: colors.onSurface },
+  urgencyNum: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
   urgencyName: { fontFamily: font.medium, fontSize: type.base, color: colors.muted },
 
   renewalCard: { gap: spacing.sm },
   renewalTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  renewalSupplier: { fontFamily: font.semibold, fontSize: type.lg, color: colors.onSurface },
+  renewalSupplier: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
   renewalMeta: {
     fontFamily: font.regular,
     fontSize: type.base,
@@ -489,7 +469,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     backgroundColor: colors.brandPrimary,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     padding: spacing.lg,
     marginTop: spacing.sm,
     ...shadow.card,
@@ -497,8 +477,8 @@ const styles = StyleSheet.create({
   scanTileIcon: {
     width: 44,
     height: 44,
-    borderRadius: radius.md,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: radius.sm,
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -506,27 +486,13 @@ const styles = StyleSheet.create({
   scanTileSub: {
     fontFamily: font.regular,
     fontSize: type.base,
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.85)",
     marginTop: 2,
   },
 
-  emptyWrap: {
-    alignItems: "center",
-    paddingVertical: spacing["2xl"],
-    paddingHorizontal: spacing.sm,
-  },
-  emptyImg: {
-    width: "100%",
-    height: 180,
-    borderRadius: radius.lg,
-    marginBottom: spacing.xl,
-  },
-  emptyTitle: {
-    fontFamily: font.bold,
-    fontSize: type.xl,
-    color: colors.onSurface,
-    textAlign: "center",
-  },
+  emptyWrap: { alignItems: "center", paddingVertical: spacing["2xl"], paddingHorizontal: spacing.sm },
+  emptyImg: { width: "100%", height: 180, borderRadius: radius.md, marginBottom: spacing.xl },
+  emptyTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, textAlign: "center" },
   emptySub: {
     fontFamily: font.regular,
     fontSize: type.base,

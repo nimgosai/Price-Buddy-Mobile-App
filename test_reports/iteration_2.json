@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 2 re-test: PRIMARY BUG FIXED. Signout from Profile tab now navigates to /signin and clears the token. Full E2E covered on Expo web preview at 390x844: signin, all 5 bottom tabs (Home/Renewals/Sites/Support/Profile), Sites empty state -> Add Site FAB -> /sites/new form -> POST /api/change-requests -> success toast -> back to /sites, Support GET + POST /api/concierge/messages appears in thread, Profile 3 switches (email/push/alerts) all persist (PUT /api/me/preferences and /api/me/alerts return 200), Delete confirmation modal opens and Cancel dismisses it (did NOT tap delete-confirm to preserve shared account), Scan primer + scan-back-button returns to /dashboard. Backend pytest suite: 9/9 pass (login OK/wrong/missing, /me auth-gated, dashboard/overview, renewals/urgent, my/audits-in-progress). All 33 captured /api requests hit the FULL external base https://utility-contract-hub.emergent.host/api/... (verified single host in request log). Signin-title visible after signout and localStorage.uch_auth_token is cleared. Retest confirms the auth guard in app/(tabs)/_layout.tsx (Redirect to /signin when !user) works.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "shadow* style props",
+        "issue": "Non-blocking web console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Originates from shadow.card in /app/frontend/src/theme/theme.ts (used by dashboard scan tile and sites FAB). Consider Platform-gating or migrating to boxShadow for web."
+      },
+      {
+        "component": "props.pointerEvents",
+        "issue": "Console warning: 'props.pointerEvents is deprecated. Use style.pointerEvents' — likely emitted by toast/animation dependency. Non-blocking."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_uch_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: migrate shadow.card in /app/frontend/src/theme/theme.ts to boxShadow for web (or gate shadow* usage to Platform.OS !== 'web') to silence RN 0.76+ deprecation warnings.",
+    "Optional (perf): dashboard.tsx still fires initial useEffect(load) AND useFocusEffect(load) on first mount causing duplicate GETs for /dashboard/overview, /renewals/urgent, /my/audits-in-progress (confirmed in this run's network capture — see 2x back-to-back). Guard useFocusEffect after first mount."
+  ],
+  "critical_code_review_comments": [
+    "(tabs)/_layout.tsx correctly gates authed screens with `if (!user) return <Redirect href='/signin' />` — declarative fix works for both the Profile signout button and any future auth-null transition.",
+    "profile.tsx signOut handler simply calls await signOut() — no manual navigation needed because the Tabs layout Redirect handles it. Clean.",
+    "sites/new.tsx correctly POSTs /api/change-requests with request_type=add_site since property creation is broker-gated. Inline field validation (`Give this site a name`, etc.) works.",
+    "support.tsx POSTs /api/concierge/messages/mark-read on every focus fire-and-forget — fine, but noisy in logs. Consider once-per-mount."
+  ],
+  "updated_files": ["/app/test_reports/iteration_2.json"],
+  "success_rate": { "backend": "100% (9/9)", "frontend": "100% (all 7 target flows PASS)" },
+  "seed_data_creation": "Posted 1 change-request ('TEST_HeadOffice', 1 TEST St, SW1A 1AA) and 1 concierge message ('TEST_ping from playwright') on the shared test account. Non-destructive — main agent may want to purge on backend if desired.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 7 review-request flows now green. Auth guard lives in app/(tabs)/_layout.tsx. Test account has no properties/renewals by design. The only remaining items are cosmetic RN web warnings (shadow*, pointerEvents) and one duplicate-fetch pattern on dashboard mount — none are blockers.",
+  "rca_of_issue": "Previous iteration bug (signout leaves user on /dashboard) is FIXED via auth guard in app/(tabs)/_layout.tsx. Verified: after tapping profile-signout-button, URL becomes /signin, signin-title visible, and localStorage.uch_auth_token is null. Root cause was that signOut() cleared state but nothing redirected; fix uses expo-router Redirect inside the (tabs) layout so any user->null transition unmounts the tabs group and routes to /signin."
+}
