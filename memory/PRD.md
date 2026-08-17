@@ -74,6 +74,9 @@ All customer-facing screens from the original spec are now implemented (public/p
 - Contracts Overview `/contracts` — all contracts from /dashboard/overview all_contracts (customer GET /contracts is 405); linked from dashboard + profile; cards open the change-request edit screen.
 - Verified by testing agent (iteration_8): backend 5/5 pass; all flows pass; 0 API leaks; no bugs.
 
+### 2026-08-17 (fix)
+- Sign-up duplicate email: /signup now detects HTTP 400 "Email already registered", returns to step 1 with an inline email error + an info toast guiding the user to sign in, and adds a "Already have an account? Sign in" link. Verified by testing agent (iteration_9), all flows pass. (Backend correctly rejects duplicates; this is a UX guidance improvement, not a backend change.)
+
 ## Known backend constraints (not fixable from the app)
 - Bill scan OCR (`POST /api/scans`) currently returns 502 gateway timeout on this deployment (heavy sync OCR > gateway limit). App surfaces a friendly retry message. Scan Review is only reachable after a successful upload.
 - Property creation is broker-gated for customers → Sites/Renewals empty for fresh accounts (expected).

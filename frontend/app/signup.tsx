@@ -80,7 +80,13 @@ export default function SignUp() {
       });
       router.replace("/onboarding/push-primer");
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Couldn't create your account.", "error");
+      if (e instanceof ApiError && e.status === 400 && /already|exist/i.test(e.message)) {
+        setStep(1);
+        setErrors({ email: "An account with this email already exists" });
+        toast("You already have an account — try signing in instead.", "info");
+      } else {
+        toast(e instanceof ApiError ? e.message : "Couldn't create your account.", "error");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -150,6 +156,16 @@ export default function SignUp() {
             returnKeyType="go"
             onSubmitEditing={onNext}
           />
+          <Pressable
+            testID="signup-have-account"
+            onPress={() => router.replace("/signin")}
+            hitSlop={8}
+            style={styles.haveAccount}
+          >
+            <Text style={styles.haveAccountText}>
+              Already have an account? <Text style={styles.haveAccountBold}>Sign in</Text>
+            </Text>
+          </Pressable>
         </KeyboardAwareScrollView>
       ) : (
         <KeyboardAwareScrollView
@@ -227,6 +243,9 @@ const styles = StyleSheet.create({
   typeText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurfaceSecondary },
   typeTextActive: { color: colors.brandPrimary },
   field: { marginTop: spacing.sm },
+  haveAccount: { alignSelf: "center", marginTop: spacing.md, paddingVertical: spacing.sm },
+  haveAccountText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
+  haveAccountBold: { fontFamily: font.semibold, color: colors.brandPrimary },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
