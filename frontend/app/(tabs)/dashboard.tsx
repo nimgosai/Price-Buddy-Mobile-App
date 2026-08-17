@@ -320,6 +320,21 @@ export default function Dashboard() {
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={colors.onBrandPrimary} />
                   </Pressable>
+
+                  <Pressable
+                    testID="dashboard-reports-tile"
+                    onPress={() => router.push("/reports")}
+                    style={({ pressed }) => [styles.reportsTile, pressed && { opacity: 0.9 }]}
+                  >
+                    <View style={styles.reportsIcon}>
+                      <Ionicons name="bar-chart-outline" size={22} color={colors.brandPrimary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reportsTitle}>View spend report</Text>
+                      <Text style={styles.reportsSub}>Your annual utility spend across all sites</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+                  </Pressable>
                 </>
               )}
             </>
@@ -489,6 +504,27 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     marginTop: 2,
   },
+
+  reportsTile: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  reportsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportsTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
+  reportsSub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
 
   emptyWrap: { alignItems: "center", paddingVertical: spacing["2xl"], paddingHorizontal: spacing.sm },
   emptyImg: { width: "100%", height: 180, borderRadius: radius.md, marginBottom: spacing.xl },

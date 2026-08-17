@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,12 +27,24 @@ type Msg = {
   created_at: string;
 };
 
+type Resource = {
+  id: string;
+  title: string;
+  description: string;
+  category?: string;
+  content?: string;
+  estimated_read_time?: string;
+};
+
 export default function Support() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const scrollRef = useRef<ScrollView>(null);
 
+  const [tab, setTab] = useState<"chat" | "help">("chat");
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [activeResource, setActiveResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -59,6 +72,12 @@ export default function Support() {
       load();
     }, [load]),
   );
+
+  useEffect(() => {
+    apiRequest<{ resources: Resource[] }>("/support/resources")
+      .then((r) => setResources(Array.isArray(r?.resources) ? r.resources : []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
@@ -94,8 +113,36 @@ export default function Support() {
       <ScreenHeader
         testID="support-header"
         title="Support"
-        subtitle="Chat with your PriceBuddy team"
+        subtitle={tab === "chat" ? "Chat with your PriceBuddy team" : "Bill & renewal FAQs"}
       />
+      <View style={styles.segment}>
+        <Pressable
+          testID="support-tab-chat"
+          onPress={() => setTab("chat")}
+          style={[styles.segBtn, tab === "chat" && styles.segBtnActive]}
+        >
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={16}
+            color={tab === "chat" ? colors.onBrandPrimary : colors.onSurfaceSecondary}
+          />
+          <Text style={[styles.segText, tab === "chat" && styles.segTextActive]}>Chat</Text>
+        </Pressable>
+        <Pressable
+          testID="support-tab-help"
+          onPress={() => setTab("help")}
+          style={[styles.segBtn, tab === "help" && styles.segBtnActive]}
+        >
+          <Ionicons
+            name="help-buoy-outline"
+            size={16}
+            color={tab === "help" ? colors.onBrandPrimary : colors.onSurfaceSecondary}
+          />
+          <Text style={[styles.segText, tab === "help" && styles.segTextActive]}>Help centre</Text>
+        </Pressable>
+      </View>
+
+      {tab === "chat" ? (
       <KeyboardAvoidingView
         style={styles.flex}
         behavior="translate-with-padding"
@@ -171,6 +218,80 @@ export default function Support() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      ) : (
+        <ScrollView
+          testID="support-help-list"
+          contentContainerStyle={[styles.helpList, { paddingBottom: insets.bottom + spacing["2xl"] }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {resources.length === 0 ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={colors.brandPrimary} />
+            </View>
+          ) : (
+            resources.map((r, i) => (
+              <Pressable
+                key={r.id || i}
+                testID={`help-resource-${i}`}
+                onPress={() => setActiveResource(r)}
+                style={({ pressed }) => [styles.helpCard, pressed && { opacity: 0.9 }]}
+              >
+                <View style={styles.helpIcon}>
+                  <Ionicons name="document-text-outline" size={20} color={colors.brandPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  {r.category ? <Text style={styles.helpCat}>{r.category.toUpperCase()}</Text> : null}
+                  <Text style={styles.helpTitle} numberOfLines={2}>{r.title}</Text>
+                  <Text style={styles.helpDesc} numberOfLines={2}>{r.description}</Text>
+                  {r.estimated_read_time ? (
+                    <Text style={styles.helpMeta}>{r.estimated_read_time} read</Text>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+              </Pressable>
+            ))
+          )}
+        </ScrollView>
+      )}
+
+      {/* Resource detail */}
+      <Modal
+        visible={!!activeResource}
+        animationType="slide"
+        onRequestClose={() => setActiveResource(null)}
+      >
+        <View style={styles.root}>
+          <ScreenHeader
+            testID="help-detail-header"
+            title={activeResource?.title || "Article"}
+            onBack={() => setActiveResource(null)}
+          />
+          <ScrollView
+            testID="help-detail-body"
+            contentContainerStyle={[styles.detailBody, { paddingBottom: insets.bottom + spacing["2xl"] }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {(activeResource?.content || activeResource?.description || "")
+              .split("\n")
+              .map((line, i) => {
+                const t = line.trim();
+                if (!t) return <View key={i} style={{ height: spacing.sm }} />;
+                if (t.startsWith("## "))
+                  return <Text key={i} style={styles.mdH2}>{t.replace(/^##\s+/, "")}</Text>;
+                if (t.startsWith("# "))
+                  return <Text key={i} style={styles.mdH1}>{t.replace(/^#\s+/, "")}</Text>;
+                const bullet = /^[-*]\s+/.test(t) || /^\d+\.\s+/.test(t);
+                const clean = t.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "").replace(/\*\*/g, "");
+                return (
+                  <View key={i} style={styles.mdRow}>
+                    {bullet ? <Text style={styles.mdBullet}>•</Text> : null}
+                    <Text style={styles.mdText}>{clean}</Text>
+                  </View>
+                );
+              })}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -248,4 +369,57 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  segment: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  segBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  segBtnActive: { backgroundColor: colors.brandPrimary },
+  segText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurfaceSecondary },
+  segTextActive: { color: colors.onBrandPrimary },
+
+  helpList: { padding: spacing.lg, gap: spacing.md },
+  helpCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  helpIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helpCat: { fontFamily: font.semibold, fontSize: 10, color: colors.brandPrimary, letterSpacing: 0.5 },
+  helpTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: 2 },
+  helpDesc: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2, lineHeight: 18 },
+  helpMeta: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: spacing.xs },
+
+  detailBody: { padding: spacing.lg },
+  mdH1: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, marginTop: spacing.md, marginBottom: spacing.xs },
+  mdH2: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: spacing.md, marginBottom: spacing.xs },
+  mdRow: { flexDirection: "row", gap: spacing.sm, marginTop: 4 },
+  mdBullet: { fontFamily: font.bold, fontSize: type.lg, color: colors.brandPrimary, lineHeight: 22 },
+  mdText: { flex: 1, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, lineHeight: 24 },
 });

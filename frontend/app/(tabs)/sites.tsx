@@ -95,19 +95,36 @@ export default function Sites() {
             </EmptyState>
           ) : (
             sites.map((s: any, i: number) => (
-              <Card key={s.id || s._id || i} testID={`site-card-${i}`} style={styles.card}>
-                <View style={styles.siteIcon}>
-                  <Ionicons name="location" size={20} color={colors.brandPrimary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name} numberOfLines={1}>
-                    {s.name || s.site_name || "Site"}
-                  </Text>
-                  <Text style={styles.addr} numberOfLines={2}>
-                    {[s.address, s.postcode].filter(Boolean).join(", ") || "Address on file"}
-                  </Text>
-                </View>
-              </Card>
+              <Pressable
+                key={s.id || s._id || i}
+                testID={`site-card-${i}`}
+                onPress={() =>
+                  router.push({
+                    pathname: "/sites/[id]",
+                    params: {
+                      id: s.id || s._id,
+                      name: s.name || s.site_name || "Site",
+                      address: [s.address, s.postcode].filter(Boolean).join(", "),
+                    },
+                  })
+                }
+                style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+              >
+                <Card style={styles.card}>
+                  <View style={styles.siteIcon}>
+                    <Ionicons name="location" size={20} color={colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {s.name || s.site_name || "Site"}
+                    </Text>
+                    <Text style={styles.addr} numberOfLines={2}>
+                      {[s.address, s.postcode].filter(Boolean).join(", ") || "Address on file"}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+                </Card>
+              </Pressable>
             ))
           )}
         </ScrollView>

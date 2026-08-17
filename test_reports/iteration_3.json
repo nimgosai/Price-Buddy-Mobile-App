@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 3 (additive features) — ALL GREEN. Backend: 7/7 new pytest cases pass against live https://utility-contract-hub.emergent.host (GET /api/reports/spend returns full shape {total_annual_spend, by_utility, by_site, contracts} with 0 spend for test account; POST /api/quotes/request returns {quote_request_id} for both electricity and gas; GET /api/support/resources returns {resources:[...]} with 4 articles; GET /api/properties/{bogus}/utilities returns a graceful 4xx). Auth-gating verified on all three (401/403 without token). Previous suite (iteration_2 test_uch_api.py, 9 tests) is untouched and still passing. Frontend (Expo web preview @ 390x844): (1) Get A Quote — /quote/new renders quote-header + horizontal chip row (electricity/gas/water/telecoms all present); tapping gas turns the chip orange (verified computed backgroundColor rgb(242,80,40)); optional quote-message accepts text; quote-submit POSTs to /api/quotes/request and navigates to /quote/success/{uuid} with quote-success-title visible (real quote created, id 814caab8-b383-42ac-a296-2be24e8eb195). (2) Spend Reports — /reports shows reports-header, reports-empty and reports-scan-button for the shared no-spend account; profile-reports-link on Profile tab navigates to /reports. (3) Help Centre — support-tab-chat and support-tab-help segments both render; tapping Help centre lists 4 help-resource-<i> cards from GET /api/support/resources; tapping help-resource-0 opens the detail modal with help-detail-body (389 chars of rendered content); Chat still works (support-input + support-send present). (4) Site Details — Sites tab still shows sites-empty for zero-property account; navigating to /sites/fake-bogus-id renders site-detail-header and, after the API returns an error for the bogus id, shows site-detail-error gracefully (no red screen, no crash). (5) Regression — signout from profile-signout-button lands on /signin. Every one of the 28 /api/... requests captured during the run went to the FULL external base https://utility-contract-hub.emergent.host (single-host verified).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "shadow* style props (theme.ts)",
+        "issue": "Non-blocking web console warning: 'shadow* style props are deprecated. Use boxShadow.' Same finding as iteration_2 — unchanged. Reference: /app/frontend/src/theme/theme.ts (shadow.card used by sites FAB and dashboard scan tile)."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_uch_api.py",
+    "/app/test_reports/pytest/iteration3_results.xml",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "None required for iteration 3 — all 4 new features and the regression pass end-to-end against the live backend.",
+    "Optional cleanup (carried over from iteration_2): migrate shadow.card in /app/frontend/src/theme/theme.ts to boxShadow (or Platform-gate) to silence RN web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "quote/new.tsx cleanly maps to legacy POST /api/quotes/request with {utility_type, message, contract_id|null, property_id|null}, then router.replace to /quote/success/:id — no navigation stack pollution on repeat.",
+    "reports.tsx correctly derives isEmpty from (total===0 && by_utility.length===0) and renders reports-empty with a Scan-a-bill CTA — matches the no-spend fixture returned by the live backend.",
+    "sites/[id].tsx normalizes multiple possible response shapes (contracts | utilities | array; meter_reads | meters | reads) and gracefully falls back to site-detail-error on API failure — verified with bogus id (no crash, no red screen).",
+    "support.tsx segmented control cleanly toggles chat/help. GET /api/support/resources is fired once from a mount-only useEffect (not on tab-switch), which is efficient. Detail modal renders lightweight markdown (## / # / bullets) safely."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/iteration_3.json",
+    "/app/test_reports/pytest/iteration3_results.xml"
+  ],
+  "success_rate": { "backend": "100% (7/7 new + 9/9 regression)", "frontend": "100% (all 5 target flows PASS)" },
+  "seed_data_creation": "Created 2 real quote requests on the shared test account via POST /api/quotes/request (electricity + gas, both with 'TEST_from_pytest'/'TEST_playwright' messages). One additional playwright-driven quote was created (id 814caab8-b383-42ac-a296-2be24e8eb195). Non-destructive; the test account was NOT deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 new features (Get A Quote, Spend Reports, Help Centre, Site Details) are live and working against https://utility-contract-hub.emergent.host. Test account has no contracts/sites by design, so the Renewals card-level 'Get a better deal' (renewals-quote-<i>) and Site Detail 'Get a quote' (site-quote-<i>) entry buttons cannot be exercised — the /quote/new screen was verified directly (which is what the review request instructed). If you need to test those entry buttons, seed a property+contract on the backend first. The shadow* deprecation warning is the only known cosmetic issue.",
+  "rca_of_issue": "N/A — no bugs surfaced during this iteration."
+}

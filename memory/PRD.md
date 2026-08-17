@@ -27,6 +27,13 @@ UK business owner managing utility/energy contracts, renewals and bills on mobil
 - `/scan/review/[id]` — editable OCR field review → POST /api/scans/{id}/confirm.
 - FIXED reported bug: sign out now returns to /signin (auth guard). Verified by testing agent (iteration_2, all pass).
 
+### 2026-08-17 (features round 2)
+- `/sites/[id]` Site Details — GET /api/properties/{id}/utilities; contracts + meter readings; per-contract quick actions: "Get a quote" and "Request a change" (modal → POST /api/change-requests). Sites list cards now tappable.
+- `/reports` Spend Reports — GET /api/reports/spend; total spend headline + simple horizontal bar charts by utility and by site (no chart lib). Entry points: Profile "Spend reports" row + dashboard tile. Empty state.
+- `/quote/new` + `/quote/success/[id]` Get A Quote — utility chip selector + message → POST /api/quotes/request. Launchable from renewal cards (dashboard + renewals) and site-detail contracts with prefilled context.
+- Support Help Centre — segmented Chat | Help centre; Help lists GET /api/support/resources with a markdown-rendered article modal.
+- Verified by testing agent (iteration_3): backend 7/7 new + 9 regression pass; all frontend flows pass.
+
 ## Known backend constraints (not fixable from the app)
 - Bill scan OCR (`POST /api/scans`) currently returns 502 gateway timeout on this deployment (heavy sync OCR > gateway limit). App surfaces a friendly retry message. Scan Review is only reachable after a successful upload.
 - Property creation is broker-gated for customers → Sites/Renewals empty for fresh accounts (expected).

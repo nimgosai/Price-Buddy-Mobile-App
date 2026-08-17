@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -168,6 +169,24 @@ export default function Renewals() {
                       </Text>
                     ) : null}
                   </View>
+                  <Pressable
+                    testID={`renewals-quote-${i}`}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/quote/new",
+                        params: {
+                          utility_type: c.utility_type || "electricity",
+                          contract_id: c.id || c._id || "",
+                          property_id: c.property_id || "",
+                          supplier: c.supplier_name || c.supplier || "",
+                        },
+                      })
+                    }
+                    style={({ pressed }) => [styles.quoteBtn, pressed && { opacity: 0.9 }]}
+                  >
+                    <Ionicons name="pricetag-outline" size={16} color={colors.onBrandPrimary} />
+                    <Text style={styles.quoteText}>Get a better deal</Text>
+                  </Pressable>
                 </Card>
               );
             })
@@ -210,4 +229,14 @@ const styles = StyleSheet.create({
   bottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   date: { fontFamily: font.medium, fontSize: type.base, color: colors.onSurfaceSecondary },
   cost: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  quoteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    height: 44,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brandPrimary,
+  },
+  quoteText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onBrandPrimary },
 });

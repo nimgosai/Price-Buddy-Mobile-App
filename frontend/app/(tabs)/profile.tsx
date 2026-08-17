@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Button, Card } from "@/src/components/ui";
@@ -22,6 +23,7 @@ import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 export default function Profile() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const router = useRouter();
   const { user, signOut, refreshUser } = useAuth();
 
   const [email, setEmail] = useState(!!user?.email_notifications_enabled);
@@ -121,6 +123,21 @@ export default function Profile() {
             <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
             <Text style={styles.emailText} numberOfLines={1}>{user?.email}</Text>
           </View>
+        </Card>
+
+        {/* Quick links */}
+        <Text style={styles.sectionTitle}>Insights</Text>
+        <Card style={styles.settingsCard}>
+          <Pressable testID="profile-reports-link" onPress={() => router.push("/reports")} style={styles.linkRow}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="bar-chart-outline" size={20} color={colors.brandPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Spend reports</Text>
+              <Text style={styles.rowSub}>Your annual utility spend</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
         </Card>
 
         {/* Notifications */}
@@ -283,6 +300,7 @@ const styles = StyleSheet.create({
   },
   settingsCard: { padding: 0, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg },
+  linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg },
   rowIcon: {
     width: 40,
     height: 40,
