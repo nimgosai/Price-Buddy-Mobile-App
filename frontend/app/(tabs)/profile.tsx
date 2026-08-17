@@ -186,6 +186,34 @@ export default function Profile() {
         </Card>
 
         {/* Actions */}
+        <Text style={styles.sectionTitle}>Support & legal</Text>
+        <Card style={styles.settingsCard}>
+          <Pressable testID="profile-help-link" onPress={() => router.push("/help")} style={styles.linkRow}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="help-circle-outline" size={20} color={colors.brandPrimary} />
+            </View>
+            <Text style={styles.linkText}>How it works</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable testID="profile-privacy-link" onPress={() => router.push("/privacy")} style={styles.linkRow}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="lock-closed-outline" size={20} color={colors.brandPrimary} />
+            </View>
+            <Text style={styles.linkText}>Privacy</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable testID="profile-terms-link" onPress={() => router.push("/terms")} style={styles.linkRow}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="document-text-outline" size={20} color={colors.brandPrimary} />
+            </View>
+            <Text style={styles.linkText}>Terms</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
+        </Card>
+
+        {/* Account actions */}
         <View style={styles.actions}>
           <Button
             testID="profile-signout-button"
@@ -312,6 +340,7 @@ const styles = StyleSheet.create({
   settingsCard: { padding: 0, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg },
   linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg },
+  linkText: { flex: 1, fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
   rowIcon: {
     width: 40,
     height: 40,

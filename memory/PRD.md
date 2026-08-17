@@ -50,6 +50,13 @@ All flows mirror the live backend's real contracts. Where the API gives no data 
 - Industry News — `/news` from GET /api/news; linked from Profile.
 - Verified by testing agent (iteration_5): backend 7/7 pass; all flows pass; fixed HIGH bug (quote contact prefill on auth hydration).
 
+### 2026-08-17 (features round 5)
+- Onboarding Carousel `/splash` — 3 slides (Snap a bill / Better rates / Renewals) with paging + dots; sets `uch_seen_splash`. New root flow: unauth first-timers → /splash → /landing; unauth returning → /landing; authed → /dashboard.
+- Marketing Landing `/landing` — logo, gradient hero, feature list, "Create free account" → /signup and "I already have an account" → /signin.
+- Notifications Primer `/onboarding/push-primer` — post-signup opt-in; Enable → PUT /api/me/preferences (push on) → /dashboard; Not now → /dashboard. (Real push delivery needs a native build.)
+- Static Help / Privacy / Terms — `/help`, `/privacy`, `/terms` linked from a Profile "Support & legal" section; Privacy/Terms open pricebuddy.co.uk externally.
+- Verified by testing agent (iteration_6): backend 4/4 pass; all flows pass; 32/32 API calls hit the live host.
+
 ## Known backend constraints (not fixable from the app)
 - Bill scan OCR (`POST /api/scans`) currently returns 502 gateway timeout on this deployment (heavy sync OCR > gateway limit). App surfaces a friendly retry message. Scan Review is only reachable after a successful upload.
 - Property creation is broker-gated for customers → Sites/Renewals empty for fresh accounts (expected).

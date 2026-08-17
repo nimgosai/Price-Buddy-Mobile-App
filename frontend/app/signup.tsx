@@ -78,7 +78,7 @@ export default function SignUp() {
         company_name: companyName.trim(),
         business_type: businessType,
       });
-      router.replace("/dashboard");
+      router.replace("/onboarding/push-primer");
     } catch (e) {
       toast(e instanceof ApiError ? e.message : "Couldn't create your account.", "error");
     } finally {

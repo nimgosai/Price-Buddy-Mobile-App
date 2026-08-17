@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 6 — Backend 4/4 PASS against live https://utility-contract-hub.emergent.host (POST /api/register with unique email → 200 with {token,user, push_notifications_enabled:false default}; PUT /api/me/preferences {push_notifications_enabled:true} → 200 and GET /api/me confirms persistence; PUT preferences with push false also persists; shared account login still returns 200). Frontend E2E (Expo web @ 390x844, base https://bill-verify-7.preview.emergentagent.com) 100% PASS: (1) Root routing — after clearing storage, '/' redirects to /splash; splash-slide-0/1/2 render; splash-next advances slides, on last slide label becomes 'Get started' and navigates to /landing; uch_seen_splash localStorage flag is set to 'true'; re-visiting '/' now lands on /landing (not /splash). (2) Landing — landing-title, landing-feature-0/1/2, landing-create-account, landing-signin all render; landing-signin → /signin (signin-title); landing-create-account → /signup (signup-header). (3) Sign-up flow — completed step1 (unique e2e_signup2_1786968872@example.com / Password123!) → step2 (limited_company chip + signup-company-input) → signup-submit lands on push-primer-title; push-primer-enable fires PUT /api/me/preferences to the LIVE backend and navigates to /dashboard (dashboard-greeting visible). (4) Help/Privacy/Terms from Profile — profile-help-link → help-header + help-section-0..3; profile-privacy-link → privacy-header + privacy-full-link; profile-terms-link → terms-header + terms-full-link; back navigation returns to Profile. (5) Regression — signout returns to /signin (signin-title); existing shared account (e2e_test_1786703401@example.com) logs in and reaches dashboard-greeting; authed '/' redirects to /dashboard. Networking: 32/32 /api/* requests hit https://utility-contract-hub.emergent.host (zero leaks to preview host). Prior HIGH-priority iteration_5 bug (quote contact prefill in /app/frontend/app/quote/new.tsx) is NOT re-verified in this iteration's scope but was NOT touched in the diff, so please check separately.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "shadow* style props (theme.ts)", "issue": "Non-blocking web-only warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Carry-over. Reference: /app/frontend/src/theme/theme.ts" },
+      { "component": "props.pointerEvents (RN-web)", "issue": "Non-blocking third-party warning: 'props.pointerEvents is deprecated. Use style.pointerEvents.' Emitted by react-native-web internals; no functional impact." },
+      { "component": "Animated useNativeDriver on web", "issue": "Non-blocking web-only warning: 'Animated: useNativeDriver is not supported…falling back to JS-based animation.' Web-preview only." }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6.py",
+    "/app/test_reports/pytest/iteration6_results.xml"
+  ],
+  "action_items": [
+    "Nothing new required for iteration 6 scope. (Optional carry-over from iteration_5: quote-contact-name / quote-contact-email prefill fix in /app/frontend/app/quote/new.tsx — add a useEffect that syncs local state when useAuth().user hydrates.)"
+  ],
+  "critical_code_review_comments": [
+    "index.tsx routing logic is correct: waits for auth ready + seenSplash before Redirect; authed → /dashboard, first-time-unauthed → /splash, returning-unauthed → /landing.",
+    "splash.tsx persists uch_seen_splash before router.replace('/landing') on both splash-next (last slide) and splash-skip — matches spec.",
+    "landing.tsx wires create/signin CTAs to /signup and /signin correctly and renders landing-feature-0..2.",
+    "onboarding/push-primer.tsx correctly PUTs {email_notifications_enabled, push_notifications_enabled:true} to /me/preferences and always router.replaces to /dashboard (even on error) so the primer is non-blocking. Good.",
+    "help.tsx / privacy.tsx / terms.tsx use ScreenHeader with correct testIDs, use canGoBack fallback to /profile, and open external pricebuddy.co.uk URLs via Linking.openURL.",
+    "signup.tsx correctly redirects to /onboarding/push-primer after signUp() resolves (not straight to /dashboard) — matches spec.",
+    "All API calls resolve to EXPO_PUBLIC_BACKEND_URL (verified: 32/32 requests went to https://utility-contract-hub.emergent.host/api/*)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration6.py",
+    "/app/test_reports/iteration_6.json",
+    "/app/test_reports/pytest/iteration6_results.xml"
+  ],
+  "success_rate": { "backend": "100% (4/4)", "frontend": "100% (all iteration-6 flows pass end-to-end)" },
+  "seed_data_creation": "Created 1 real user via /register (e2e_signup2_1786968872@example.com / Password123!) on the LIVE backend as part of the sign-up E2E. An additional user was created by pytest for backend fixture. Shared test account was NOT deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 6 (splash + landing + push-primer + help/privacy/terms) is fully working against the live backend on the preview host. All new testIDs match the spec. Only carry-over concern is the iteration_5 quote-contact prefill bug in /app/frontend/app/quote/new.tsx — retest if that file is edited.",
+  "rca_of_issue": "N/A — no new defects found."
+}
