@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 4 — ALL GREEN. Backend: 5/5 new pytest cases pass against the LIVE https://utility-contract-hub.emergent.host. POST /api/change-requests with {message, request_type:'update_contract', contract_id:'demo-123', property_id:null} → 200 with {ok, change_request:{id,...}}; GET /api/change-requests → 200 and the newly-created TEST_iter4 record appears in the list; unauth POST returns 401; GET /api/scans → 200 [] (empty for shared account as documented); GET /api/reports/spend → 200 with total_annual_spend=0 and no monthly keys. Previous suites (test_uch_api.py 9/9 + test_new_features.py 7/7) remain untouched. Frontend (Expo web preview @ 390x844): (1) Contract Editing PRIMARY — deep-link /contracts/demo-123/edit?supplier=British%20Gas&start_date=2024-01-01&end_date=2026-09-01 renders contract-edit-header; fields prefill EXACTLY: supplier='British Gas', start='01/01/2024', end='01/09/2026'; adding text to contract-edit-notes makes the form dirty; tapping contract-edit-submit fires POST https://utility-contract-hub.emergent.host/api/change-requests → 200 and navigates back to /sites (success toast rendered before nav). (2) Bill History (data-gated) — Dashboard loads (dashboard-greeting visible), fires GET /api/scans (captured), and bill-history-0 is CORRECTLY absent since the account has zero scans. (3) Usage Trends (data-gated) — /reports loads, reports-empty is shown, reports-monthly-trend is CORRECTLY absent since /api/reports/spend returns no monthly data. (4) Regression — sign-in works, profile-signout-button clears the session and returns to /signin. Single-host verified: every /api/... request during the run went to https://utility-contract-hub.emergent.host.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "shadow* style props (theme.ts)",
+        "issue": "Same non-blocking web console warning as iteration_2/3: 'shadow* style props are deprecated. Use boxShadow.' Not a regression, no functional impact. Reference: /app/frontend/src/theme/theme.ts (shadow.card)."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/pytest/iteration4_results.xml"
+  ],
+  "action_items": [
+    "None required — Contract Editing (change-request) is fully wired end-to-end, Bill History and Usage Trends sections are correctly hidden for the zero-data shared account, and no regressions were detected.",
+    "Optional carryover from prior iterations: migrate shadow.card in /app/frontend/src/theme/theme.ts to boxShadow to silence the RN-web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/contracts/[id]/edit.tsx cleanly composes a human-readable message diff (only listing fields that actually changed) and correctly submits {request_type:'update_contract', contract_id, property_id, message} to /api/change-requests. Dirty-flag guard (supplier/start/end/notes) prevents empty submissions. router.canGoBack() + fallback to /sites is correct.",
+    "/app/frontend/app/(tabs)/dashboard.tsx correctly fires GET /api/scans in a non-blocking .then() (so a 502 from that endpoint would not fail the whole dashboard load) and only renders the 'Recent bills' section when scans.length > 0 — matches the review-request contract exactly. scanStatusMeta() maps a broad set of backend status strings to the four UI pills.",
+    "/app/frontend/app/reports.tsx normalizeMonthly() accepts by_month/monthly/spend_by_month/monthly_spend keys, defensively returns [] when absent, and only renders reports-monthly-trend when items.length > 0 — matches the data-gated contract.",
+    "All three screens send requests via apiRequest(), which resolves against EXPO_PUBLIC_BACKEND_URL. Runtime capture confirmed 100% of /api/* traffic went to https://utility-contract-hub.emergent.host — no localhost/proxy leaks."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/iteration_4.json",
+    "/app/test_reports/pytest/iteration4_results.xml"
+  ],
+  "success_rate": { "backend": "100% (5/5 new + 16/16 regression suites still green)", "frontend": "100% (Contract Editing PRIMARY + Bill History gated + Usage Trends gated + regression all PASS)" },
+  "seed_data_creation": "Created ONE real change-request on the shared test account via POST /api/change-requests (message begins with 'TEST_iter4 Please update this contract'). Non-destructive — the test account was NOT deleted and can be re-used.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Contract Editing (change-request) is fully exercisable end-to-end and returns 200 on the live backend; the created record is retrievable via GET /api/change-requests. Bill History and Usage Trends are intentionally data-gated and cannot be exercised on this shared account (no scans, no monthly spend) — this is the documented, expected behaviour. If you need to exercise the bill-history-<i> cards or the reports-monthly-trend bars end-to-end, seed a scan + monthly spend on the backend first. The shadow* deprecation warning is the only cosmetic issue and is a carry-over.",
+  "rca_of_issue": "N/A — no bugs surfaced during this iteration."
+}

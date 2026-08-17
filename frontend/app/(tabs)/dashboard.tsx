@@ -57,6 +57,19 @@ function urgencyForDays(days: number | null): string {
   return "low";
 }
 
+function scanStatusMeta(status?: string): { label: string; color: string } {
+  const s = (status || "").toLowerCase();
+  if (["verified", "confirmed", "approved", "completed"].includes(s))
+    return { label: "Verified", color: "#10B981" };
+  if (["rejected", "failed", "error"].includes(s))
+    return { label: "Rejected", color: "#EF4444" };
+  if (["pending", "processing", "uploaded", "extracting"].includes(s))
+    return { label: "Processing", color: "#F59E0B" };
+  if (["awaiting_review", "submitted", "in_review", "reviewing"].includes(s))
+    return { label: "In review", color: "#4A5169" };
+  return { label: s ? s.replace(/_/g, " ") : "Submitted", color: "#4A5169" };
+}
+
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -66,6 +79,7 @@ export default function Dashboard() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [renewals, setRenewals] = useState<any[]>([]);
   const [audits, setAudits] = useState<any[]>([]);
+  const [scans, setScans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +96,9 @@ export default function Dashboard() {
       setOverview(ov);
       setRenewals(Array.isArray(rn?.items) ? rn.items : []);
       setAudits(Array.isArray(au) ? au : []);
+      apiRequest<any[]>("/scans")
+        .then((s) => setScans(Array.isArray(s) ? s : []))
+        .catch(() => {});
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't load your dashboard.");
     }
@@ -207,6 +224,40 @@ export default function Dashboard() {
                   </View>
                 );
               })}
+
+              {scans.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Recent bills</Text>
+                  {scans.slice(0, 4).map((sc: any, i: number) => {
+                    const meta = scanStatusMeta(sc.status);
+                    const when = sc.created_at || sc.uploaded_at || sc.date;
+                    const sid = sc.id || sc._id || sc.scan_id;
+                    return (
+                      <Pressable
+                        key={sid || i}
+                        testID={`bill-history-${i}`}
+                        onPress={() => sid && router.push(`/scan/review/${sid}`)}
+                        style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                      >
+                        <Card style={styles.billCard}>
+                          <View style={styles.billIcon}>
+                            <Ionicons name="receipt-outline" size={20} color={colors.brandPrimary} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.billTitle} numberOfLines={1}>
+                              {sc.supplier_name || sc.supplier || "Scanned bill"}
+                            </Text>
+                            <Text style={styles.billMeta} numberOfLines={1}>
+                              {when ? dayjs(when).format("D MMM YYYY") : "Recently uploaded"}
+                            </Text>
+                          </View>
+                          <StatusPill label={meta.label} color={meta.color} />
+                        </Card>
+                      </Pressable>
+                    );
+                  })}
+                </>
+              )}
 
               {isEmpty ? (
                 <View style={styles.emptyWrap} testID="dashboard-empty">
@@ -478,6 +529,18 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
   renewalDate: { fontFamily: font.medium, fontSize: type.base, color: colors.onSurfaceSecondary },
+
+  billCard: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  billIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  billTitle: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
+  billMeta: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
 
   scanTile: {
     flexDirection: "row",

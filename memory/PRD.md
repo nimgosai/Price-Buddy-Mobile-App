@@ -34,6 +34,15 @@ UK business owner managing utility/energy contracts, renewals and bills on mobil
 - Support Help Centre — segmented Chat | Help centre; Help lists GET /api/support/resources with a markdown-rendered article modal.
 - Verified by testing agent (iteration_3): backend 7/7 new + 9 regression pass; all frontend flows pass.
 
+### 2026-08-17 (features round 3)
+- Contract Editing — `/contracts/[id]/edit` "Request a change" screen (supplier + dates prefilled) → POST /api/change-requests (customer contract edits are broker-gated on the backend, so this is the faithful path). Launched from each contract card on Site Detail.
+- Bill History — dashboard "Recent bills" section from GET /api/scans with status pills; taps open /scan/review/:id. Renders only when scans exist (data-gated).
+- Usage Trends — Reports "Monthly spend" mini bar-trend that reads real monthly data (by_month/monthly) from /api/reports/spend; hidden when the API returns none (no fabricated data).
+- Verified by testing agent (iteration_4): backend 5/5 pass; contract change-request flow passes; data-gated sections correctly hidden for the empty test account.
+
+## Fidelity note
+All flows mirror the live backend's real contracts. Where the API gives no data (no contracts/scans/monthly spend for the test account), the corresponding UI degrades gracefully instead of showing invented data. No speculative features were added (e.g. "Share Savings" was only ever a suggestion and was NOT built).
+
 ## Known backend constraints (not fixable from the app)
 - Bill scan OCR (`POST /api/scans`) currently returns 502 gateway timeout on this deployment (heavy sync OCR > gateway limit). App surfaces a friendly retry message. Scan Review is only reachable after a successful upload.
 - Property creation is broker-gated for customers → Sites/Renewals empty for fresh accounts (expected).

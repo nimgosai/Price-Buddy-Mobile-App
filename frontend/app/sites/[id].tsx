@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,7 +15,6 @@ import dayjs from "dayjs";
 
 import { Button, Card, StatusPill } from "@/src/components/ui";
 import { ScreenHeader, EmptyState } from "@/src/components/screen";
-import { useToast } from "@/src/components/toast";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -39,7 +36,6 @@ function urgencyForDays(days: number | null): string {
 export default function SiteDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const toast = useToast();
   const params = useLocalSearchParams<{ id: string; name?: string; address?: string }>();
 
   const [contracts, setContracts] = useState<any[]>([]);
@@ -47,10 +43,6 @@ export default function SiteDetail() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [changeFor, setChangeFor] = useState<any | null>(null);
-  const [changeText, setChangeText] = useState("");
-  const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -82,29 +74,6 @@ export default function SiteDetail() {
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace("/sites");
-  };
-
-  const sendChange = async () => {
-    if (!changeText.trim() || sending) return;
-    setSending(true);
-    try {
-      await apiRequest("/change-requests", {
-        method: "POST",
-        body: {
-          message: changeText.trim(),
-          request_type: "update_contract",
-          contract_id: changeFor?.id || changeFor?._id || null,
-          property_id: params.id,
-        },
-      });
-      toast("Sent to your account manager.", "success");
-      setChangeFor(null);
-      setChangeText("");
-    } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Couldn't send your request.", "error");
-    } finally {
-      setSending(false);
-    }
   };
 
   const readsForContract = (c: any) => {
@@ -224,10 +193,19 @@ export default function SiteDetail() {
                       </Pressable>
                       <Pressable
                         testID={`site-change-${i}`}
-                        onPress={() => {
-                          setChangeFor(c);
-                          setChangeText("");
-                        }}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/contracts/[id]/edit",
+                            params: {
+                              id: c.id || c._id || "",
+                              property_id: params.id,
+                              supplier: supplier,
+                              utility_type: c.utility_type || "",
+                              start_date: c.start_date || c.contract_start_date || "",
+                              end_date: end || "",
+                            },
+                          })
+                        }
                         style={[styles.actionBtn, styles.actionGhost]}
                       >
                         <Ionicons name="create-outline" size={16} color={colors.heading} />
@@ -241,44 +219,6 @@ export default function SiteDetail() {
           )}
         </ScrollView>
       )}
-
-      {/* Request a change modal */}
-      <Modal
-        visible={!!changeFor}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setChangeFor(null)}
-      >
-        <View style={styles.backdrop}>
-          <View style={styles.sheet} testID="change-request-sheet">
-            <Text style={styles.sheetTitle}>Request a change</Text>
-            <Text style={styles.sheetSub}>
-              {changeFor?.supplier_name || changeFor?.supplier || "This contract"} — tell us what
-              needs updating and we&apos;ll take care of it.
-            </Text>
-            <TextInput
-              testID="change-request-input"
-              value={changeText}
-              onChangeText={setChangeText}
-              placeholder="e.g. update the contact name, correct the end date…"
-              placeholderTextColor={colors.muted}
-              multiline
-              style={styles.sheetInput}
-            />
-            <View style={styles.sheetActions}>
-              <Button label="Cancel" variant="secondary" onPress={() => setChangeFor(null)} style={{ flex: 1 }} />
-              <Button
-                testID="change-request-send"
-                label="Send"
-                onPress={sendChange}
-                loading={sending}
-                disabled={!changeText.trim()}
-                style={{ flex: 1 }}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

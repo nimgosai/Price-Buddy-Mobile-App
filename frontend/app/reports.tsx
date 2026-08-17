@@ -38,6 +38,41 @@ function valueOf(it: any): number {
   return Number(it.spend ?? it.total ?? it.amount ?? it.annual_cost ?? it.total_spend ?? 0);
 }
 
+function monthLabel(raw: any): string {
+  const s = `${raw ?? ""}`;
+  const m = s.match(/^(\d{4})-(\d{2})/);
+  if (m) {
+    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return names[Math.max(0, Math.min(11, parseInt(m[2], 10) - 1))];
+  }
+  return s.slice(0, 3);
+}
+function normalizeMonthly(d: any): { label: string; value: number }[] {
+  const arr = d?.by_month || d?.monthly || d?.spend_by_month || d?.monthly_spend || [];
+  if (!Array.isArray(arr)) return [];
+  return arr.map((it: any) => ({
+    label: monthLabel(it.month ?? it.label ?? it.period ?? it.name),
+    value: Number(it.spend ?? it.total ?? it.amount ?? it.value ?? 0),
+  }));
+}
+
+function MonthlyTrend({ items }: { items: { label: string; value: number }[] }) {
+  const max = Math.max(1, ...items.map((i) => i.value));
+  return (
+    <View style={styles.trendRow} testID="reports-monthly-trend">
+      {items.map((it, i) => {
+        const h = Math.max(4, Math.round((it.value / max) * 96));
+        return (
+          <View key={i} style={styles.trendCol}>
+            <View style={[styles.trendBar, { height: h }]} />
+            <Text style={styles.trendLabel}>{it.label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function BarGroup({ items, testID }: { items: any[]; testID: string }) {
   const max = Math.max(1, ...items.map(valueOf));
   return (
@@ -104,6 +139,7 @@ export default function Reports() {
   const total = data?.total_annual_spend ?? 0;
   const byUtility = data?.by_utility ?? [];
   const bySite = data?.by_site ?? [];
+  const monthly = normalizeMonthly(data);
   const isEmpty = !loading && !error && total === 0 && byUtility.length === 0;
 
   const goBack = () => {
@@ -150,6 +186,15 @@ export default function Reports() {
                 </Text>
               </Card>
 
+              {monthly.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Monthly spend</Text>
+                  <Card>
+                    <MonthlyTrend items={monthly} />
+                  </Card>
+                </>
+              )}
+
               {byUtility.length > 0 && (
                 <>
                   <Text style={styles.sectionTitle}>By utility</Text>
@@ -195,4 +240,9 @@ const styles = StyleSheet.create({
   barValue: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
   barTrack: { height: 10, borderRadius: 999, backgroundColor: colors.surfaceTertiary, overflow: "hidden" },
   barFill: { height: 10, borderRadius: 999 },
+
+  trendRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", height: 128 },
+  trendCol: { flex: 1, alignItems: "center", justifyContent: "flex-end", gap: spacing.xs },
+  trendBar: { width: 10, borderRadius: 999, backgroundColor: colors.brandPrimary },
+  trendLabel: { fontFamily: font.regular, fontSize: 10, color: colors.muted },
 });
