@@ -17,9 +17,9 @@ export default function ResetPassword() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
-  const params = useLocalSearchParams<{ token?: string }>();
+  const params = useLocalSearchParams<{ token?: string; code?: string }>();
 
-  const [token, setToken] = useState(params.token || "");
+  const [token, setToken] = useState(params.token || params.code || "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);

@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 7 — Backend 7/7 PASS against LIVE https://utility-contract-hub.emergent.host: POST /api/auth/confirm-device {token:'bad'} → 400 with 'invalid' detail; GET /api/share/badtoken → 404 with graceful invalid message (public — no 401); POST /api/auth/reset-password {token:'bad', new_password:'X'} → 400 graceful; POST /api/auth/forgot-password → 200 for known AND unknown emails (no user enumeration); shared login regression → 200. Frontend E2E on https://bill-verify-7.preview.emergentagent.com @ 390x844: (1) Partners — landing-partners-link on /landing routes to /partners; partners-title + partners-benefit-0..3 + partners-cta all render (external URL wired to https://pricebuddy.co.uk/partners via Linking.openURL). (2) Confirm Device — /confirm-device shows confirm-device-header/input/submit; manual submit of bogus code fires POST /api/auth/confirm-device to LIVE host and surfaces toast 'This confirmation link is invalid.'; deep-link /confirm-device?token=bad auto-submits exactly ONCE (autoTried ref) and shows the same graceful toast without crash or loop. (3) Shared Contract View — /share/badtoken loads while signed OUT (public), fires GET /api/share/badtoken to LIVE, renders share-error card with 'This share link is invalid or has expired.', and both share-create-account (→ /signup verified) and share-signin CTAs render. (4) Deep-link Reset — /reset-password?code=ABC123XYZ prefills reset-token-input with 'ABC123XYZ' AND /reset-password?token=TOKEN999 also prefills correctly (dual accept); short password + mismatch produce inline errors ('Use at least 8 characters' + \"Passwords don't match\") and do NOT hit the backend; valid form + bogus token fires POST /api/auth/reset-password to LIVE (400 graceful). Existing /forgot-password → forgot-submit → POST /api/auth/forgot-password (200) and forgot-sent view renders. (5) Regression — shared account login → dashboard-greeting; authed root '/' → /dashboard; 0/10 /api leaks (100% of /api calls went to https://utility-contract-hub.emergent.host). No new deprecated-package or SafeAreaView issues detected in the 4 new files.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "shadow* style props (theme.ts)", "issue": "Non-blocking web-only warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Carry-over from prior iterations. Reference: /app/frontend/src/theme/theme.ts" },
+      { "component": "props.pointerEvents (RN-web)", "issue": "Non-blocking third-party warning: 'props.pointerEvents is deprecated. Use style.pointerEvents.' Emitted by react-native-web internals; no functional impact." },
+      { "component": "Animated useNativeDriver on web", "issue": "Non-blocking web-only warning: 'Animated: useNativeDriver is not supported…falling back to JS-based animation.' Web-preview only." }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration7.py",
+    "/app/test_reports/pytest/iteration7_results.xml"
+  ],
+  "action_items": [
+    "Nothing new required for iteration 7 scope. (Optional carry-over from iteration_5: quote-contact-name / quote-contact-email prefill fix in /app/frontend/app/quote/new.tsx — not in this iteration's diff.)"
+  ],
+  "critical_code_review_comments": [
+    "partners.tsx correctly gates back navigation via router.canGoBack() ? back : replace('/landing') — safe when deep-linked. LinearGradient hero + Linking.openURL('https://pricebuddy.co.uk/partners') wired correctly.",
+    "confirm-device.tsx: autoTried useRef flag is correctly used inside useEffect to guarantee single auto-submit — no infinite loop when ?token=bad returns 4xx. Uses auth:false on apiRequest, plus completeSession(token) on success to hydrate /me — sound.",
+    "share/[token].tsx: correct auth:false public fetch of /share/:token; render branches loading/error/success; error card + both CTAs (share-create-account, share-signin) route to /signup and /signin via router.replace. Public access verified while signed out.",
+    "reset-password.tsx: accepts BOTH ?token= and ?code= in useLocalSearchParams — matches spec deep-link 'code' key. Client validation (length>=8, confirm===password) runs BEFORE backend POST — verified backend NOT hit on inline-error path.",
+    "auth-context.tsx: new completeSession(token) properly writes TOKEN_KEY via storage.secureSet then loadMe() to hydrate user — used by confirm-device success path.",
+    "Networking: all /api calls in the iteration 7 flows resolved to EXPO_PUBLIC_BACKEND_URL (https://utility-contract-hub.emergent.host). 0 leaks to preview host across 10 monitored calls."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration7.py",
+    "/app/test_reports/iteration_7.json",
+    "/app/test_reports/pytest/iteration7_results.xml"
+  ],
+  "success_rate": { "backend": "100% (7/7)", "frontend": "100% (all iteration-7 flows pass)" },
+  "seed_data_creation": "None. Shared test account (e2e_test_1786703401@example.com) was used read-only and NOT deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 7 additive scope (Partners, Confirm-Device incl. deep-link auto-submit, public Shared Contract View, Reset-Password deep-link prefill accepting ?code= or ?token=) is fully working end-to-end against the live backend on the preview host. Backend /api/auth/confirm-device, /api/share/:token, /api/auth/reset-password all return 4xx graceful; /api/auth/forgot-password always returns 200 (no enumeration). Valid confirm-device/share tokens are broker/email-gated so success paths remain untested by design. No leaks: 100% of /api calls hit https://utility-contract-hub.emergent.host.",
+  "rca_of_issue": "N/A — no new defects found."
+}

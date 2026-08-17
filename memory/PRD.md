@@ -57,6 +57,16 @@ All flows mirror the live backend's real contracts. Where the API gives no data 
 - Static Help / Privacy / Terms — `/help`, `/privacy`, `/terms` linked from a Profile "Support & legal" section; Privacy/Terms open pricebuddy.co.uk externally.
 - Verified by testing agent (iteration_6): backend 4/4 pass; all flows pass; 32/32 API calls hit the live host.
 
+### 2026-08-17 (features round 6)
+- Partners `/partners` — accountant-firm marketing page; linked from Landing.
+- Confirm Device `/confirm-device` — POST /api/auth/confirm-device {token}; manual entry + deep-link auto-submit (once); success uses AuthContext.completeSession(token) → /dashboard.
+- Shared Contract View `/share/[token]` — PUBLIC (no auth) GET /api/share/{token}; renders a contract summary or a graceful invalid state with sign-up/sign-in CTAs.
+- Deep-Link Reset — `/reset-password` and `/confirm-device` accept `token` or `code` query params (app scheme `frontend`), so emailed links open the right screen pre-filled.
+- Verified by testing agent (iteration_7): backend 7/7 pass; all flows pass; 0 API leaks.
+
+## Status
+All customer-facing screens from the original spec are now implemented (public/pre-auth, authed customer, and static/legal). Intentionally excluded per brief: all admin/broker and accountant-portal screens.
+
 ## Known backend constraints (not fixable from the app)
 - Bill scan OCR (`POST /api/scans`) currently returns 502 gateway timeout on this deployment (heavy sync OCR > gateway limit). App surfaces a friendly retry message. Scan Review is only reachable after a successful upload.
 - Property creation is broker-gated for customers → Sites/Renewals empty for fresh accounts (expected).

@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -69,6 +69,9 @@ export default function Landing() {
           variant="secondary"
           onPress={() => router.push("/signin")}
         />
+        <Pressable testID="landing-partners-link" onPress={() => router.push("/partners")} hitSlop={8} style={styles.partnersLink}>
+          <Text style={styles.partnersText}>Are you an accountant? See partner options</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -94,6 +97,8 @@ const styles = StyleSheet.create({
   },
   featureTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
   featureBody: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
+  partnersLink: { alignSelf: "center", paddingVertical: spacing.xs },
+  partnersText: { fontFamily: font.semibold, fontSize: type.base, color: colors.brandPrimary },
   cta: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,

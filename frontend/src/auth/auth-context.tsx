@@ -28,6 +28,7 @@ type AuthState = {
   }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  completeSession: (token: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -107,8 +108,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loadMe();
   }, [loadMe]);
 
+  const completeSession = useCallback(
+    async (token: string) => {
+      await storage.secureSet(TOKEN_KEY, token);
+      await loadMe();
+    },
+    [loadMe],
+  );
+
   return (
-    <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut, refreshUser }}>
+    <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut, refreshUser, completeSession }}>
       {children}
     </AuthContext.Provider>
   );
