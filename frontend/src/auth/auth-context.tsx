@@ -29,6 +29,8 @@ type AuthState = {
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   completeSession: (token: string) => Promise<void>;
+  unlocked: boolean;
+  markUnlocked: () => void;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -36,6 +38,8 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const markUnlocked = useCallback(() => setUnlocked(true), []);
 
   const loadMe = useCallback(async () => {
     const me = await apiRequest<User>("/me", { auth: true });
@@ -117,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut, refreshUser, completeSession }}>
+    <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut, refreshUser, completeSession, unlocked, markUnlocked }}>
       {children}
     </AuthContext.Provider>
   );

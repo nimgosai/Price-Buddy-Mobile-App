@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 8 — Backend 5/5 PASS against LIVE https://utility-contract-hub.emergent.host: GET /api/dashboard/overview (auth) returns 200 with all_contracts=[] + total_contracts=0 for the shared test account; unauth returns 401/403. GET /api/onboarding/badtoken returns 404 (PUBLIC — no 401), confirmed for two different bogus tokens. Login regression 200 OK returning {token,user}. Frontend E2E on https://bill-verify-7.preview.emergentagent.com @ 390x844: (1) Contracts Overview — /contracts loads after login, renders contracts-header + contracts-empty with 'Scan a bill' CTA; /dashboard/overview called 6× during flow. (2) Entry points — profile-contracts-link on Profile navigates to /contracts and renders the empty overview correctly. dashboard-see-contracts link is only rendered inside the non-empty branch of dashboard.tsx (line 287, gated by !isEmpty), so it is NOT reachable for the empty-state test account by design — matches spec ('not testable without data'). (3) Biometric toggle — Profile shows toggle-biometric switch OFF; tapping it triggers hasHardware/isEnrolled false on web-preview, an info toast reading 'No Face ID / fingerprint is set up on this device.' is shown, switch STAYS OFF, no crash; storage flag uch_biometric_enabled remains unset. (4) Welcome Back — /welcome-back mounts without crash. While signed OUT it auto-proceeds (Platform.OS==='web' branch calls proceed()) → markUnlocked+push /dashboard → auth guard redirects to /signin. While signed IN it auto-proceeds directly to /dashboard (verified redirected_to_dashboard=true). welcome-signout button wired to signOut()+router.replace('/signin'). (5) /biometric/unlock — biometric-title renders, and status resolves to 'ok' on web so biometric-continue button appears; no crash. (6) Onboarding — /onboarding/badtoken (PUBLIC, signed OUT) fetches GET /api/onboarding/badtoken → 404 and renders onboarding-error card with 'This invitation link is invalid or has expired.' message. CRITICAL precedence check PASSED: /onboarding/push-primer resolves to push-primer-title and does NOT render onboarding-error (static route wins over dynamic [token]). (7) Regression — shared login → dashboard-greeting; signout → /signin. Networking: 0/26 /api leaks (100% of calls hit https://utility-contract-hub.emergent.host).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "shadow* style props (theme.ts)", "issue": "Non-blocking web-only warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Carry-over from prior iterations. Reference: /app/frontend/src/theme/theme.ts" }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration8.py",
+    "/app/test_reports/pytest/iteration8_results.xml"
+  ],
+  "action_items": [
+    "No fixes required for iteration 8 scope. dashboard-see-contracts entry point is only rendered when totalContracts>0 — this matches the review request note 'not testable without data' and is intentional per dashboard.tsx:287."
+  ],
+  "critical_code_review_comments": [
+    "contracts/index.tsx: correctly falls back res.all_contracts || res.contracts || [] and gracefully handles ApiError; empty branch renders EmptyState + Scan-a-bill CTA; refresh + focus reload wired via useFocusEffect. Uses colors.urgency map safely.",
+    "welcome-back.tsx: Platform.OS==='web' short-circuits to proceed() before touching LocalAuthentication — safe on web-preview. useEffect(() => { unlock() }) runs once on mount. markUnlocked() + router.replace('/dashboard') is the correct handoff pattern. welcome-signout awaits signOut() before router.replace('/signin').",
+    "biometric/[mode].tsx: Same web guard pattern; status starts 'idle' and resolves to 'ok' on web so biometric-continue is shown. router.canGoBack() fallback to /dashboard is defensive.",
+    "onboarding/[token].tsx: apiRequest called with {auth:false} — no Bearer token on public route; error branch catches ApiError; upload uses FormData (correct for RN/web). Existence of static /onboarding/push-primer.tsx alongside /onboarding/[token].tsx correctly gives Expo Router static-route precedence.",
+    "profile.tsx toggleBiometric: guards on hasHardwareAsync && isEnrolledAsync; when false, shows info toast and returns WITHOUT flipping state or writing storage — matches spec. When true, sets state AND persists via storage.setItem.",
+    "auth-context.tsx: added `unlocked` + `markUnlocked` state (default false, set true on welcome-back proceed); index.tsx correctly gates on flags.biometric && !unlocked → /welcome-back.",
+    "Networking: 0/26 /api calls leaked to preview host; all resolved to EXPO_PUBLIC_BACKEND_URL (https://utility-contract-hub.emergent.host)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration8.py",
+    "/app/test_reports/iteration_8.json",
+    "/app/test_reports/pytest/iteration8_results.xml"
+  ],
+  "success_rate": { "backend": "100% (5/5)", "frontend": "100% (all iteration-8 flows pass; dashboard-see-contracts is empty-state-gated by design)" },
+  "seed_data_creation": "None. Shared test account (e2e_test_1786703401@example.com) used read-only and NOT deleted. Biometric flag was NOT persisted (web decline path returns before storage write).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 8 additive scope (Contracts Overview via /dashboard/overview all_contracts, Biometric toggle w/ graceful web decline, Welcome-Back auto-proceed on web, /biometric/[mode] stub, PUBLIC Client Onboarding with static push-primer precedence) is fully working end-to-end on the preview host against the live backend. Test account has 0 contracts so contract-card-* and /contracts/[id]/edit navigation cannot be exercised (per spec). dashboard-see-contracts only renders when contracts exist; profile-contracts-link + direct /contracts nav are the reliable entry points. Biometric flag is NOT persisted on web because hasHardware/isEnrolled return false — future runs on this account start with biometric OFF (no lock-out risk). No leaks: 100% /api calls to https://utility-contract-hub.emergent.host.",
+  "rca_of_issue": "N/A — no defects found."
+}

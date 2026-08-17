@@ -7,16 +7,20 @@ import { storage } from "@/src/utils/storage";
 import { colors } from "@/src/theme/theme";
 
 export const SEEN_SPLASH_KEY = "uch_seen_splash";
+export const BIOMETRIC_KEY = "uch_biometric_enabled";
 
 export default function Index() {
-  const { user, ready } = useAuth();
-  const [seenSplash, setSeenSplash] = useState<boolean | null>(null);
+  const { user, ready, unlocked } = useAuth();
+  const [flags, setFlags] = useState<{ splash: boolean; biometric: boolean } | null>(null);
 
   useEffect(() => {
-    storage.getItem<boolean>(SEEN_SPLASH_KEY, false).then((v) => setSeenSplash(!!v));
+    Promise.all([
+      storage.getItem<boolean>(SEEN_SPLASH_KEY, false),
+      storage.getItem<boolean>(BIOMETRIC_KEY, false),
+    ]).then(([splash, biometric]) => setFlags({ splash: !!splash, biometric: !!biometric }));
   }, []);
 
-  if (!ready || seenSplash === null) {
+  if (!ready || flags === null) {
     return (
       <View style={styles.container} testID="boot-loading">
         <ActivityIndicator color={colors.brandPrimary} size="large" />
@@ -24,8 +28,11 @@ export default function Index() {
     );
   }
 
-  if (user) return <Redirect href="/dashboard" />;
-  if (!seenSplash) return <Redirect href="/splash" />;
+  if (user) {
+    if (flags.biometric && !unlocked) return <Redirect href="/welcome-back" />;
+    return <Redirect href="/dashboard" />;
+  }
+  if (!flags.splash) return <Redirect href="/splash" />;
   return <Redirect href="/landing" />;
 }
 

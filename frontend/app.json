@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.emergent.billverify.dyo6wt",
       "infoPlist": {
         "NSCameraUsageDescription": "Snap a photo of your utility bill",
-        "NSPhotoLibraryUsageDescription": "Upload a bill from your photos"
+        "NSPhotoLibraryUsageDescription": "Upload a bill from your photos",
+        "NSFaceIDUsageDescription": "Unlock the app with Face ID"
       }
     },
     "android": {
@@ -45,6 +46,12 @@
         "expo-image-picker",
         {
           "photosPermission": "Upload a bill from your photos"
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Unlock the app with Face ID"
         }
       ],
       [

@@ -282,7 +282,12 @@ export default function Dashboard() {
                 </View>
               ) : (
                 <>
-                  <Text style={styles.sectionTitle}>Utility health</Text>
+                  <View style={styles.sectionRow}>
+                    <Text style={styles.sectionTitle}>Utility health</Text>
+                    <Pressable testID="dashboard-see-contracts" onPress={() => router.push("/contracts")}>
+                      <Text style={styles.sectionLink}>All contracts</Text>
+                    </Pressable>
+                  </View>
                   <Card testID="utility-health-card">
                     <View style={styles.healthTop}>
                       <View>

@@ -67,6 +67,13 @@ All flows mirror the live backend's real contracts. Where the API gives no data 
 ## Status
 All customer-facing screens from the original spec are now implemented (public/pre-auth, authed customer, and static/legal). Intentionally excluded per brief: all admin/broker and accountant-portal screens.
 
+### 2026-08-17 (features round 7)
+- Welcome Back `/welcome-back` — returning-user greeting + biometric unlock; only gates entry when the biometric flag is on.
+- Biometric Unlock — real Face ID / fingerprint via expo-local-authentication; opt-in toggle in Profile (checks hardware+enrollment, graceful when unavailable); `/biometric/[mode]` prompt stub. Root gating: authed + biometric enabled + not-yet-unlocked → /welcome-back.
+- Client Onboarding `/onboarding/[token]` — PUBLIC 3-option screen (upload a bill / forward by email / request a callback) via /api/onboarding/{token} (+ upload-bill, request-callback); graceful invalid-token state; static /onboarding/push-primer keeps precedence.
+- Contracts Overview `/contracts` — all contracts from /dashboard/overview all_contracts (customer GET /contracts is 405); linked from dashboard + profile; cards open the change-request edit screen.
+- Verified by testing agent (iteration_8): backend 5/5 pass; all flows pass; 0 API leaks; no bugs.
+
 ## Known backend constraints (not fixable from the app)
 - Bill scan OCR (`POST /api/scans`) currently returns 502 gateway timeout on this deployment (heavy sync OCR > gateway limit). App surfaces a friendly retry message. Scan Review is only reachable after a successful upload.
 - Property creation is broker-gated for customers → Sites/Renewals empty for fresh accounts (expected).

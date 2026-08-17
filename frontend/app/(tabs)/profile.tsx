@@ -12,6 +12,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as LocalAuthentication from "expo-local-authentication";
+
+import { storage } from "@/src/utils/storage";
 
 import { Button, Card } from "@/src/components/ui";
 import { ScreenHeader } from "@/src/components/screen";
@@ -29,6 +32,7 @@ export default function Profile() {
   const [email, setEmail] = useState(!!user?.email_notifications_enabled);
   const [push, setPush] = useState(!!user?.push_notifications_enabled);
   const [alertsOptOut, setAlertsOptOut] = useState(false);
+  const [biometricOn, setBiometricOn] = useState(false);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -47,7 +51,20 @@ export default function Profile() {
 
   useEffect(() => {
     loadAlerts();
+    storage.getItem<boolean>("uch_biometric_enabled", false).then((v) => setBiometricOn(!!v));
   }, [loadAlerts]);
+
+  const toggleBiometric = async (v: boolean) => {
+    if (v) {
+      const ok = (await LocalAuthentication.hasHardwareAsync()) && (await LocalAuthentication.isEnrolledAsync());
+      if (!ok) {
+        toast("No Face ID / fingerprint is set up on this device.", "info");
+        return;
+      }
+    }
+    setBiometricOn(v);
+    await storage.setItem("uch_biometric_enabled", v);
+  };
 
   useEffect(() => {
     setEmail(!!user?.email_notifications_enabled);
@@ -149,6 +166,17 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.muted} />
           </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable testID="profile-contracts-link" onPress={() => router.push("/contracts")} style={styles.linkRow}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="documents-outline" size={20} color={colors.brandPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>All contracts</Text>
+              <Text style={styles.rowSub}>Browse every contract we track</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
         </Card>
 
         {/* Notifications */}
@@ -182,6 +210,15 @@ export default function Profile() {
             value={!alertsOptOut}
             disabled={loadingAlerts || savingKey === "alerts"}
             onValueChange={(v) => saveAlerts(!v)}
+          />
+          <View style={styles.rowDivider} />
+          <Row
+            testID="toggle-biometric"
+            icon="finger-print-outline"
+            title="Unlock with Face ID / fingerprint"
+            subtitle="Require biometrics when opening the app"
+            value={biometricOn}
+            onValueChange={toggleBiometric}
           />
         </Card>
 
