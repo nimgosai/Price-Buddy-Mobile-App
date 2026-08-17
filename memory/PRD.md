@@ -43,6 +43,13 @@ UK business owner managing utility/energy contracts, renewals and bills on mobil
 ## Fidelity note
 All flows mirror the live backend's real contracts. Where the API gives no data (no contracts/scans/monthly spend for the test account), the corresponding UI degrades gracefully instead of showing invented data. No speculative features were added (e.g. "Share Savings" was only ever a suggestion and was NOT built).
 
+### 2026-08-17 (features round 4)
+- Password Reset — `/forgot-password` (POST /api/auth/forgot-password) + `/reset-password` (POST /api/auth/reset-password {token, new_password}); sign-in "Forgot password?" now links here.
+- Self Sign-Up — `/signup` 2-step wizard (identity → business type + name) → POST /api/register → authenticated to /dashboard; sign-in "Create an account" link added; `signUp` added to AuthContext.
+- Full Quote Wizard — `/quote/new` rebuilt as the multi-utility wizard (electric/gas/water/telecoms) → POST /api/quotes/multi with energy_meters / water_supplier / telecoms_supplier and contact+address → /quote/success/:id. Renewal/site "get a quote" entry points preselect the utility.
+- Industry News — `/news` from GET /api/news; linked from Profile.
+- Verified by testing agent (iteration_5): backend 7/7 pass; all flows pass; fixed HIGH bug (quote contact prefill on auth hydration).
+
 ## Known backend constraints (not fixable from the app)
 - Bill scan OCR (`POST /api/scans`) currently returns 502 gateway timeout on this deployment (heavy sync OCR > gateway limit). App surfaces a friendly retry message. Scan Review is only reachable after a successful upload.
 - Property creation is broker-gated for customers → Sites/Renewals empty for fresh accounts (expected).

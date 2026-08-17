@@ -138,6 +138,17 @@ export default function Profile() {
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.muted} />
           </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable testID="profile-news-link" onPress={() => router.push("/news")} style={styles.linkRow}>
+            <View style={styles.rowIcon}>
+              <Ionicons name="newspaper-outline" size={20} color={colors.brandPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Industry news</Text>
+              <Text style={styles.rowSub}>Latest UK energy updates</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
         </Card>
 
         {/* Notifications */}

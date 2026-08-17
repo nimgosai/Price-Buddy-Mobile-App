@@ -116,15 +116,24 @@ export default function SignIn() {
 
           <Pressable
             testID="signin-forgot-link"
-            onPress={() =>
-              toast("Password reset is available on the web for now.", "info")
-            }
+            onPress={() => router.push("/forgot-password")}
             hitSlop={8}
             style={styles.forgotWrap}
           >
             <Text style={styles.forgotText}>Forgot password?</Text>
           </Pressable>
         </View>
+
+        <Pressable
+          testID="signin-signup-link"
+          onPress={() => router.push("/signup")}
+          hitSlop={8}
+          style={styles.signupWrap}
+        >
+          <Text style={styles.signupText}>
+            New here? <Text style={styles.signupTextBold}>Create an account</Text>
+          </Text>
+        </Pressable>
       </KeyboardAwareScrollView>
 
       <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
@@ -170,6 +179,9 @@ const styles = StyleSheet.create({
     fontSize: type.base,
     color: colors.brandSecondary,
   },
+  signupWrap: { alignSelf: "center", marginTop: spacing.xl, paddingVertical: spacing.sm },
+  signupText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
+  signupTextBold: { fontFamily: font.semibold, color: colors.brandPrimary },
   footer: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,

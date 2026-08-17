@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 5 — Backend 7/7 PASS against live https://utility-contract-hub.emergent.host (forgot-password 200 for known+unknown emails, reset-password with bogus token returns 4xx gracefully, /register creates account + returns {token,user}, /me authenticated echoes new email, /quotes/multi with electric+water returns {quote_request_id}, /news returns {news:[...]}). Frontend (Expo web preview @ 390x844, base https://bill-verify-7.preview.emergentagent.com): (1) Forgot password: signin-forgot-link → forgot-header; invalid email inline error; submit valid → forgot-sent; forgot-have-code → reset-header; forgot-back-signin verified in code. (2) Reset password: short pw + mismatched confirm show inline errors (both); submitting reset-submit with token='bogus' stays on page and shows graceful toast (no crash). (3) Sign-Up wizard: signin-signup-link → signup-header 'Step 1 of 2'; empty step1 shows inline validation; unique email e2e_signup_1786967441@example.com + Password123!, Step 2 chips (limited_company/sole_trader/partnership/charity) tap-selectable, signup-submit → /dashboard authenticated. (4) Quote wizard: quote-header 'Step 1 of 2', empty selection blocked ('Pick at least one utility'), Electricity+Water tiles toggle orange, water reveals quote-water-supplier and blocks Next until filled, meter fields optional, Step 2 loads, submit → quote-success-title (real quote_request_id created). (5) Industry news: profile-news-link → news-header, news-card-0 rendered (live public feed). (6) Regression: bottom tabs work, signout returns to signin. Networking: 15/15 /api/* requests during the E2E run went to https://utility-contract-hub.emergent.host (zero leaks). ONE BUG FOUND: quote/new does NOT prefill quote-contact-name and quote-contact-email from the authenticated user even when useAuth().user is fully hydrated (verified with the existing test account after signing in; both fields were empty). RCA: /app/frontend/app/quote/new.tsx lines 50-51 seed local state via useState(user?.full_name…) only ONCE at mount; there is no useEffect syncing when the AuthProvider finishes hydrating, so the fields stay blank. Spec explicitly requires prefill.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "app/quote/new.tsx",
+        "issue": "quote-contact-name and quote-contact-email are NOT prefilled from the authenticated user (spec says they must be). useState initializer captures user before AuthProvider hydration completes and never re-syncs.",
+        "testID": "quote-contact-name, quote-contact-email",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "shadow* style props (theme.ts)", "issue": "Non-blocking web console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Carry-over from prior iterations. Reference: /app/frontend/src/theme/theme.ts" },
+      { "component": "props.pointerEvents (RN-web)", "issue": "Non-blocking warning: 'props.pointerEvents is deprecated. Use style.pointerEvents.' Emitted by third-party (likely react-native-keyboard-controller/expo). No functional impact on mobile." },
+      { "component": "Animated useNativeDriver on web", "issue": "Non-blocking warning: 'Animated: `useNativeDriver` is not supported…falling back to JS-based animation.' Web-preview only." }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration5.py",
+    "/app/test_reports/pytest/iteration5_results.xml"
+  ],
+  "action_items": [
+    "FIX (HIGH): /app/frontend/app/quote/new.tsx — add a useEffect that syncs local name/email state whenever `user` changes from AuthProvider, so quote-contact-name/quote-contact-email prefill correctly after auth hydration. Example: useEffect(() => { if (!name && (user?.full_name || user?.company_name)) setName(user.full_name || user.company_name || ''); if (!email && user?.email) setEmail(user.email); }, [user]);",
+    "OPTIONAL carry-over: migrate shadow.card in /app/frontend/src/theme/theme.ts to boxShadow to silence the RN-web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "forgot-password.tsx correctly handles the 'always ok' contract, shows a graceful confirmation view, and offers both 'I have a reset code' and 'Back to sign in' CTAs — matches spec.",
+    "reset-password.tsx correctly sends {token, new_password} (not `password`) and shows an error toast (not a false success) on bogus token — matches spec.",
+    "signup.tsx correctly uses signUp() from AuthProvider which POSTs to /register, stores the token, and hydrates via /me before pushing to /dashboard — matches spec.",
+    "quote/new.tsx correctly POSTs {selected_services, contact, address, energy_meters?, water_supplier?, telecoms_supplier?} to /quotes/multi and navigates to /quote/success/:id — matches spec EXCEPT for the prefill bug noted above.",
+    "news.tsx correctly calls GET /news with auth:false, renders news-card-<i>, and opens Linking.openURL on tap — matches spec."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration5.py",
+    "/app/test_reports/iteration_5.json",
+    "/app/test_reports/pytest/iteration5_results.xml"
+  ],
+  "success_rate": { "backend": "100% (7/7)", "frontend": "94% (all flows work end-to-end; 1 spec violation: quote contact prefill)" },
+  "seed_data_creation": "Created 1 real user via /register (e2e_signup_1786967441@example.com / Password123!) and 1 real quote_request via /quotes/multi on the SHARED existing account (e2e_test_1786703401). Shared account NOT deleted.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All four new screens (forgot-password, reset-password, signup, quote/new, news) are wired to the live backend correctly. The only defect is that quote-contact-name and quote-contact-email fail to prefill from useAuth().user because /app/frontend/app/quote/new.tsx uses useState lazy initializers without a follow-up useEffect. Fix by syncing on user change. Backend tests are idempotent and safe to re-run.",
+  "rca_of_issue": "Bug: quote contact fields not prefilled. Reproduction: sign in as any existing user with a full_name+email, navigate to /quote/new, complete step 1, land on step 2 — quote-contact-name and quote-contact-email are BLANK. Root cause: /app/frontend/app/quote/new.tsx lines 50-51 use `useState(user?.full_name || user?.company_name || '')` and `useState(user?.email || '')`, which only capture the value ONCE at first render. AuthProvider hydrates asynchronously from SecureStore, so on the first render the `user` context can be null and the local state is locked to empty. Mitigation: add `useEffect(() => { if (user) { setName(prev => prev || user.full_name || user.company_name || ''); setEmail(prev => prev || user.email || ''); } }, [user]);`."
+}

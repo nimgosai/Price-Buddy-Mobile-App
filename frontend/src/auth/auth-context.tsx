@@ -19,6 +19,13 @@ type AuthState = {
   user: User | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (payload: {
+    email: string;
+    password: string;
+    full_name?: string;
+    company_name?: string;
+    business_type?: string;
+  }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 };
@@ -68,6 +75,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [loadMe],
   );
 
+  const signUp = useCallback(
+    async (payload: {
+      email: string;
+      password: string;
+      full_name?: string;
+      company_name?: string;
+      business_type?: string;
+    }) => {
+      const data = await apiRequest<{ token: string; user: User }>("/register", {
+        method: "POST",
+        auth: false,
+        body: { ...payload, email: payload.email.trim().toLowerCase() },
+      });
+      await storage.secureSet(TOKEN_KEY, data.token);
+      try {
+        await loadMe();
+      } catch {
+        setUser(data.user);
+      }
+    },
+    [loadMe],
+  );
+
   const signOut = useCallback(async () => {
     await storage.secureRemove(TOKEN_KEY);
     setUser(null);
@@ -78,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadMe]);
 
   return (
-    <AuthContext.Provider value={{ user, ready, signIn, signOut, refreshUser }}>
+    <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
