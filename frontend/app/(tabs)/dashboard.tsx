@@ -249,7 +249,7 @@ export default function Dashboard() {
             <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
               title="Add Business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="quick-action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
-              title="Meter Setup" onPress={() => setMeter(true)} />
+              title="Meter Installation" onPress={() => setMeter(true)} />
             <QuickAction testID="quick-action-quote" icon="pound" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
               title="Get Quote" onPress={() => router.push("/quote/new")} />
           </View>
