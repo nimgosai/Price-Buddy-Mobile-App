@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { LogBox } from "react-native";
+import { LogBox, Text, TextInput } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -16,6 +16,14 @@ import { ToastProvider } from "@/src/components/toast";
 // Disable logbox errors etc so that users can see the app
 // and agent works as expected.
 LogBox.ignoreAllLogs(true);
+
+// Render text at the exact designed sizes on every device, ignoring the phone's
+// system "Font size / Display size" accessibility setting. Without this, native
+// devices scale all text so it no longer matches the design (and the web preview).
+const TextAny = Text as unknown as { defaultProps?: Record<string, unknown> };
+TextAny.defaultProps = { ...(TextAny.defaultProps || {}), allowFontScaling: false };
+const TextInputAny = TextInput as unknown as { defaultProps?: Record<string, unknown> };
+TextInputAny.defaultProps = { ...(TextInputAny.defaultProps || {}), allowFontScaling: false };
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
