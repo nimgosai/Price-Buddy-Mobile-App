@@ -134,3 +134,24 @@ No login/live-data writes used — everything reconstructed from the bundle.
   dashboard card). Moved app/reports.tsx -> app/(tabs)/reports.tsx.
 - Sites cluster re-skinned with exact icons.
 - Colors: accent #FF6B47 used for Try-it badge. Consider aligning brandPrimary to #FF6B47 app-wide (currently #F25028) — CHECK with user.
+
+### COLOR + PILL FIX
+- Accent locked to #FF6B47 app-wide (theme.brandPrimary/brand). heading/onSurface #1A1F36, onSurfaceSecondary #3F4659.
+- "Have a query" pill corrected: lavender bg (#DDD6FE) + dark navy text/icon (#1A1F36) + border rgba(109,40,217,.18). (was wrongly peach).
+
+### BATCH 2 COMPLETE (Scan flow)
+- scan/index.tsx: card multi-page flow (dashed lavender card, scan circle, headings/subs per state,
+  page thumbnails + PDF chip, buttons "Take a photo"/"Upload image or PDF"/"+Add"/Start over).
+  Uses expo-image-picker (camera) + expo-document-picker (image/PDF). Max 4 imgs / 12MB, no PDF+img mix.
+  POST /scans multipart (file for pdf, files[] for images) -> /scan/review/{id}.
+- scan/review/[id].tsx: GET /scans/{id} + GET /properties. pages badge, match banner (mpan green /
+  new purple), action chips (Existing/New business), site chips, utility chips, fields with "from bill"
+  prefilled highlight, intent picker (track/quote/both), "Confirm & save" -> POST /scans/{id}/confirm
+  {action,intent,property_id,...} -> /scan/success/{id}. "Cancel and re-scan".
+- scan/success/[id].tsx: urgency-tier result (gl config: missing/expired/critical/high/medium/renewable/
+  low/normal) with exact headlines+bodies, LinearGradient circle, route A="View Live Quotes"(/quote/new
+  ?utility&incumbent&property) / route B="Go to Dashboard", "View site details", "Call 0800 368 9822",
+  "Scan another bill". pending_review -> audit-team card.
+- NOTE: review/success need real OCR bill data to fully verify end-to-end.
+
+### REMAINING: Batch 3 (Quote wizard + Reports), Batch 4 (Profile/Support/Partners/News), Batch 5 (Auth/splash/landing)

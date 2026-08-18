@@ -53,9 +53,7 @@ export function HaveAQueryPill() {
         onPress={() => setOpen(true)}
         style={({ pressed }) => [styles.pill, pressed && { opacity: 0.9 }]}
       >
-        <View style={styles.pillIcon}>
-          <Icon name="chat" size={16} color={colors.pastel.peachIcon} />
-        </View>
+        <Icon name="chat" size={16} color={colors.heading} />
         <Text style={styles.pillText}>
           Have a query? Message us directly. <Text>👋</Text>
         </Text>
@@ -127,13 +125,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     alignSelf: "center",
-    backgroundColor: colors.pastel.peach,
+    backgroundColor: colors.pastel.lavender,
+    borderWidth: 1,
+    borderColor: "rgba(109,40,217,0.18)",
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingLeft: 14,
+    paddingRight: 18,
+    paddingVertical: 10,
   },
-  pillIcon: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
-  pillText: { fontFamily: font.bold, fontSize: type.base, color: colors.pastel.peachIcon },
+  pillText: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
 
   backdrop: { flex: 1, backgroundColor: "rgba(20,15,40,0.55)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: spacing.lg },

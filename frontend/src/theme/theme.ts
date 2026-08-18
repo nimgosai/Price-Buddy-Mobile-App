@@ -3,22 +3,22 @@
 
 export const colors = {
   surface: "#FFFFFF", // cards
-  onSurface: "#1A1F36", // main text
-  heading: "#1F2A44", // headings
+  onSurface: "#1A1F36", // main text (--hu-text)
+  heading: "#1A1F36", // headings (--hu-purple-deep)
   surfaceSecondary: "#F8F9FC", // app background
-  onSurfaceSecondary: "#4A5169",
+  onSurfaceSecondary: "#3F4659", // --hu-text-2
   surfaceTertiary: "#EEF0F6",
-  surfaceInverse: "#1F2A44",
+  surfaceInverse: "#1A1F36",
   onSurfaceInverse: "#FFFFFF",
 
-  brand: "#F25028",
-  brandPrimary: "#F25028",
-  brandPrimaryPressed: "#DD3F1B",
+  brand: "#FF6B47",
+  brandPrimary: "#FF6B47",
+  brandPrimaryPressed: "#E85535",
   onBrandPrimary: "#FFFFFF",
-  brandSecondary: "#1F2A44",
+  brandSecondary: "#1A1F36",
   onBrandSecondary: "#FFFFFF",
-  brandTertiary: "#FDE7DF", // light accent tint
-  onBrandTertiary: "#F25028",
+  brandTertiary: "#FFEAE4", // light accent tint
+  onBrandTertiary: "#FF6B47",
 
   success: "#10B981",
   warning: "#F59E0B",

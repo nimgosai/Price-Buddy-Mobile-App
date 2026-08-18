@@ -1,440 +1,304 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Linking,
-  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
 
-import { Button } from "@/src/components/ui";
+import { Icon } from "@/src/components/icon";
+import { ScreenHeader } from "@/src/components/screen";
 import { useToast } from "@/src/components/toast";
 import { apiRequest, ApiError } from "@/src/api/client";
-import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
-type Captured = { uri: string; name: string; type: string };
+const MAX_PAGES = 4;
+const MAX_BYTES = 12 * 1024 * 1024;
+
+type Page = { uri: string; name: string; type: string };
 
 export default function Scan() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
 
-  const cameraRef = useRef<CameraView>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  const [pages, setPages] = useState<Page[]>([]);
+  const [pdf, setPdf] = useState<Page | null>(null);
+  const [phase, setPhase] = useState<"idle" | "uploading" | "extracting">("idle");
+  const [error, setError] = useState("");
 
-  const [captured, setCaptured] = useState<Captured | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const busy = phase !== "idle";
+  const count = pdf ? 1 : pages.length;
+  const canAddMore = !pdf && pages.length < MAX_PAGES;
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace("/dashboard");
   };
 
-  const askCamera = async () => {
-    const res = await requestPermission();
-    if (!res.granted && !res.canAskAgain) Linking.openSettings();
+  const addImage = (a: ImagePicker.ImagePickerAsset) => {
+    if (a.fileSize && a.fileSize > MAX_BYTES) {
+      setError(`"${a.fileName || "Photo"}" is over 12MB. Please try a smaller photo.`);
+      return;
+    }
+    setError("");
+    setPages((p) => [
+      ...p,
+      { uri: a.uri, name: a.fileName || `Page ${p.length + 1}.jpg`, type: a.mimeType || "image/jpeg" },
+    ]);
   };
 
   const takePhoto = async () => {
-    if (!cameraRef.current || busy) return;
-    setBusy(true);
-    try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
-      if (photo?.uri) setCaptured({ uri: photo.uri, name: "bill.jpg", type: "image/jpeg" });
-    } catch {
-      toast("Couldn't capture the photo. Try again.", "error");
-    } finally {
-      setBusy(false);
+    if (pdf) {
+      setError("Remove the PDF before adding images.");
+      return;
     }
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      if (!perm.canAskAgain) {
+        toast("Enable camera access in Settings to scan a bill.", "info");
+        Linking.openSettings();
+      } else {
+        toast("Camera access is needed to photograph your bill.", "info");
+      }
+      return;
+    }
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (!res.canceled && res.assets?.[0]) addImage(res.assets[0]);
   };
 
-  const pickFromGallery = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        if (!perm.canAskAgain) {
-          toast("Enable photo access in Settings to pick a bill.", "info");
-          Linking.openSettings();
-        } else {
-          toast("Photo access is needed to pick a bill.", "info");
-        }
+  const uploadFile = async () => {
+    // Try image library first; user can also pick a PDF via document picker below
+    if (pdf) {
+      setError("Remove the PDF before adding images.");
+      return;
+    }
+    const res = await DocumentPicker.getDocumentAsync({
+      type: ["image/*", "application/pdf"],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+    const a = res.assets[0];
+    const isPdf = a.mimeType === "application/pdf" || (a.name || "").toLowerCase().endsWith(".pdf");
+    if (isPdf) {
+      if (pages.length > 0) {
+        setError("Please upload either a single PDF or multiple images — not both.");
         return;
       }
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
-      if (!result.canceled && result.assets?.[0]) {
-        const a = result.assets[0];
-        const name = a.fileName || a.uri.split("/").pop() || "bill.jpg";
-        setCaptured({ uri: a.uri, name, type: a.mimeType || "image/jpeg" });
+      if (a.size && a.size > MAX_BYTES) {
+        setError("That PDF is over 12MB. Please try a smaller file.");
+        return;
       }
-    } catch {
-      toast("Couldn't open your photos. Try again.", "error");
-    } finally {
-      setBusy(false);
+      setError("");
+      setPdf({ uri: a.uri, name: a.name || "bill.pdf", type: "application/pdf" });
+    } else {
+      if (pages.length >= MAX_PAGES) {
+        setError(`You can upload up to ${MAX_PAGES} pages per bill.`);
+        return;
+      }
+      if (a.size && a.size > MAX_BYTES) {
+        setError(`"${a.name || "Photo"}" is over 12MB. Please try a smaller photo.`);
+        return;
+      }
+      setError("");
+      setPages((p) => [...p, { uri: a.uri, name: a.name || `Page ${p.length + 1}.jpg`, type: a.mimeType || "image/jpeg" }]);
     }
   };
 
-  const upload = useCallback(async () => {
-    if (!captured || uploading) return;
-    setUploading(true);
+  const removePage = (i: number) => {
+    setError("");
+    setPages((p) => p.filter((_, n) => n !== i));
+  };
+
+  const reset = () => {
+    setPages([]);
+    setPdf(null);
+    setError("");
+  };
+
+  const extract = useCallback(async () => {
+    if (count === 0 || busy) return;
+    setError("");
+    setPhase("uploading");
     try {
       const form = new FormData();
-      form.append("file", { uri: captured.uri, name: captured.name, type: captured.type } as any);
+      if (pdf) {
+        form.append("file", { uri: pdf.uri, name: pdf.name, type: pdf.type } as any);
+      } else {
+        pages.forEach((p) => form.append("files", { uri: p.uri, name: p.name, type: p.type } as any));
+      }
+      setPhase("extracting");
       const res = await apiRequest<any>("/scans", { method: "POST", body: form, timeoutMs: 120000 });
       const id = res?.id || res?.scan_id || res?._id;
-      if (id) {
-        router.replace(`/scan/review/${id}`);
-      } else {
-        setDone(true);
-      }
+      router.replace(`/scan/review/${id}`);
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Upload failed. Please try again.", "error");
+      setError(e instanceof ApiError ? e.message : "Could not read this bill. Please try a clearer photo.");
     } finally {
-      setUploading(false);
+      setPhase("idle");
     }
-  }, [captured, uploading, toast, router]);
+  }, [count, busy, pdf, pages, router]);
 
-  /* Success */
-  if (done) {
-    return (
-      <View style={styles.lightRoot}>
-        <View style={[styles.successWrap, { paddingTop: insets.top + spacing["3xl"] }]}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark" size={44} color="#fff" />
-          </View>
-          <Text testID="scan-success-title" style={styles.successTitle}>Bill received</Text>
-          <Text style={styles.successSub}>
-            Our team will verify the details and update your contracts within a day. You&apos;ll
-            see it under &quot;Audit in progress&quot; on your dashboard.
-          </Text>
-          <View style={styles.successActions}>
-            <Button
-              testID="scan-success-done"
-              label="Back to dashboard"
-              onPress={() => router.replace("/dashboard")}
-            />
-            <Button
-              testID="scan-success-another"
-              label="Scan another"
-              variant="secondary"
-              onPress={() => {
-                setCaptured(null);
-                setDone(false);
-              }}
-            />
-          </View>
-        </View>
-      </View>
-    );
-  }
+  const heading = busy
+    ? phase === "uploading"
+      ? "Uploading bill…"
+      : "Analyzing your bill… parsing contract details"
+    : count > 0
+      ? `Ready: ${count} ${count === 1 ? "page" : "pages"}`
+      : "Scan your bill to find savings";
 
-  /* Preview + upload */
-  if (captured) {
-    return (
-      <View style={styles.darkRoot}>
-        <Image source={{ uri: captured.uri }} style={StyleSheet.absoluteFill} contentFit="contain" />
-        {uploading && (
-          <View style={styles.uploadOverlay} testID="scan-uploading">
-            <ActivityIndicator size="large" color="#fff" />
-            <Text style={styles.uploadText}>
-              Extracting document details{"\n"}(this may take up to 60s)…
-            </Text>
-          </View>
-        )}
-        <View style={[styles.previewBar, { paddingBottom: insets.bottom + spacing.lg }]}>
-          <Button
-            testID="scan-retake-button"
-            label="Retake"
-            variant="secondary"
-            icon="camera-reverse-outline"
-            onPress={() => setCaptured(null)}
-            disabled={uploading}
-            style={{ flex: 1 }}
-          />
-          <Button
-            testID="scan-use-button"
-            label="Use this bill"
-            icon="cloud-upload-outline"
-            onPress={upload}
-            loading={uploading}
-            style={{ flex: 1 }}
-          />
-        </View>
-        <Pressable
-          testID="scan-preview-back"
-          onPress={() => setCaptured(null)}
-          disabled={uploading}
-          style={[styles.closeBtn, { top: insets.top + spacing.sm }]}
-        >
-          <Ionicons name="close" size={24} color="#fff" />
-        </Pressable>
-      </View>
-    );
-  }
+  const sub = busy
+    ? "This usually takes 10–20 seconds."
+    : count > 0
+      ? "Add more pages if your bill spans several sheets, or hit Extract details."
+      : "Snap or upload your bill — we'll pull out the supplier, rates, and meter numbers automatically.";
 
-  /* Permission primer */
-  const needsPrimer = !permission || !permission.granted;
-  if (needsPrimer) {
-    const blocked = permission && !permission.granted && !permission.canAskAgain;
-    return (
-      <View style={styles.lightRoot}>
-        <View style={[styles.lightHeader, { paddingTop: insets.top + spacing.sm }]}>
-          <Pressable testID="scan-back-button" onPress={goBack} hitSlop={10} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={colors.heading} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Scan a bill</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.primerWrap} testID="scan-permission-primer">
-          <View style={styles.primerIcon}>
-            <Ionicons name="camera-outline" size={40} color={colors.brandPrimary} />
-          </View>
-          <Text style={styles.primerTitle}>Scan your utility bill</Text>
-          <Text style={styles.primerSub}>
-            Allow camera access to snap a photo of your bill. We&apos;ll read the supplier, rates
-            and dates for you — no typing needed.
-          </Text>
-          <View style={styles.primerActions}>
-            <Button
-              testID="scan-enable-camera"
-              label={blocked ? "Open Settings" : "Enable camera"}
-              icon="camera-outline"
-              onPress={askCamera}
-            />
-            <Button
-              testID="scan-pick-gallery-primer"
-              label="Pick from gallery instead"
-              variant="secondary"
-              icon="images-outline"
-              onPress={pickFromGallery}
-              loading={busy}
-            />
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  /* Live camera */
   return (
-    <View style={styles.darkRoot}>
-      {Platform.OS !== "web" ? (
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, styles.webCam]}>
-          <Text style={styles.webCamText}>Camera preview isn&apos;t available here.</Text>
-        </View>
-      )}
-
-      <View style={styles.maskTop} pointerEvents="none">
-        <Text style={styles.frameHint}>Fit the whole bill inside the frame</Text>
-      </View>
-      <View style={styles.maskMiddle} pointerEvents="none">
-        <View style={styles.maskSide} />
-        <View style={styles.frame}>
-          <View style={[styles.corner, styles.cTL]} />
-          <View style={[styles.corner, styles.cTR]} />
-          <View style={[styles.corner, styles.cBL]} />
-          <View style={[styles.corner, styles.cBR]} />
-        </View>
-        <View style={styles.maskSide} />
-      </View>
-      <View style={styles.maskBottom} pointerEvents="none" />
-
-      <Pressable
-        testID="scan-close-button"
-        onPress={goBack}
-        style={[styles.closeBtn, { top: insets.top + spacing.sm }]}
+    <View style={styles.root}>
+      <ScreenHeader testID="scan-header" title="Scan a bill" onBack={goBack} />
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons name="close" size={24} color="#fff" />
-      </Pressable>
-
-      <View style={[styles.controls, { paddingBottom: insets.bottom + spacing.xl }]}>
-        <Pressable testID="scan-gallery-button" onPress={pickFromGallery} style={styles.galleryBtn}>
-          <Ionicons name="images-outline" size={24} color="#fff" />
-        </Pressable>
-        <Pressable testID="scan-shutter-button" onPress={takePhoto} disabled={busy} style={styles.shutterOuter}>
-          <View style={styles.shutterInner}>
-            {busy && <ActivityIndicator color={colors.brandPrimary} />}
+        <View style={styles.card} testID="scan-cta-box">
+          <View style={[styles.circle, busy && styles.circlePulse]}>
+            <Icon name="scan" size={42} color={colors.heading} />
           </View>
-        </Pressable>
-        <View style={styles.galleryBtn} />
-      </View>
+          <Text style={styles.heading}>{heading}</Text>
+          <Text style={styles.sub}>{sub}</Text>
+
+          {!busy && pages.length > 0 && (
+            <View style={styles.strip} testID="scan-page-strip">
+              {pages.map((p, i) => (
+                <View key={p.uri} style={styles.thumb} testID={`scan-page-thumb-${i}`}>
+                  <Image source={{ uri: p.uri }} style={styles.thumbImg} />
+                  <Pressable
+                    testID={`scan-page-remove-${i}`}
+                    onPress={() => removePage(i)}
+                    style={styles.thumbRemove}
+                  >
+                    <Text style={styles.thumbRemoveText}>×</Text>
+                  </Pressable>
+                  <View style={styles.thumbLabel}>
+                    <Text style={styles.thumbLabelText}>PAGE {i + 1}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {!busy && pdf && (
+            <View style={styles.pdfChip} testID="scan-pdf-chip">
+              <Icon name="document" size={16} color={colors.heading} />
+              <Text style={styles.pdfName} numberOfLines={1}>{pdf.name}</Text>
+              <Pressable testID="scan-pdf-remove" onPress={() => setPdf(null)} style={styles.pdfRemove}>
+                <Text style={styles.thumbRemoveText}>×</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {busy && <ActivityIndicator color={colors.heading} style={{ marginTop: spacing.sm }} />}
+
+          {!busy && (
+            <View style={styles.actions}>
+              {count > 0 && (
+                <Pressable testID="scan-submit" onPress={extract} style={[styles.btn, styles.btnAccent]}>
+                  <Icon name="scan" size={18} color="#FFFFFF" />
+                  <Text style={styles.btnAccentText}>
+                    Extract details ({count} {count === 1 ? "page" : "pages"})
+                  </Text>
+                </Pressable>
+              )}
+              {canAddMore && (
+                <Pressable testID="scan-take-photo" onPress={takePhoto} style={[styles.btn, count === 0 ? styles.btnPurple : styles.btnSecondary]}>
+                  <Icon name="scan" size={18} color={count === 0 ? "#FFFFFF" : colors.heading} />
+                  <Text style={count === 0 ? styles.btnPurpleText : styles.btnSecondaryText}>
+                    {pages.length === 0 ? "Take a photo" : "+ Add another page"}
+                  </Text>
+                </Pressable>
+              )}
+              {canAddMore && (
+                <Pressable testID="scan-upload-file" onPress={uploadFile} style={[styles.btn, count === 0 ? styles.btnPrimary : styles.btnSecondary]}>
+                  <Icon name="document" size={18} color={count === 0 ? "#FFFFFF" : colors.heading} />
+                  <Text style={count === 0 ? styles.btnPrimaryText : styles.btnSecondaryText}>
+                    {count === 0 ? "Upload image or PDF" : "+ Add from gallery"}
+                  </Text>
+                </Pressable>
+              )}
+              {count > 0 && (
+                <Pressable testID="scan-reset" onPress={reset} style={styles.startOver}>
+                  <Text style={styles.startOverText}>Start over</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {!!error && (
+            <Text testID="scan-error" style={styles.error}>{error}</Text>
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
-const FRAME_H = 380;
 const styles = StyleSheet.create({
-  darkRoot: { flex: 1, backgroundColor: "#000" },
-  lightRoot: { flex: 1, backgroundColor: colors.surface },
-  lightHeader: {
-    flexDirection: "row",
+  root: { flex: 1, backgroundColor: colors.surfaceSecondary },
+  scroll: { padding: spacing.lg },
+  card: {
+    backgroundColor: "#F5F3FF",
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "#C4B5FD",
+    borderRadius: radius.lg,
+    padding: spacing["2xl"],
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceSecondary,
-  },
-  headerTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading },
-
-  maskTop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: spacing.lg,
-  },
-  maskMiddle: { flexDirection: "row", height: FRAME_H },
-  maskSide: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
-  maskBottom: { flex: 1.4, backgroundColor: "rgba(0,0,0,0.6)" },
-  frame: { width: "82%", height: FRAME_H, borderRadius: radius.sm },
-  corner: { position: "absolute", width: 28, height: 28, borderColor: "#fff" },
-  cTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: radius.sm },
-  cTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: radius.sm },
-  cBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: radius.sm },
-  cBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: radius.sm },
-  frameHint: {
-    color: "#fff",
-    fontFamily: font.medium,
-    fontSize: type.base,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  closeBtn: {
-    position: "absolute",
-    left: spacing.lg,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  controls: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing["2xl"],
-    paddingTop: spacing.lg,
-  },
-  galleryBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.sm,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shutterOuter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 4,
-    borderColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shutterInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  webCam: { backgroundColor: "#1a1a1a", alignItems: "center", justifyContent: "center" },
-  webCamText: { color: "#fff", fontFamily: font.medium, fontSize: type.base },
-  uploadOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(31,42,68,0.85)",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.lg,
-    zIndex: 5,
-  },
-  uploadText: {
-    color: "#fff",
-    fontFamily: font.medium,
-    fontSize: type.lg,
-    textAlign: "center",
-    lineHeight: 24,
-  },
-  previewBar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  primerWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xl },
-  primerIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.md,
-    backgroundColor: colors.brandTertiary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xl,
-  },
-  primerTitle: { fontFamily: font.bold, fontSize: type["2xl"], color: colors.heading, textAlign: "center" },
-  primerSub: {
-    fontFamily: font.regular,
-    fontSize: type.lg,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: spacing.md,
-    lineHeight: 24,
-  },
-  primerActions: { alignSelf: "stretch", gap: spacing.md, marginTop: spacing["2xl"] },
-  successWrap: { flex: 1, alignItems: "center", paddingHorizontal: spacing.xl },
-  successIcon: {
+  circle: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: colors.success,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
+    ...shadow.card,
   },
-  successTitle: { fontFamily: font.bold, fontSize: type["2xl"], color: colors.heading, textAlign: "center" },
-  successSub: {
-    fontFamily: font.regular,
-    fontSize: type.lg,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: spacing.md,
-    lineHeight: 24,
-  },
-  successActions: { alignSelf: "stretch", gap: spacing.md, marginTop: spacing["2xl"] },
+  circlePulse: { opacity: 0.9 },
+  heading: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, textAlign: "center", marginBottom: spacing.sm },
+  sub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, textAlign: "center", marginBottom: spacing.lg, lineHeight: 20 },
+
+  strip: { flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center", marginBottom: spacing.md },
+  thumb: { width: 76, height: 96, borderRadius: 10, overflow: "hidden", borderWidth: 2, borderColor: "#C4B5FD", backgroundColor: "#fff" },
+  thumbImg: { width: "100%", height: "100%" },
+  thumbRemove: { position: "absolute", top: 2, right: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: "#DC2626", alignItems: "center", justifyContent: "center" },
+  thumbRemoveText: { color: "#fff", fontFamily: font.bold, fontSize: 14, lineHeight: 16 },
+  thumbLabel: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.55)", paddingVertical: 2, alignItems: "center" },
+  thumbLabelText: { color: "#fff", fontFamily: font.semibold, fontSize: 9, letterSpacing: 0.3 },
+
+  pdfChip: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.pill, marginBottom: spacing.md, ...shadow.card, maxWidth: "100%" },
+  pdfName: { flexShrink: 1, fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
+  pdfRemove: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#DC2626", alignItems: "center", justifyContent: "center" },
+
+  actions: { alignSelf: "stretch", gap: spacing.sm, marginTop: spacing.sm },
+  btn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, height: 50, borderRadius: radius.md },
+  btnAccent: { backgroundColor: colors.brandPrimary },
+  btnAccentText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
+  btnPurple: { backgroundColor: colors.heading },
+  btnPurpleText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
+  btnPrimary: { backgroundColor: colors.brandPrimary },
+  btnPrimaryText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
+  btnSecondary: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.border },
+  btnSecondaryText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  startOver: { alignItems: "center", paddingVertical: spacing.sm },
+  startOverText: { fontFamily: font.medium, fontSize: type.sm, color: colors.muted, textDecorationLine: "underline" },
+  error: { fontFamily: font.medium, fontSize: type.sm, color: colors.error, marginTop: spacing.md, textAlign: "center" },
 });
