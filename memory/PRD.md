@@ -177,3 +177,14 @@ No login/live-data writes used — everything reconstructed from the bundle.
   Cleared Metro cache. Need user to confirm: scanning dev preview QR vs published snapshot; bottom nav shows
   Home/Sites/Reports/Support/Profile (new) vs Home/Renewals/Sites/... (old).
 - REMAINING: Batch 4 (Profile/Support/Partners), Batch 5 (splash/landing/auth). quote/success screen pre-existing (works).
+
+### QUOTE STEP-2 AUTO-POPULATE FIX (matches web Oo flow)
+- Prefills contact name/email/phone from signed-in account (useAuth); subtitle "Pre-filled from your account…"
+  when logged in, generic otherwise.
+- GET /properties: if arrived via ?property=<id> (from a site) -> locked "QUOTE FOR THIS SITE" card
+  (testID quote-locked-site) auto-filling business/address/postcode, with "Change" (quote-change-site,
+  only when >1 site). Else if saved sites exist -> saved-site picker chips (quote-property-select) that
+  auto-fill on tap. No sites -> plain manual fields. Verified via screenshot (empty acct shows plain fields
+  + subtle Continue + asterisks + prefilled email).
+- STILL TODO (next): Profile (Request account deletion), Support (concierge chat, phone 0800 368 9822),
+  Reports layout/wording, then splash/landing/auth.

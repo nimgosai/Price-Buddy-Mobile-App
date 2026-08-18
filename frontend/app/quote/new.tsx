@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
+import { useAuth } from "@/src/auth/auth-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -37,7 +38,11 @@ const newMeter = (u: "electric" | "gas"): Meter => ({ _id: `m${mid++}`, utility:
 
 export default function QuoteWizard() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{ utility?: string; incumbent?: string; property?: string }>();
+
+  const [properties, setProperties] = useState<any[]>([]);
+  const [changedSite, setChangedSite] = useState(false);
 
   const preUtil = (params.utility || "").toLowerCase();
   const [selected, setSelected] = useState<Set<string>>(() => {
@@ -76,6 +81,46 @@ export default function QuoteWizard() {
       delete n[k];
       return n;
     });
+
+  const fillFromProperty = (p: any) =>
+    setAddr((a) => ({
+      ...a,
+      property_id: p.id || p._id || "",
+      business_name: a.business_name || p.business_name || "",
+      full_address: p.address || p.property_name || a.full_address,
+      postcode: p.postcode || a.postcode,
+    }));
+
+  // Prefill contact from the signed-in account
+  useEffect(() => {
+    if (user) {
+      setContact((c) => ({
+        name: c.name || user.full_name || "",
+        email: c.email || user.email || "",
+        phone: c.phone || (user as any).phone || "",
+      }));
+    }
+  }, [user]);
+
+  // Load saved sites; auto-fill if arriving from a specific site
+  useEffect(() => {
+    apiRequest<any[]>("/properties")
+      .then((list) => {
+        const arr = Array.isArray(list) ? list : [];
+        setProperties(arr);
+        if (params.property) {
+          const match = arr.find((p) => (p.id || p._id) === params.property);
+          if (match) fillFromProperty(match);
+        }
+      })
+      .catch(() => setProperties([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const lockedSite = useMemo(
+    () => (params.property ? properties.find((p) => (p.id || p._id) === params.property) : null),
+    [params.property, properties],
+  );
 
   const flow = useMemo(() => {
     const f = ["service", "global"];
@@ -232,6 +277,11 @@ export default function QuoteWizard() {
         {current === "global" && (
           <View testID="step-global" style={{ gap: spacing.md }}>
             <Text style={styles.h2}>Your details</Text>
+            <Text style={styles.muted}>
+              {user
+                ? "Pre-filled from your account — edit if a colleague should receive the quote instead."
+                : "Tell us who should receive the quote and where the supply is."}
+            </Text>
             <Labeled label="Your name" required error={fieldErrors.name} testID="quote-error-name">
               <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => { setContact((c) => ({ ...c, name: t })); clearFieldError("name"); }} placeholder="Your name" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.name && styles.inputError]} />
             </Labeled>
@@ -241,6 +291,46 @@ export default function QuoteWizard() {
             <Labeled label="Phone (optional)">
               <TextInput testID="quote-contact-phone" value={contact.phone} onChangeText={(t) => setContact((c) => ({ ...c, phone: t }))} placeholder="07123 456789" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} />
             </Labeled>
+            <Text style={[styles.h3, { marginTop: spacing.sm }]}>Site</Text>
+            {lockedSite && !changedSite ? (
+              <View style={styles.lockedSite} testID="quote-locked-site">
+                <View style={styles.lockedIcon}>
+                  <Icon name="building" size={20} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.lockedKicker}>QUOTE FOR THIS SITE</Text>
+                  <Text style={styles.lockedName} numberOfLines={1}>{lockedSite.property_name || lockedSite.address}</Text>
+                  <Text style={styles.lockedAddr} numberOfLines={1}>{[lockedSite.address, lockedSite.postcode].filter(Boolean).join(", ")}</Text>
+                </View>
+                {properties.length > 1 && (
+                  <Pressable testID="quote-change-site" onPress={() => setChangedSite(true)}>
+                    <Text style={styles.changeLink}>Change</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : (
+              properties.length > 0 && (
+                <View testID="quote-property-select" style={{ gap: spacing.xs }}>
+                  <Text style={styles.label}>Use a saved site</Text>
+                  <View style={styles.chipWrap}>
+                    {properties.map((p) => {
+                      const pid = p.id || p._id;
+                      const on = addr.property_id === pid;
+                      return (
+                        <Pressable
+                          key={pid}
+                          testID={`quote-site-${pid}`}
+                          onPress={() => { fillFromProperty(p); clearFieldError("business_name"); clearFieldError("full_address"); clearFieldError("postcode"); }}
+                          style={[styles.chip, on && styles.chipOn]}
+                        >
+                          <Text style={[styles.chipText, on && styles.chipTextOn]}>{p.property_name || p.address}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )
+            )}
             <Labeled label="Business name" required error={fieldErrors.business_name} testID="quote-error-business">
               <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => { setAddr((a) => ({ ...a, business_name: t })); clearFieldError("business_name"); }} placeholder="BIOS Ltd" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.business_name && styles.inputError]} />
             </Labeled>
@@ -434,6 +524,12 @@ const styles = StyleSheet.create({
   svcSelected: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.4, color: colors.heading, marginTop: 4 },
 
   segRow: { flexDirection: "row", gap: spacing.sm },
+  lockedSite: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: "#F5F3FF", borderWidth: 1, borderColor: "#DDD6FE", borderRadius: radius.md, padding: spacing.md },
+  lockedIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.heading, alignItems: "center", justifyContent: "center" },
+  lockedKicker: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.4, color: colors.heading, marginBottom: 2 },
+  lockedName: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  lockedAddr: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
+  changeLink: { fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
   seg: { flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   segOn: { borderWidth: 2, borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
   segText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
