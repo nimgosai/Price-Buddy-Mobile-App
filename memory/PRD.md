@@ -89,3 +89,37 @@ All customer-facing screens from the original spec are now implemented (public/p
 
 ## Notes
 - Camera capture & native gallery only work on a real device / dev build, not Expo Go web preview.
+
+---
+## FAITHFUL REBUILD FROM ORIGINAL WEB APP (in progress)
+Goal: rebuild the mobile app to match the user's ORIGINAL web build (flows, copy, behaviour) 1:1.
+Source of truth = the live web app's own client bundle, saved at:
+- /app/memory/_ref/web_bundle.pretty.js  (beautified React, readable)
+- /app/memory/_ref/web_bundle.min.js, /tmp/orig.css (color tokens: --hu-accent #ff6b47, pastels)
+No login/live-data writes used — everything reconstructed from the bundle.
+
+### CRITICAL FIX (fork)
+- Fork reset EXPO_PUBLIC_BACKEND_URL to the preview host → /api 404s. App must hit the LIVE backend.
+- Fix: src/api/client.ts now uses EXPO_PUBLIC_UCH_BACKEND_URL (added to .env) with hardcoded
+  fallback https://utility-contract-hub.emergent.host. Fork-proof.
+
+### DONE
+- Phase 1 — Dashboard: time-based greeting (Good Morning/Afternoon/Evening + subtitles), bell→/profile,
+  alerts nudge, trust banner ("Fully secured / You're completely covered") vs "Action required" card
+  (urgency config gl: expired/critical/high/medium/renewable/low/normal titles+pills+accents),
+  Quick Actions (Smart Bill Upload→/scan, Add another business [modal→POST /businesses],
+  Meter Installation [modal→POST /meter-installs]), lower-bills quote promo→/quote/new.
+  New components: src/components/add-business-modal.tsx, meter-install-modal.tsx.
+- Phase 2 — Sites & Contracts: sites list ("Your sites"/"{n} sites", search when >5, dashed "Add a new site",
+  empty "Add your first site"), SiteActionsSheet (Scan a bill/Get a quote/Add site manually) →
+  src/components/site-actions-sheet.tsx; manual add-site form (/sites/new) → POST /change-requests
+  {request_type:"site_add"} + "We're on it" success; site detail (/sites/[id]) expandable utility sections
+  (electricity/gas/water/broadband/telecoms) from GET /properties/{id}/utilities, Get Quote/Lock in new rate,
+  Request change modal → POST /change-requests {contract_id,property_id,request_type,message}
+  (src/components/request-change-modal.tsx).
+
+### REMAINING PHASES
+- Phase 3 — Scan flow (/scan, scan/review, scan/success) + Quote wizard (/quote/new 5-step multi-utility, quote/success)
+- Phase 4 — Reports, Profile (exact sections + "Request account deletion"), Support (phone 0800 368 9822), Partners
+- Phase 5 — Entry & Auth: splash, landing ("Never overpay on utilities again."), signin/signup wording
+- Note: multi-business switcher chip (>1 business) + spotlight tour intentionally deferred (single-biz test acct)

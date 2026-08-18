@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,24 +12,26 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 
-import { Button, Card, StatusPill } from "@/src/components/ui";
-import { ScreenHeader, EmptyState } from "@/src/components/screen";
+import { Button } from "@/src/components/ui";
+import { ScreenHeader } from "@/src/components/screen";
+import { RequestChangeModal } from "@/src/components/request-change-modal";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
-function daysUntil(dateStr?: string): number | null {
-  if (!dateStr) return null;
-  const d = dayjs(dateStr);
-  if (!d.isValid()) return null;
-  return d.startOf("day").diff(dayjs().startOf("day"), "day");
-}
-function urgencyForDays(days: number | null): string {
-  if (days === null) return "normal";
-  if (days < 0 || days <= 14) return "critical";
-  if (days <= 30) return "high";
-  if (days <= 60) return "medium";
-  if (days <= 90) return "renewable";
-  return "low";
+type UMeta = { label: string; icon: keyof typeof Ionicons.glyphMap; color: string };
+const UTIL_ORDER = ["electricity", "gas", "water", "broadband", "telecoms"] as const;
+const UTIL_META: Record<string, UMeta> = {
+  electricity: { label: "Electricity", icon: "flash", color: "#F59E0B" },
+  gas: { label: "Gas", icon: "flame", color: "#EA580C" },
+  water: { label: "Water", icon: "water", color: "#2563EB" },
+  broadband: { label: "Broadband", icon: "wifi", color: "#7C3AED" },
+  telecoms: { label: "Telecoms", icon: "call", color: "#059669" },
+};
+
+function fmt(d?: string) {
+  if (!d) return "—";
+  const x = dayjs(d);
+  return x.isValid() ? x.format("D MMM YYYY") : "—";
 }
 
 export default function SiteDetail() {
@@ -38,20 +39,22 @@ export default function SiteDetail() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; name?: string; address?: string }>();
 
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [meterReads, setMeterReads] = useState<any[]>([]);
+  const [property, setProperty] = useState<any>(null);
+  const [utilities, setUtilities] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [rcContract, setRcContract] = useState<any>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
       const res = await apiRequest<any>(`/properties/${params.id}/utilities`);
-      const c = res?.contracts || res?.utilities || (Array.isArray(res) ? res : []) || [];
-      const m = res?.meter_reads || res?.meters || res?.reads || [];
-      setContracts(Array.isArray(c) ? c : []);
-      setMeterReads(Array.isArray(m) ? m : []);
+      setProperty(res?.property || null);
+      setUtilities(res?.utilities || {});
+      const init: Record<string, boolean> = {};
+      UTIL_ORDER.forEach((u) => (init[u] = true));
+      setExpanded(init);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't load this site.");
     }
@@ -65,30 +68,24 @@ export default function SiteDetail() {
     })();
   }, [load]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }, [load]);
-
   const goBack = () => {
     if (router.canGoBack()) router.back();
-    else router.replace("/sites");
+    else router.replace("/dashboard");
   };
 
-  const readsForContract = (c: any) => {
-    const cid = c.id || c._id;
-    return meterReads.filter((r) => (r.contract_id || r.contractId) === cid);
-  };
+  const title = property?.property_name || property?.address || params.name || "Site";
+  const subtitle =
+    property?.address
+      ? `${property.address}${property.postcode ? `, ${property.postcode}` : ""}`
+      : params.address || undefined;
+
+  // Which utilities to show: those with a contract, else all
+  const present = UTIL_ORDER.filter((u) => utilities[u]);
+  const shown = present.length > 0 ? present : UTIL_ORDER;
 
   return (
     <View style={styles.root}>
-      <ScreenHeader
-        testID="site-detail-header"
-        title={params.name || "Site"}
-        subtitle={params.address || undefined}
-        onBack={goBack}
-      />
+      <ScreenHeader testID="site-detail-header" title={title} subtitle={subtitle} onBack={goBack} />
       {loading ? (
         <View style={styles.center} testID="site-detail-loading">
           <ActivityIndicator size="large" color={colors.brandPrimary} />
@@ -97,137 +94,159 @@ export default function SiteDetail() {
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {error ? (
-            <Card testID="site-detail-error" style={styles.errorCard}>
+            <View style={styles.errorCard} testID="site-detail-error">
               <Ionicons name="cloud-offline-outline" size={28} color={colors.error} />
               <Text style={styles.errorText}>{error}</Text>
-              <Button label="Try again" variant="secondary" onPress={onRefresh} />
-            </Card>
-          ) : contracts.length === 0 ? (
-            <EmptyState
-              testID="site-detail-empty"
-              icon="document-text-outline"
-              title="No contracts on this site"
-              message="Scan a bill for this location and we'll add its contracts and meter readings here."
-            >
-              <Button label="Scan a bill" icon="scan-outline" onPress={() => router.push("/scan")} />
-            </EmptyState>
+              <Button label="Try again" variant="secondary" onPress={load} />
+            </View>
           ) : (
             <>
-              <Text style={styles.sectionTitle}>Contracts</Text>
-              {contracts.map((c: any, i: number) => {
-                const end = c.end_date || c.contract_end_date || c.renewal_date;
-                const days = daysUntil(end);
-                const urg = c.urgency || urgencyForDays(days);
-                const color = colors.urgency[urg] || colors.urgency.normal;
-                const reads = readsForContract(c);
-                const supplier = c.supplier_name || c.supplier || "Contract";
+              {shown.map((u) => {
+                const meta = UTIL_META[u];
+                const c = utilities[u];
+                const open = expanded[u];
+                const days = c?.days_until_expiry;
                 return (
-                  <Card key={c.id || c._id || i} testID={`site-contract-${i}`} style={styles.card}>
-                    <View style={styles.cTop}>
-                      <View style={[styles.utilIcon, { backgroundColor: `${color}1A` }]}>
-                        <Ionicons name="flash" size={18} color={color} />
+                  <View key={u} style={styles.card} testID={`utility-section-${u}`}>
+                    <Pressable
+                      testID={`utility-toggle-${u}`}
+                      onPress={() => setExpanded((p) => ({ ...p, [u]: !p[u] }))}
+                      style={styles.cardHead}
+                    >
+                      <View style={[styles.uIcon, { backgroundColor: `${meta.color}22` }]}>
+                        <Ionicons name={meta.icon} size={18} color={meta.color} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.supplier} numberOfLines={1}>{supplier}</Text>
-                        <Text style={styles.meta} numberOfLines={1}>
-                          {(c.utility_type || "utility").toString().replace(/_/g, " ")}
-                          {c.tariff_name ? ` • ${c.tariff_name}` : ""}
-                        </Text>
-                      </View>
-                      <StatusPill
-                        label={days === null ? "Active" : days < 0 ? "Expired" : `${days}d left`}
-                        color={color}
+                      <Text style={styles.uLabel}>{meta.label}</Text>
+                      <Ionicons
+                        name={open ? "chevron-down" : "chevron-forward"}
+                        size={18}
+                        color={colors.muted}
                       />
-                    </View>
+                    </Pressable>
 
-                    <View style={styles.rowsBox}>
-                      {end ? (
-                        <Row label="Renews" value={dayjs(end).format("D MMM YYYY")} />
-                      ) : null}
-                      {c.annual_cost ? (
-                        <Row label="Annual cost" value={`£${Number(c.annual_cost).toLocaleString("en-GB")}`} />
-                      ) : null}
-                      {c.unit_rate ? <Row label="Unit rate" value={`${c.unit_rate} p/kWh`} /> : null}
-                      {c.standing_charge ? (
-                        <Row label="Standing charge" value={`${c.standing_charge} p/day`} />
-                      ) : null}
-                    </View>
+                    {open && (
+                      <View style={styles.cardBody}>
+                        {c ? (
+                          <>
+                            <View style={styles.supRow}>
+                              <View>
+                                <Text style={styles.mini}>Supplier</Text>
+                                <Text style={styles.supVal}>{c.supplier_name || "—"}</Text>
+                              </View>
+                              <View style={{ alignItems: "flex-end" }}>
+                                <Text style={styles.mini}>{days < 0 ? "Expired" : "Ends"}</Text>
+                                <Text
+                                  style={[
+                                    styles.supVal,
+                                    { color: days < 60 ? colors.error : colors.heading },
+                                  ]}
+                                >
+                                  {days < 0 ? `${Math.abs(days)} days ago` : `in ${days} days`}
+                                </Text>
+                              </View>
+                            </View>
 
-                    {reads.length > 0 && (
-                      <View style={styles.reads}>
-                        <Text style={styles.readsTitle}>Meter readings</Text>
-                        {reads.slice(0, 3).map((r: any, ri: number) => (
-                          <View key={ri} style={styles.readRow}>
-                            <Text style={styles.readDate}>
-                              {dayjs(r.read_date || r.date || r.created_at).format("D MMM YYYY")}
+                            {c.renewable_now && days > 90 && (
+                              <View style={styles.renewBanner} testID={`renewable-banner-${u}`}>
+                                <Text style={{ fontSize: 16 }}>🔓</Text>
+                                <Text style={styles.renewText}>
+                                  <Text style={styles.renewStrong}>Renewable now.</Text> UK businesses
+                                  can secure a new {meta.label.toLowerCase()} contract up to 12 months
+                                  before this one ends — locking in today&apos;s wholesale rates.
+                                </Text>
+                              </View>
+                            )}
+
+                            <View style={styles.grid}>
+                              <Detail
+                                label={u === "gas" ? "MPRN" : u === "electricity" ? "MPAN" : "Account"}
+                                value={c.meter_point_number || c.account_number || "—"}
+                              />
+                              <Detail label="Meter serial" value={c.meter_serial_number || "—"} />
+                              <Detail label="Start date" value={fmt(c.start_date)} />
+                              <Detail label="End date" value={fmt(c.end_date)} />
+                            </View>
+
+                            <View style={styles.btnRow}>
+                              <Pressable
+                                testID={`utility-get-quote-${u}`}
+                                onPress={() =>
+                                  router.push({
+                                    pathname: "/quote/new",
+                                    params: {
+                                      utility_type: u,
+                                      contract_id: c.id || c._id || "",
+                                      property_id: params.id,
+                                      supplier: c.supplier_name || "",
+                                    },
+                                  })
+                                }
+                                style={[styles.actBtn, styles.actPrimary]}
+                              >
+                                <Text style={styles.actPrimaryText}>
+                                  {c.renewable_now && days > 90 ? "Lock in new rate" : "Get Quote"}
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                testID={`utility-request-change-${u}`}
+                                onPress={() => setRcContract({ ...c, property_id: c.property_id || params.id })}
+                                style={[styles.actBtn, styles.actGhost]}
+                              >
+                                <Ionicons name="lock-closed" size={15} color={colors.heading} />
+                                <Text style={styles.actGhostText}>Request change</Text>
+                              </Pressable>
+                            </View>
+                          </>
+                        ) : (
+                          <View style={styles.emptyU}>
+                            <Text style={styles.emptyUText}>
+                              No {meta.label.toLowerCase()} contract on file
                             </Text>
-                            <Text style={styles.readVal}>
-                              {r.value ?? r.reading ?? r.units ?? "—"}
-                            </Text>
+                            <Pressable
+                              testID={`utility-add-${u}`}
+                              onPress={() => router.push("/scan")}
+                              style={styles.scanUBtn}
+                            >
+                              <Ionicons name="add" size={16} color={colors.onBrandPrimary} />
+                              <Text style={styles.scanUText}>Scan your {meta.label.toLowerCase()} bill</Text>
+                            </Pressable>
+                            <Text style={styles.emptyUHint}>Once reviewed, we&apos;ll add it to your account.</Text>
                           </View>
-                        ))}
+                        )}
                       </View>
                     )}
-
-                    <View style={styles.actions}>
-                      <Pressable
-                        testID={`site-quote-${i}`}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/quote/new",
-                            params: {
-                              utility_type: c.utility_type || "electricity",
-                              contract_id: c.id || c._id || "",
-                              property_id: params.id,
-                              supplier,
-                            },
-                          })
-                        }
-                        style={styles.actionBtn}
-                      >
-                        <Ionicons name="pricetag-outline" size={16} color={colors.onBrandPrimary} />
-                        <Text style={styles.actionText}>Get a quote</Text>
-                      </Pressable>
-                      <Pressable
-                        testID={`site-change-${i}`}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/contracts/[id]/edit",
-                            params: {
-                              id: c.id || c._id || "",
-                              property_id: params.id,
-                              supplier: supplier,
-                              utility_type: c.utility_type || "",
-                              start_date: c.start_date || c.contract_start_date || "",
-                              end_date: end || "",
-                            },
-                          })
-                        }
-                        style={[styles.actionBtn, styles.actionGhost]}
-                      >
-                        <Ionicons name="create-outline" size={16} color={colors.heading} />
-                        <Text style={[styles.actionText, styles.actionGhostText]}>Request a change</Text>
-                      </Pressable>
-                    </View>
-                  </Card>
+                  </View>
                 );
               })}
+
+              <Button
+                testID="site-scan-bill"
+                label="Scan new bill"
+                icon="scan-outline"
+                onPress={() => router.push("/scan")}
+                style={{ marginTop: spacing.md, alignSelf: "stretch" }}
+              />
             </>
           )}
         </ScrollView>
       )}
+
+      <RequestChangeModal
+        visible={!!rcContract}
+        contract={rcContract}
+        onClose={() => setRcContract(null)}
+      />
     </View>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+    <View style={styles.detail}>
+      <Text style={styles.mini}>{label}</Text>
+      <Text style={styles.detailVal}>{value}</Text>
     </View>
   );
 }
@@ -236,65 +255,59 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: { padding: spacing.lg, gap: spacing.md },
-  errorCard: { alignItems: "center", gap: spacing.md },
+  errorCard: { alignItems: "center", gap: spacing.md, padding: spacing.lg },
   errorText: { fontFamily: font.medium, fontSize: type.base, color: colors.onSurfaceSecondary, textAlign: "center" },
-  sectionTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: spacing.sm },
 
-  card: { gap: spacing.md },
-  cTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  utilIcon: { width: 40, height: 40, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
-  supplier: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
-  meta: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2, textTransform: "capitalize" },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  uIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  uLabel: { flex: 1, fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
+  cardBody: { marginTop: spacing.lg, gap: spacing.md },
 
-  rowsBox: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.sm, padding: spacing.md, gap: spacing.sm },
-  infoRow: { flexDirection: "row", justifyContent: "space-between" },
-  infoLabel: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
-  infoValue: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  supRow: { flexDirection: "row", justifyContent: "space-between" },
+  mini: { fontFamily: font.semibold, fontSize: type.sm, color: colors.muted },
+  supVal: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 2 },
 
-  reads: { gap: spacing.xs },
-  readsTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
-  readRow: { flexDirection: "row", justifyContent: "space-between" },
-  readDate: { fontFamily: font.regular, fontSize: type.base, color: colors.onSurfaceSecondary },
-  readVal: { fontFamily: font.medium, fontSize: type.base, color: colors.heading },
+  renewBanner: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    backgroundColor: "#F5F3FF",
+    borderWidth: 1,
+    borderColor: "#DDD6FE",
+    borderRadius: radius.sm,
+    padding: spacing.md,
+  },
+  renewText: { flex: 1, fontFamily: font.regular, fontSize: type.sm, color: colors.heading, lineHeight: 18 },
+  renewStrong: { fontFamily: font.bold },
 
-  actions: { flexDirection: "row", gap: spacing.sm },
-  actionBtn: {
-    flex: 1,
+  grid: { flexDirection: "row", flexWrap: "wrap", rowGap: spacing.md },
+  detail: { width: "50%" },
+  detailVal: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 2 },
+
+  btnRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
+  actBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 46, borderRadius: radius.sm },
+  actPrimary: { backgroundColor: colors.brandPrimary },
+  actPrimaryText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onBrandPrimary },
+  actGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  actGhostText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+
+  emptyU: { alignItems: "center", paddingVertical: spacing.sm, gap: spacing.sm },
+  emptyUText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
+  scanUBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    height: 44,
-    borderRadius: radius.sm,
+    gap: 6,
     backgroundColor: colors.brandPrimary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
   },
-  actionGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  actionText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onBrandPrimary },
-  actionGhostText: { color: colors.heading },
-
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(31,42,68,0.55)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  sheetTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading },
-  sheetSub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, lineHeight: 20 },
-  sheetInput: {
-    minHeight: 100,
-    textAlignVertical: "top",
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    fontFamily: font.regular,
-    fontSize: type.lg,
-    color: colors.onSurface,
-  },
-  sheetActions: { flexDirection: "row", gap: spacing.md, marginTop: spacing.sm },
+  scanUText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onBrandPrimary },
+  emptyUHint: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
 });

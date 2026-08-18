@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,9 +14,10 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Button, Card } from "@/src/components/ui";
-import { ScreenHeader, EmptyState } from "@/src/components/screen";
+import { ScreenHeader } from "@/src/components/screen";
+import { SiteActionsSheet } from "@/src/components/site-actions-sheet";
 import { apiRequest, ApiError } from "@/src/api/client";
-import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
+import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 export default function Sites() {
   const insets = useSafeAreaInsets();
@@ -25,6 +27,8 @@ export default function Sites() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [sheet, setSheet] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -56,12 +60,25 @@ export default function Sites() {
     setRefreshing(false);
   }, [load]);
 
+  const filtered = useMemo(() => {
+    const sorted = [...sites].sort((a, b) =>
+      (a.property_name || a.address || "").toLowerCase().localeCompare(
+        (b.property_name || b.address || "").toLowerCase(),
+      ),
+    );
+    const q = query.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((s) =>
+      `${s.property_name || ""} ${s.address || ""} ${s.postcode || ""}`.toLowerCase().includes(q),
+    );
+  }, [sites, query]);
+
   return (
     <View style={styles.root}>
       <ScreenHeader
         testID="sites-header"
         title="Your sites"
-        subtitle="Business locations we track for you"
+        subtitle={`${sites.length} ${sites.length === 1 ? "site" : "sites"}`}
       />
       {loading ? (
         <View style={styles.center} testID="sites-loading">
@@ -69,8 +86,9 @@ export default function Sites() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 96 }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {error ? (
@@ -80,69 +98,92 @@ export default function Sites() {
               <Button label="Try again" variant="secondary" onPress={onRefresh} />
             </Card>
           ) : sites.length === 0 ? (
-            <EmptyState
-              testID="sites-empty"
-              icon="business-outline"
-              title="No sites yet"
-              message="Add your first business location and we'll help you track its utility contracts and renewals."
-            >
+            <View style={styles.emptyCard} testID="sites-empty">
+              <View style={styles.emptyIcon}>
+                <Ionicons name="business-outline" size={22} color={colors.brandPrimary} />
+              </View>
+              <Text style={styles.emptyTitle}>No sites yet</Text>
+              <Text style={styles.emptySub}>
+                Add your first site for this business — scan a bill, get a quote, or enter details
+                manually.
+              </Text>
               <Button
-                testID="sites-empty-add"
-                label="Add a site"
+                testID="sites-add-first"
+                label="Add your first site"
                 icon="add"
-                onPress={() => router.push("/sites/new")}
+                onPress={() => setSheet(true)}
+                style={{ marginTop: spacing.lg, alignSelf: "stretch" }}
               />
-            </EmptyState>
+            </View>
           ) : (
-            sites.map((s: any, i: number) => (
-              <Pressable
-                key={s.id || s._id || i}
-                testID={`site-card-${i}`}
-                onPress={() =>
-                  router.push({
-                    pathname: "/sites/[id]",
-                    params: {
-                      id: s.id || s._id,
-                      name: s.name || s.site_name || "Site",
-                      address: [s.address, s.postcode].filter(Boolean).join(", "),
-                    },
-                  })
-                }
-                style={({ pressed }) => [pressed && { opacity: 0.9 }]}
-              >
-                <Card style={styles.card}>
-                  <View style={styles.siteIcon}>
-                    <Ionicons name="location" size={20} color={colors.brandPrimary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.name} numberOfLines={1}>
-                      {s.name || s.site_name || "Site"}
-                    </Text>
-                    <Text style={styles.addr} numberOfLines={2}>
-                      {[s.address, s.postcode].filter(Boolean).join(", ") || "Address on file"}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            <>
+              {sites.length > 5 && (
+                <View style={styles.searchWrap}>
+                  <Ionicons name="search" size={16} color={colors.muted} />
+                  <TextInput
+                    testID="sites-search"
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Search sites by name or postcode"
+                    placeholderTextColor={colors.muted}
+                    style={styles.searchInput}
+                  />
+                </View>
+              )}
+
+              {filtered.length === 0 ? (
+                <Card testID="sites-no-match" style={styles.noMatch}>
+                  <Text style={styles.noMatchText}>No sites match “{query}”.</Text>
                 </Card>
+              ) : (
+                filtered.map((s: any) => (
+                  <Pressable
+                    key={s.id || s._id}
+                    testID={`site-card-${s.id || s._id}`}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/sites/[id]",
+                        params: {
+                          id: s.id || s._id,
+                          name: s.property_name || s.name || s.site_name || "Site",
+                          address: [s.address, s.postcode].filter(Boolean).join(", "),
+                        },
+                      })
+                    }
+                    style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+                  >
+                    <Card style={styles.card}>
+                      <View style={styles.siteIcon}>
+                        <Ionicons name="business" size={20} color={colors.brandPrimary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.name} numberOfLines={1}>
+                          {s.property_name || s.address || "Site"}
+                        </Text>
+                        <Text style={styles.addr} numberOfLines={1}>
+                          {[s.address, s.postcode].filter(Boolean).join(", ") || "Address on file"}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                    </Card>
+                  </Pressable>
+                ))
+              )}
+
+              <Pressable
+                testID="sites-add-new"
+                onPress={() => setSheet(true)}
+                style={({ pressed }) => [styles.addNew, pressed && { opacity: 0.9 }]}
+              >
+                <Ionicons name="add" size={18} color={colors.brandPrimary} />
+                <Text style={styles.addNewText}>Add a new site</Text>
               </Pressable>
-            ))
+            </>
           )}
         </ScrollView>
       )}
 
-      {/* Floating add button */}
-      <Pressable
-        testID="sites-add-fab"
-        onPress={() => router.push("/sites/new")}
-        style={({ pressed }) => [
-          styles.fab,
-          { bottom: insets.bottom + spacing.md },
-          pressed && { backgroundColor: colors.brandPrimaryPressed },
-        ]}
-      >
-        <Ionicons name="add" size={22} color={colors.onBrandPrimary} />
-        <Text style={styles.fabText}>Add site</Text>
-      </Pressable>
+      <SiteActionsSheet visible={sheet} onClose={() => setSheet(false)} />
     </View>
   );
 }
@@ -158,28 +199,73 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceSecondary,
     textAlign: "center",
   },
+
+  emptyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing["2xl"],
+    alignItems: "center",
+  },
+  emptyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  emptyTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
+  emptySub: {
+    fontFamily: font.regular,
+    fontSize: type.base,
+    color: colors.muted,
+    textAlign: "center",
+    marginTop: spacing.sm,
+    lineHeight: 20,
+  },
+
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    height: 48,
+  },
+  searchInput: { flex: 1, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, height: "100%" },
+
+  noMatch: { alignItems: "center", paddingVertical: spacing.lg },
+  noMatchText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
+
   card: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   siteIcon: {
     width: 44,
     height: 44,
-    borderRadius: radius.sm,
+    borderRadius: 14,
     backgroundColor: colors.brandTertiary,
     alignItems: "center",
     justifyContent: "center",
   },
   name: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
   addr: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
-  fab: {
-    position: "absolute",
-    right: spacing.lg,
+
+  addNew: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.brandPrimary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
-    ...shadow.card,
+    justifyContent: "center",
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.brandPrimary,
+    backgroundColor: colors.brandTertiary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
   },
-  fabText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onBrandPrimary },
+  addNewText: { fontFamily: font.semibold, fontSize: type.base, color: colors.brandPrimary },
 });
