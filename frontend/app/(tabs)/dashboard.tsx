@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,12 +18,17 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Icon } from "@/src/components/icon";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
+import { SpotlightTour, TourStep } from "@/src/components/spotlight-tour";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
+import { useBusiness } from "@/src/business/business-context";
 import { AddBusinessModal } from "@/src/components/add-business-modal";
 import { MeterInstallModal } from "@/src/components/meter-install-modal";
 import { apiRequest } from "@/src/api/client";
+import { storage } from "@/src/utils/storage";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
+
+export const TOUR_REPLAY_KEY = "uch_tour_replay";
 
 const UTILITY_LABEL: Record<string, string> = {
   electricity: "Electricity",
@@ -74,6 +80,8 @@ export default function Dashboard() {
   const router = useRouter();
   const toast = useToast();
   const { user, refreshUser } = useAuth();
+  const { refreshBusinesses } = useBusiness();
+  const { width, height } = useWindowDimensions();
 
   const [items, setItems] = useState<any[]>([]);
   const [audits, setAudits] = useState<any[]>([]);
@@ -83,6 +91,57 @@ export default function Dashboard() {
   const [meter, setMeter] = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
+
+  // Guided spotlight tour
+  const scanRef = useRef<View>(null);
+  const ctaRef = useRef<View>(null);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
+  const tourTriggered = useRef(false);
+
+  const measure = (ref: React.RefObject<View>) =>
+    new Promise<{ x: number; y: number; w: number; h: number } | null>((resolve) => {
+      if (!ref.current) return resolve(null);
+      ref.current.measureInWindow((x, y, w, h) => resolve({ x, y, w, h }));
+    });
+
+  const startTour = useCallback(async () => {
+    const [scan, cta] = await Promise.all([measure(scanRef), measure(ctaRef)]);
+    const tabH = 60 + Math.max(insets.bottom, Platform.OS === "android" ? 10 : 0);
+    const tabW = width / 5;
+    const sitesRect = { x: tabW * 1, y: height - tabH + 4, w: tabW, h: 52 };
+    setTourSteps([
+      {
+        title: "All your sites & contracts",
+        body: 'Tap Sites any time to see your whole portfolio. Got more than one business? Switch between them — or pick "All businesses" to see everything in one list.',
+        rect: sitesRect,
+      },
+      {
+        title: "Snap any bill",
+        body: "Tap Smart Bill Upload to photograph a bill — we'll auto-extract rates, supplier and renewal date, then our validation engine will confirm the details.",
+        rect: scan,
+      },
+      {
+        title: "Hands-free renewal",
+        body: "When you're ready, tap this banner to start a quote. Sit back while our platform handles the negotiations and notify you when your bespoke offer is ready.",
+        rect: cta,
+      },
+    ]);
+    setTourOpen(true);
+  }, [insets.bottom, width, height]);
+
+  const closeTour = useCallback(
+    async () => {
+      setTourOpen(false);
+      try {
+        await apiRequest("/me/preferences", { method: "PUT", body: { has_completed_tour: true } });
+        refreshUser().catch(() => {});
+      } catch {
+        /* best-effort persistence */
+      }
+    },
+    [refreshUser],
+  );
 
   const load = useCallback(async () => {
     try {
@@ -109,7 +168,15 @@ export default function Dashboard() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load]),
+      // Replay requested from Profile: dashboard stays mounted across tabs,
+      // so re-check on focus (not just mount).
+      storage.getItem<boolean>(TOUR_REPLAY_KEY, false).then((replay) => {
+        if (replay) {
+          storage.removeItem(TOUR_REPLAY_KEY);
+          setTimeout(() => startTour(), 250);
+        }
+      });
+    }, [load, startTour]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -117,6 +184,15 @@ export default function Dashboard() {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  // Auto-open the guided tour once for first-timers (replay is handled on focus).
+  useEffect(() => {
+    if (loading || tourTriggered.current || !user) return;
+    if (user.has_completed_tour === false) {
+      tourTriggered.current = true;
+      setTimeout(() => startTour(), 350);
+    }
+  }, [loading, user, startTour]);
 
   const firstName = useMemo(() => {
     const fn = user?.full_name?.trim();
@@ -244,7 +320,7 @@ export default function Dashboard() {
           {/* Quick actions — compact 2-column grid */}
           <Text style={styles.quickLabel}>QUICK ACTIONS</Text>
           <View style={styles.quickGrid}>
-            <QuickAction testID="quick-action-scan" icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
+            <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
               title="Scan Bill" badge={isNewUser ? "Try it" : undefined} onPress={() => router.push("/scan")} />
             <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
               title="Add Business" onPress={() => setAddBiz(true)} />
@@ -258,7 +334,7 @@ export default function Dashboard() {
           <HaveAQueryPill />
 
           {/* Lower-bills quote promo — concise */}
-          <Pressable testID="lower-bills-cta" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promo, pressed && { opacity: 0.95 }]}>
+          <Pressable ref={ctaRef} collapsable={false} testID="lower-bills-cta" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promo, pressed && { opacity: 0.95 }]}>
             <View style={styles.promoIcon}>
               <Icon name="pound" size={22} color={colors.pastel.mintIcon} />
             </View>
@@ -274,14 +350,16 @@ export default function Dashboard() {
         </ScrollView>
       )}
 
-      <AddBusinessModal visible={addBiz} onClose={() => setAddBiz(false)} onCreated={() => { setAddBiz(false); toast("Business added.", "success"); load(); }} />
+      <AddBusinessModal visible={addBiz} onClose={() => setAddBiz(false)} onCreated={() => { setAddBiz(false); toast("Business added.", "success"); refreshBusinesses(); load(); }} />
       <MeterInstallModal visible={meter} onClose={() => setMeter(false)} />
+
+      <SpotlightTour open={tourOpen} steps={tourSteps} onClose={closeTour} />
     </View>
   );
 }
 
-function QuickAction({ icon, bg, fg, title, onPress, testID, badge }: {
-  icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string;
+function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: {
+  icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View>;
 }) {
   const { width } = useWindowDimensions();
   const fontSize = Math.max(12, Math.min(15, width * 0.037));
@@ -299,7 +377,7 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge }: {
   }, [badge, scale]);
 
   return (
-    <Pressable testID={testID} onPress={onPress} style={({ pressed }) => [styles.qa, pressed && { opacity: 0.9 }]}>
+    <Pressable ref={innerRef} collapsable={false} testID={testID} onPress={onPress} style={({ pressed }) => [styles.qa, pressed && { opacity: 0.9 }]}>
       {badge ? (
         <Animated.View testID="quick-action-badge" style={[styles.qaBadge, { transform: [{ scale }] }]}>
           <Icon name="sparkle" size={10} color="#FFFFFF" />

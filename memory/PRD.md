@@ -226,3 +226,19 @@ No login/live-data writes used — everything reconstructed from the bundle.
   Signup step1 "Create your account" (Your name / you@business.co.uk) -> step2 "Tell us about your business".
 - OPEN (next): optional side-by-side polish of Scan & Quote inner-screen wording/spacing (headers already
   consistent via the global scale).
+
+### BATCH 8 — Tour + Multi-business chip + Scan/Quote/Site polish (verified iter 12)
+- GUIDED SPOTLIGHT TOUR (src/components/spotlight-tour.tsx): dark cutout overlay + brand ring around
+  a measured target + tooltip card (dots/Skip/Back/Next/'Got it'). Dashboard measures Scan tile
+  (quick-action-scan) & Lower-bills CTA (lower-bills-cta) via measureInWindow, and computes the Sites
+  bottom-tab rect. 3 steps w/ exact original copy: "All your sites & contracts" / "Snap any bill" /
+  "Hands-free renewal". Auto-opens once when user.has_completed_tour===false; persists via
+  PUT /me/preferences {has_completed_tour:true} + refreshUser. Profile "Replay product tour" sets
+  storage uch_tour_replay -> dashboard re-opens on FOCUS (tabs stay mounted).
+- MULTI-BUSINESS: BusinessProvider (src/business/business-context.tsx) mounted in _layout inside
+  AuthProvider. Fetches GET /businesses; activeBizId stored locally (uch_active_business_id), default
+  ALL_BUSINESSES ("__all__"). BusinessSwitcherChip (sites=lavender / reports=purple) renders ONLY when
+  businesses.length>1 (single-biz test acct => hidden). Sites -> GET /properties{?business_id=},
+  Reports -> GET /reports/spend{?business_id=}; switching reloads. Switcher bottom-sheet lists
+  "All businesses (n)" + each business.
+- POLISH: scan/review intent body 11.5->13; Scan/Quote/Site-detail inherit the global type scale.

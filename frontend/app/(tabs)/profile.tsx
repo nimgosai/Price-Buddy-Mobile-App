@@ -18,6 +18,7 @@ import { ScreenHeader } from "@/src/components/screen";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { apiRequest, ApiError } from "@/src/api/client";
+import { storage } from "@/src/utils/storage";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 export default function Profile() {
@@ -111,7 +112,7 @@ export default function Profile() {
 
         <LinkRow icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon} label="My sites" onPress={() => router.push("/sites")} testID="profile-sites" />
         <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My quote requests" onPress={() => router.push("/quote/new")} testID="profile-quotes" />
-        <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={() => router.push("/splash")} testID="profile-tour" />
+        <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={async () => { await storage.setItem("uch_tour_replay", true); router.push("/dashboard"); }} testID="profile-tour" />
         <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
 
         <Pressable testID="profile-logout" onPress={() => { signOut(); router.replace("/signin"); }} style={styles.logout}>

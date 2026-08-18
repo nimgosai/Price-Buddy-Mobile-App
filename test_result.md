@@ -168,3 +168,68 @@
 ##       (3 slides, Next/Get started) -> /signup; 'I already have an account' -> /signin ('Welcome back');
 ##       signup step1 'Create your account' -> step2 'Tell us about your business'. Do NOT create real
 ##       accounts on the live backend (registration writes). Sign-in + navigation only.
+
+## frontend:
+##   - task: "Guided spotlight tour on dashboard (first-timer + replay), persists via PUT /me/preferences {has_completed_tour:true}"
+##     implemented: true
+##     working: "NA"
+##     file: "src/components/spotlight-tour.tsx, app/(tabs)/dashboard.tsx, app/(tabs)/profile.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Auto-opens on dashboard when user.has_completed_tour===false. 3 coach-mark steps highlighting Sites tab, Scan Bill tile, Lower-bills CTA with exact original copy. Skip/Back/Next/Got it + dots. On finish/skip -> PUT /me/preferences {has_completed_tour:true} + refreshUser. Profile 'Replay product tour' sets storage uch_tour_replay and dashboard re-opens on focus. Verified via screenshots. Backend flag reset to false for this test run."
+##   - task: "Multi-business switcher chip on Sites & Reports (client-side active business, ?business_id= filter)"
+##     implemented: true
+##     working: "NA"
+##     file: "src/business/business-context.tsx, src/components/business-switcher-chip.tsx, app/_layout.tsx, app/(tabs)/sites.tsx, app/(tabs)/reports.tsx"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "BusinessProvider fetches GET /businesses. Chip only renders when businesses.length>1 (test account has 1 business so chip is intentionally HIDDEN). Sites uses GET /properties{?business_id}, Reports uses GET /reports/spend{?business_id}. Switching reloads. Verify no crash / Sites & Reports still load with chip hidden for single-business account."
+##   - task: "Scan/Quote/Site-detail typography polish (global scale applied)"
+##     implemented: true
+##     working: "NA"
+##     file: "app/scan/review/[id].tsx, app/(tabs)/... (theme scale), app/sites/[id].tsx"
+##     stuck_count: 0
+##     priority: "low"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Fixed one outlier (intent body 11.5->13). Scan, Quote wizard and Site Detail inherit the consistent global type scale. Verify these screens still render and headers are consistent."
+
+## metadata:
+##   created_by: "main_agent"
+##   version: "2.1"
+##   test_sequence: 12
+##   run_ui: true
+
+## test_plan:
+##   current_focus:
+##     - "Guided spotlight tour on dashboard (first-timer + replay)"
+##     - "Multi-business switcher chip on Sites & Reports"
+##   stuck_tasks: []
+##   test_all: false
+##   test_priority: "high_first"
+
+## agent_communication:
+##     -agent: "main"
+##     -comment: >
+##       Frontend-only. Live backend. Login e2e_test_1786703401@example.com / Password123!.
+##       (1) TOUR: after login the dashboard should auto-open the spotlight tour (has_completed_tour was
+##       reset to false). Verify 3 steps: 'All your sites & contracts' (highlights Sites tab),
+##       'Snap any bill' (highlights Scan Bill tile), 'Hands-free renewal' (highlights Lower your utility
+##       bills CTA). Test Skip on step 1 closes it; re-login should NOT reopen (persisted). Then Profile ->
+##       'Replay product tour' should reopen the tour on the dashboard. testIDs: spotlight-tour,
+##       spotlight-card, tour-skip, tour-back, tour-next.
+##       (2) BUSINESS CHIP: test account has ONE business so the chip is HIDDEN by design — just confirm
+##       Sites and Reports still load without errors (no red screen).
+##       (3) Confirm Scan (/scan) and Quote (/quote/new) screens still render with consistent headers.
+##       NOTE: If has_completed_tour is already true when you start (a prior run completed it), use
+##       Profile -> Replay product tour to trigger the tour. Do NOT create real businesses/accounts.

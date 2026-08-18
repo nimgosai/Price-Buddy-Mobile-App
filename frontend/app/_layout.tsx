@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { useAppFonts } from "@/src/hooks/use-app-fonts";
 import { AuthProvider } from "@/src/auth/auth-context";
+import { BusinessProvider } from "@/src/business/business-context";
 import { ToastProvider } from "@/src/components/toast";
 
 // Disable logbox errors etc so that users can see the app
@@ -43,10 +44,12 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <KeyboardProvider>
           <AuthProvider>
-            <ToastProvider>
-              <StatusBar style="dark" />
-              <Stack screenOptions={{ headerShown: false }} />
-            </ToastProvider>
+            <BusinessProvider>
+              <ToastProvider>
+                <StatusBar style="dark" />
+                <Stack screenOptions={{ headerShown: false }} />
+              </ToastProvider>
+            </BusinessProvider>
           </AuthProvider>
         </KeyboardProvider>
       </SafeAreaProvider>

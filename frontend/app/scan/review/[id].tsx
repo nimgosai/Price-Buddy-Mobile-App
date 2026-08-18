@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   intentOptActive: { borderWidth: 2, borderColor: colors.heading, backgroundColor: "#F5F3FF" },
   intentEmoji: { fontSize: 22, marginTop: 2 },
   intentOptTitle: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurfaceSecondary },
-  intentOptBody: { fontFamily: font.regular, fontSize: 11.5, color: colors.muted, marginTop: 2 },
+  intentOptBody: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
   radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: "#D1D5DB", marginTop: 4, alignItems: "center", justifyContent: "center" },
   radioOn: { borderColor: colors.heading, backgroundColor: colors.heading },
   radioDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#FFFFFF" },

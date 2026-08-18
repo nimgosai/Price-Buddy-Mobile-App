@@ -13,6 +13,7 @@ export type User = {
   push_notifications_enabled?: boolean;
   business_type?: string;
   trading_name?: string | null;
+  has_completed_tour?: boolean;
 };
 
 type AuthState = {

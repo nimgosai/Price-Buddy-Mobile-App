@@ -13,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Button, Card } from "@/src/components/ui";
 import { ScreenHeader, EmptyState } from "@/src/components/screen";
+import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
+import { useBusiness } from "@/src/business/business-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -77,6 +79,7 @@ function BarGroup({ items, kind, testID }: { items: any[]; kind: "utility" | "si
 export default function Reports() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { activeBizId, bizQuery } = useBusiness();
 
   const [data, setData] = useState<Spend | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,12 +89,12 @@ export default function Reports() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await apiRequest<Spend>("/reports/spend");
+      const res = await apiRequest<Spend>(`/reports/spend${bizQuery()}`);
       setData(res);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't load your report.");
     }
-  }, []);
+  }, [bizQuery]);
 
   useEffect(() => {
     (async () => {
@@ -99,7 +102,7 @@ export default function Reports() {
       await load();
       setLoading(false);
     })();
-  }, [load]);
+  }, [load, activeBizId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -133,6 +136,7 @@ export default function Reports() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
+          <BusinessSwitcherChip variant="reports" />
           {error ? (
             <Card testID="reports-error" style={styles.errorCard}>
               <Ionicons name="cloud-offline-outline" size={28} color={colors.error} />

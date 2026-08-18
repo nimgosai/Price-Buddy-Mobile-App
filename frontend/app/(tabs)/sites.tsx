@@ -17,12 +17,15 @@ import { Button, Card } from "@/src/components/ui";
 import { Icon } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { SiteActionsSheet } from "@/src/components/site-actions-sheet";
+import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
+import { useBusiness } from "@/src/business/business-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 export default function Sites() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { activeBizId, bizQuery } = useBusiness();
 
   const [sites, setSites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,12 +37,12 @@ export default function Sites() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await apiRequest<any[]>("/properties");
+      const res = await apiRequest<any[]>(`/properties${bizQuery()}`);
       setSites(Array.isArray(res) ? res : []);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't load your sites.");
     }
-  }, []);
+  }, [bizQuery]);
 
   useEffect(() => {
     (async () => {
@@ -47,7 +50,7 @@ export default function Sites() {
       await load();
       setLoading(false);
     })();
-  }, [load]);
+  }, [load, activeBizId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,6 +96,7 @@ export default function Sites() {
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
+          <BusinessSwitcherChip variant="sites" />
           {error ? (
             <Card testID="sites-error" style={styles.errorCard}>
               <Ionicons name="cloud-offline-outline" size={28} color={colors.error} />
