@@ -217,7 +217,7 @@ export function AddBusinessModal({
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(20,15,40,0.55)", justifyContent: "flex-end" },
-  kav: { width: "100%" },
+  kav: { width: "100%", flex: 1, justifyContent: "flex-end" },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 26,

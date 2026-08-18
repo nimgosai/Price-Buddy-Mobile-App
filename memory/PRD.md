@@ -258,3 +258,13 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Fix: optimistic local state (emailOn/pushOn) synced from user via useEffect; each toggle flips
   instantly & independently; PUT /me/preferences fires in background; revert + toast on failure.
   Removed shared disabled. Verified via screenshots (push flips instantly, email unaffected).
+
+### FIX — Bottom-sheet top clipped (Meter Install + Add Business) [user video]
+- Root cause: sheet used maxHeight:"88%" but its parent KeyboardAvoidingView (kav) had no resolved
+  height (width:100% only), so the % didn't resolve -> sheet grew taller than the screen, bottom-anchored,
+  and its TOP (grabber + header) overflowed above the viewport (looked cut off).
+- Fix: kav -> { width:"100%", flex:1, justifyContent:"flex-end" } so the sheet's parent fills the screen,
+  maxHeight:"88%" resolves correctly, and the sheet is capped + scrollable. Applied to
+  meter-install-modal.tsx and add-business-modal.tsx. Verified via screenshots (full header now visible).
+- Audited all other modals/sheets: request-change & have-a-query are content-sized (no maxHeight) => OK;
+  business-switcher & profile-delete sheets sit under a full-screen flex:1 backdrop => % resolves OK.
