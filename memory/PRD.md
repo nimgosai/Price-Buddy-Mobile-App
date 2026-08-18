@@ -251,3 +251,10 @@ No login/live-data writes used — everything reconstructed from the bundle.
   meta/date ->13 for consistency.
 - Contracts overview: card supplier ->15, meta/date ->13.
 - Scan success: already matches original (tiered headlines, View Live Quotes / Scan another bill) — left as-is.
+
+### FIX — Profile toggles flashing / slow (from user video Emergent (11).mp4)
+- Root cause: shared savingPref disabled BOTH switches during save, and Switch value was bound to the
+  server value (only updated after refreshUser round-trip) -> both flashed + felt slow.
+- Fix: optimistic local state (emailOn/pushOn) synced from user via useEffect; each toggle flips
+  instantly & independently; PUT /me/preferences fires in background; revert + toast on failure.
+  Removed shared disabled. Verified via screenshots (push flips instantly, email unaffected).

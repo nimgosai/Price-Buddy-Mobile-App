@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -27,32 +27,39 @@ export default function Profile() {
   const toast = useToast();
   const { user, signOut, refreshUser } = useAuth();
 
-  const [savingPref, setSavingPref] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState("");
   const [deleteDone, setDeleteDone] = useState(false);
 
+  // Optimistic local toggle state so switches flip instantly and independently.
+  const [emailOn, setEmailOn] = useState(user?.email_notifications_enabled ?? true);
+  const [pushOn, setPushOn] = useState(user?.push_notifications_enabled ?? false);
+  useEffect(() => {
+    setEmailOn(user?.email_notifications_enabled ?? true);
+    setPushOn(user?.push_notifications_enabled ?? false);
+  }, [user?.email_notifications_enabled, user?.push_notifications_enabled]);
+
   const initials = (user?.full_name || user?.email || "U").split(/\s+/).map((s) => s[0]).slice(0, 2).join("").toUpperCase();
 
-  const setPref = async (patch: { email?: boolean; push?: boolean }) => {
-    setSavingPref(true);
+  const savePrefs = async (email: boolean, push: boolean) => {
     try {
       await apiRequest("/me/preferences", {
         method: "PUT",
-        body: {
-          email_notifications_enabled: patch.email ?? user?.email_notifications_enabled ?? true,
-          push_notifications_enabled: patch.push ?? user?.push_notifications_enabled ?? false,
-        },
+        body: { email_notifications_enabled: email, push_notifications_enabled: push },
       });
       refreshUser().catch(() => {});
     } catch {
+      // Revert optimistic change on failure.
+      setEmailOn(user?.email_notifications_enabled ?? true);
+      setPushOn(user?.push_notifications_enabled ?? false);
       toast("Couldn't update your preferences.", "error");
-    } finally {
-      setSavingPref(false);
     }
   };
+
+  const onToggleEmail = (v: boolean) => { setEmailOn(v); savePrefs(v, pushOn); };
+  const onTogglePush = (v: boolean) => { setPushOn(v); savePrefs(emailOn, v); };
 
   const submitDelete = async () => {
     if (confirmText.trim().toUpperCase() !== "DELETE") {
@@ -95,18 +102,16 @@ export default function Profile() {
           icon="mail" bg={colors.pastel.yellow} fg={colors.pastel.yellowIcon}
           label="Email alerts"
           description="Renewal emails at 365 / 180 / 90 / 60 / 30 / 21 / 14 / 7 / 3 / 1 days before energy contracts end."
-          value={user?.email_notifications_enabled ?? true}
-          disabled={savingPref}
-          onChange={(v) => setPref({ email: v })}
+          value={emailOn}
+          onChange={onToggleEmail}
           testID="profile-alerts-toggle"
         />
         <ToggleRow
           icon="bell" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
           label="Phone push notifications"
           description="Get a heads-up on your phone the moment a renewal window opens."
-          value={user?.push_notifications_enabled ?? false}
-          disabled={savingPref}
-          onChange={(v) => setPref({ push: v })}
+          value={pushOn}
+          onChange={onTogglePush}
           testID="profile-push-toggle"
         />
 
