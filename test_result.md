@@ -233,3 +233,20 @@
 ##       (3) Confirm Scan (/scan) and Quote (/quote/new) screens still render with consistent headers.
 ##       NOTE: If has_completed_tour is already true when you start (a prior run completed it), use
 ##       Profile -> Replay product tour to trigger the tour. Do NOT create real businesses/accounts.
+
+## agent_communication:
+##     -agent: "main"
+##     -comment: >
+##       FULL FLOW SWEEP requested. Frontend-only, live backend. Login
+##       e2e_test_1786703401@example.com / Password123!. Click through EVERY screen and interactive
+##       element and report any rough edges (clipped/overflowing content, dead buttons, broken nav,
+##       text truncation, layout issues, console/page errors). Account has 2 businesses now, so the
+##       business switcher chip IS visible on Sites & Reports. Priority checks:
+##       (1) Bottom-sheet modals must NOT be clipped at the top (grabber+header visible): Meter
+##       Installation (quick-action-meter), Add Business (quick-action-add-business), Request change
+##       (site detail), Have-a-query pill, Account deletion (profile), Business switcher sheet.
+##       (2) Profile toggles flip instantly & independently (no flashing).
+##       (3) Tabs: Home, Sites, Reports, Support, Profile + back buttons. Renewals (from dashboard card),
+##       Contracts (View Contracts), Scan flow, Quote wizard, Site detail, Entry screens (landing/splash/
+##       signin/signup). Do NOT submit real registrations or create more businesses. Tour may auto-open;
+##       skip it or replay via Profile -> Replay product tour.
