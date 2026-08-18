@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 10 — frontend-only Playwright verification on mobile viewport (390x844) against preview https://bill-verify-7.preview.emergentagent.com with LIVE backend https://utility-contract-hub.emergent.host. Signed in with e2e_test_1786703401@example.com / Password123! → dashboard → navigated to /quote/new. ALL 7 review-request flows PASS. (1) Step 1 (step-service) with no service selected + wizard-next: shows wizard-error 'Pick at least one service to continue.' and stays on step-service. (2) Selecting service-electric + wizard-next: advances to step-global. (3) PRIMARY BUG FIX — Step 2 (step-global) with all fields empty + wizard-next: does NOT advance (still on step-global), and all 5 inline error testIDs render with expected text: quote-error-name='Name is required', quote-error-email='Email is required', quote-error-business='Business name is required', quote-error-address='Address is required', quote-error-postcode='Postcode is required'. Every corresponding input (quote-contact-name, quote-contact-email, quote-business-name, quote-address, quote-postcode) has computed borderColor=rgb(220,38,38) confirming the red inputError style is applied. Mandatory labels display asterisks (Your name *, Email *, Business name *, Address *, Postcode *). (4) Invalid email 'not-an-email' + wizard-next: quote-error-email='Enter a valid email'. (5) Tapping quote-supply-no reveals the quote-supply-postcode input; leaving it empty + wizard-next surfaces quote-error-supply-postcode='Supply postcode is required'. (6) Field error clears on typing: quote-error-name was PRESENT, then after typing into quote-contact-name it became MISSING (cleared). (7) Filling all valid values (name John Doe, email john@example.com, business Acme Ltd, address '1 High St, London', postcode SW1A 1AA, supply-postcode EC2A 4BX) + wizard-next: advances to step-energy (still-on-global=False, wizard-error banner absent). No red screens, no page errors during the flow. Console shows only pre-existing warnings ('shadow*' style props deprecated; props.pointerEvents deprecated; useNativeDriver JS fallback) that are unrelated to this fix.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "shadow* style props (theme.ts)", "issue": "Non-blocking web-only warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Carry-over from prior iterations; not related to this fix. Reference: /app/frontend/src/theme/theme.ts" },
+      { "component": "props.pointerEvents", "issue": "Web-only cosmetic warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'." }
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_10.json"],
+  "action_items": [
+    "No fixes required for the Step 2 inline-validation bug — implementation in /app/frontend/app/quote/new.tsx is correct and verified end-to-end."
+  ],
+  "critical_code_review_comments": [
+    "quote/new.tsx globalFieldErrors() (L125-135) correctly maps required fields to their inline error keys (name, email, business_name, full_address, postcode, supply_postcode) and includes a proper email regex (/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/) for the 'Enter a valid email' message.",
+    "next() for 'global' step (L144-151) sets fieldErrors, sets a generic banner and scrolls to top on validation failure — matches the requested UX.",
+    "Each TextInput's onChangeText calls clearFieldError(key) so the inline error disappears as soon as the user edits that field — confirmed at runtime.",
+    "Labeled helper renders the asterisk via styles.req and the error via Text testID={testID} with styles.fieldError (red) — matches the spec.",
+    "inputError style (borderWidth:1.5, borderColor:'#DC2626', backgroundColor:'#FEF2F2') is conditionally applied via [styles.input, fieldErrors.X && styles.inputError] on all 5 required inputs.",
+    "wizard-next uses navPrimarySubtle (opacity 0.55) when !validateStep(), giving the requested visually-subtle Continue button until the step is valid.",
+    "Supply-postcode field is conditionally rendered only when !addr.is_supply_address, and its error clears via clearFieldError('supply_postcode') on change."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend-only iteration; live backend used only for signin)", "frontend": "100% (7/7 review-request flows passed)" },
+  "seed_data_creation": "None. Shared test account e2e_test_1786703401@example.com was used for signin only; the quote wizard was navigated up to step-energy but not submitted (no data written to backend).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Step 2 (Your details) inline validation is shipped and fully verified. testIDs to reuse: step-service, service-electric/gas/water/telecoms, step-global, quote-contact-name, quote-contact-email, quote-contact-phone, quote-business-name, quote-address, quote-postcode, quote-supply-yes, quote-supply-no, quote-supply-postcode; inline error testIDs: quote-error-name, quote-error-email, quote-error-business, quote-error-address, quote-error-postcode, quote-error-supply-postcode; nav: wizard-next, wizard-back, wizard-submit, wizard-error. Sign-in submit testID is 'signin-submit-button' (not 'signin-submit'). Preview host: https://bill-verify-7.preview.emergentagent.com. Live backend: https://utility-contract-hub.emergent.host. Account has no contracts (broker-gated) — expected empty dashboard.",
+  "rca_of_issue": "Original bug: Step 2 showed only a generic banner and did not highlight invalid fields. RCA: previous validateStep() computed only a boolean and next() surfaced a single banner. Fix (already implemented in /app/frontend/app/quote/new.tsx): a new globalFieldErrors() function returns a Record<string,string> of per-field messages; next() writes it to fieldErrors state, which drives (a) the red input border via styles.inputError, (b) the red inline Text under each field via Labeled(testID=...), (c) mandatory-label asterisks via required prop, and (d) auto-scroll to top with scrollRef. Each input's onChangeText also calls clearFieldError() so errors self-clear when the user starts editing. Verified end-to-end on preview; no regressions observed."
+}

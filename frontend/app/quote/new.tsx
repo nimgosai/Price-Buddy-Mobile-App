@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -65,7 +65,17 @@ export default function QuoteWizard() {
   const [waterSupplier, setWaterSupplier] = useState("");
   const [telecomsSupplier, setTelecomsSupplier] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const scrollRef = useRef<any>(null);
+
+  const clearFieldError = (k: string) =>
+    setFieldErrors((p) => {
+      if (!p[k]) return p;
+      const n = { ...p };
+      delete n[k];
+      return n;
+    });
 
   const flow = useMemo(() => {
     const f = ["service", "global"];
@@ -112,10 +122,43 @@ export default function QuoteWizard() {
     return true;
   };
 
+  const globalFieldErrors = (): Record<string, string> => {
+    const e: Record<string, string> = {};
+    if (!contact.name.trim()) e.name = "Name is required";
+    if (!contact.email.trim()) e.email = "Email is required";
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email.trim())) e.email = "Enter a valid email";
+    if (!addr.business_name.trim()) e.business_name = "Business name is required";
+    if (!addr.full_address.trim()) e.full_address = "Address is required";
+    if (!addr.postcode.trim()) e.postcode = "Postcode is required";
+    if (!addr.is_supply_address && !addr.supply_postcode.trim()) e.supply_postcode = "Supply postcode is required";
+    return e;
+  };
+
   const next = () => {
     setError("");
-    if (!validateStep()) {
-      setError("Please complete the highlighted fields.");
+    if (current === "service") {
+      if (selected.size === 0) {
+        setError("Pick at least one service to continue.");
+        return;
+      }
+    } else if (current === "global") {
+      const fe = globalFieldErrors();
+      if (Object.keys(fe).length > 0) {
+        setFieldErrors(fe);
+        setError("Please complete the required fields marked in red.");
+        scrollRef.current?.scrollTo?.({ y: 0, animated: true });
+        return;
+      }
+    } else if (current === "energy") {
+      if (!meters.every((m) => m.supplier.trim() && m.contract_end_window)) {
+        setError("Add a supplier and contract end date for each meter.");
+        return;
+      }
+    } else if (current === "water" && !waterSupplier.trim()) {
+      setError("Enter your current water supplier.");
+      return;
+    } else if (current === "telecoms" && !telecomsSupplier.trim()) {
+      setError("Enter your current telecoms supplier.");
       return;
     }
     setStep((s) => Math.min(flow.length - 1, s + 1));
@@ -164,7 +207,7 @@ export default function QuoteWizard() {
         ))}
       </View>
 
-      <KeyboardAwareScrollView contentContainerStyle={styles.scroll} bottomOffset={90} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView ref={scrollRef} contentContainerStyle={styles.scroll} bottomOffset={90} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {current === "service" && (
           <View testID="step-service">
             <Text style={styles.h2}>Which services do you need a quote for?</Text>
@@ -189,23 +232,23 @@ export default function QuoteWizard() {
         {current === "global" && (
           <View testID="step-global" style={{ gap: spacing.md }}>
             <Text style={styles.h2}>Your details</Text>
-            <Labeled label="Name">
-              <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => setContact((c) => ({ ...c, name: t }))} placeholder="Your name" placeholderTextColor={colors.muted} style={styles.input} />
+            <Labeled label="Your name" required error={fieldErrors.name} testID="quote-error-name">
+              <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => { setContact((c) => ({ ...c, name: t })); clearFieldError("name"); }} placeholder="Your name" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.name && styles.inputError]} />
             </Labeled>
-            <Labeled label="Email">
-              <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => setContact((c) => ({ ...c, email: t }))} placeholder="you@company.co.uk" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+            <Labeled label="Email" required error={fieldErrors.email} testID="quote-error-email">
+              <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => { setContact((c) => ({ ...c, email: t })); clearFieldError("email"); }} placeholder="you@company.co.uk" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" style={[styles.input, fieldErrors.email && styles.inputError]} />
             </Labeled>
             <Labeled label="Phone (optional)">
               <TextInput testID="quote-contact-phone" value={contact.phone} onChangeText={(t) => setContact((c) => ({ ...c, phone: t }))} placeholder="07123 456789" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} />
             </Labeled>
-            <Labeled label="Business name">
-              <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => setAddr((a) => ({ ...a, business_name: t }))} placeholder="BIOS Ltd" placeholderTextColor={colors.muted} style={styles.input} />
+            <Labeled label="Business name" required error={fieldErrors.business_name} testID="quote-error-business">
+              <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => { setAddr((a) => ({ ...a, business_name: t })); clearFieldError("business_name"); }} placeholder="BIOS Ltd" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.business_name && styles.inputError]} />
             </Labeled>
-            <Labeled label="Address">
-              <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => setAddr((a) => ({ ...a, full_address: t }))} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={styles.input} />
+            <Labeled label="Address" required error={fieldErrors.full_address} testID="quote-error-address">
+              <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => { setAddr((a) => ({ ...a, full_address: t })); clearFieldError("full_address"); }} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.full_address && styles.inputError]} />
             </Labeled>
-            <Labeled label="Postcode">
-              <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
+            <Labeled label="Postcode" required error={fieldErrors.postcode} testID="quote-error-postcode">
+              <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => { setAddr((a) => ({ ...a, postcode: t.toUpperCase() })); clearFieldError("postcode"); }} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={[styles.input, fieldErrors.postcode && styles.inputError]} />
             </Labeled>
             <Labeled label="Is this the supply address?">
               <View style={styles.segRow}>
@@ -218,8 +261,8 @@ export default function QuoteWizard() {
               </View>
             </Labeled>
             {!addr.is_supply_address && (
-              <Labeled label="Supply postcode">
-                <TextInput testID="quote-supply-postcode" value={addr.supply_postcode} onChangeText={(t) => setAddr((a) => ({ ...a, supply_postcode: t.toUpperCase() }))} placeholder="EC2A 4BX" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
+              <Labeled label="Supply postcode" required error={fieldErrors.supply_postcode} testID="quote-error-supply-postcode">
+                <TextInput testID="quote-supply-postcode" value={addr.supply_postcode} onChangeText={(t) => { setAddr((a) => ({ ...a, supply_postcode: t.toUpperCase() })); clearFieldError("supply_postcode"); }} placeholder="EC2A 4BX" placeholderTextColor={colors.muted} autoCapitalize="characters" style={[styles.input, fieldErrors.supply_postcode && styles.inputError]} />
               </Labeled>
             )}
           </View>
@@ -280,7 +323,7 @@ export default function QuoteWizard() {
               )}
             </Pressable>
           ) : (
-            <Pressable testID="wizard-next" onPress={next} style={[styles.navBtn, styles.navPrimary, { flex: 2 }]}>
+            <Pressable testID="wizard-next" onPress={next} style={[styles.navBtn, styles.navPrimary, { flex: 2 }, !validateStep() && styles.navPrimarySubtle]}>
               <Text style={styles.navPrimaryText}>Continue</Text>
             </Pressable>
           )}
@@ -290,11 +333,17 @@ export default function QuoteWizard() {
   );
 }
 
-function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+function Labeled({ label, required, error, testID, children }: { label: string; required?: boolean; error?: string; testID?: string; children: React.ReactNode }) {
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>
+        {label}
+        {required ? <Text style={styles.req}> *</Text> : null}
+      </Text>
       {children}
+      {!!error && (
+        <Text testID={testID} style={styles.fieldError}>{error}</Text>
+      )}
     </View>
   );
 }
@@ -372,7 +421,10 @@ const styles = StyleSheet.create({
   h3: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
   muted: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginBottom: spacing.md, lineHeight: 20 },
   label: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
+  req: { color: "#DC2626", fontFamily: font.bold },
+  fieldError: { fontFamily: font.medium, fontSize: type.sm, color: "#DC2626" },
   input: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, backgroundColor: colors.surface },
+  inputError: { borderWidth: 1.5, borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
 
   svcGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   svcCard: { width: "47%", flexGrow: 1, alignItems: "center", padding: spacing.lg, borderRadius: radius.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
@@ -412,5 +464,6 @@ const styles = StyleSheet.create({
   navBack: { flex: 1, backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border },
   navBackText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
   navPrimary: { backgroundColor: colors.brandPrimary },
+  navPrimarySubtle: { opacity: 0.55 },
   navPrimaryText: { fontFamily: font.semibold, fontSize: type.lg, color: "#FFFFFF" },
 });

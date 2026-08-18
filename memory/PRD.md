@@ -164,3 +164,16 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Add-site form: optional Existing supplier, Contract end date, Meter type (Electric/Gas segmented), Meter number.
 - GLOBAL theme tokens (theme.ts) updated for contrast: heading #1A1D1E, onSurface #1E293B,
   onSurfaceSecondary #475569, muted #64748B. Section headers 12px/0.05em/semibold/muted. Accent #FF6B47.
+
+### BATCH 3 COMPLETE (Quote wizard) + STEP-2 VALIDATION FIX (verified by testing_agent iter 10)
+- app/quote/new.tsx: multi-step wizard (service -> global -> energy meters -> water -> telecoms -> review)
+  -> POST /quotes/multi -> /quote/success/{id}. Services electric/gas/water/telecoms; energy meters add/remove
+  with contract_end_window chips (out_of_contract/under_6m/6_12m/over_12m). Prefills from ?utility&incumbent&property.
+- Step 2 inline validation: per-field red border (#DC2626) + red error text (testIDs quote-error-name/email/
+  business/address/postcode/supply-postcode), asterisks on mandatory labels, auto-scroll to top on fail,
+  Continue button subtle (opacity .55) until valid. Email format validated.
+- Reports already uses shared ScreenHeader -> consistent with Sites.
+- OPEN: user's physical phone still shows OLD build via Expo Go (web preview + android bundle DO update).
+  Cleared Metro cache. Need user to confirm: scanning dev preview QR vs published snapshot; bottom nav shows
+  Home/Sites/Reports/Support/Profile (new) vs Home/Renewals/Sites/... (old).
+- REMAINING: Batch 4 (Profile/Support/Partners), Batch 5 (splash/landing/auth). quote/success screen pre-existing (works).
