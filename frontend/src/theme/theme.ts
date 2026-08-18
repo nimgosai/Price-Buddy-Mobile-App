@@ -3,12 +3,12 @@
 
 export const colors = {
   surface: "#FFFFFF", // cards
-  onSurface: "#1A1F36", // main text (--hu-text)
-  heading: "#1A1F36", // headings (--hu-purple-deep)
+  onSurface: "#1E293B", // main / card text
+  heading: "#1A1D1E", // page titles & greetings (dark slate)
   surfaceSecondary: "#F8F9FC", // app background
-  onSurfaceSecondary: "#3F4659", // --hu-text-2
+  onSurfaceSecondary: "#475569", // secondary text (readable medium-slate)
   surfaceTertiary: "#EEF0F6",
-  surfaceInverse: "#1A1F36",
+  surfaceInverse: "#1A1D1E",
   onSurfaceInverse: "#FFFFFF",
 
   brand: "#FF6B47",
@@ -28,7 +28,7 @@ export const colors = {
   border: "#E6E8F0",
   borderStrong: "#C3C8D8",
   divider: "#EEF0F6",
-  muted: "#8A90A6",
+  muted: "#64748B",
 
   urgency: {
     critical: "#EF4444",
