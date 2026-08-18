@@ -6,7 +6,7 @@ import { Icon } from "@/src/components/icon";
 import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
-type Variant = "sites" | "reports";
+type Variant = "sites" | "reports" | "dashboard";
 
 const VARIANT_STYLE: Record<Variant, { bg: string; border: string; iconBg: string; iconFg: string; kicker: string }> = {
   sites: {
@@ -33,10 +33,59 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
 
   if (businesses.length <= 1) return null;
 
-  const vs = VARIANT_STYLE[variant];
-  const kicker = variant === "reports" ? "VIEWING REPORTS FOR" : "VIEWING SITES FOR";
   const name =
     activeBizId === ALL_BUSINESSES ? `All businesses (${businesses.length})` : activeBusiness?.company_name || "—";
+
+  const renderSheet = () => (
+    <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
+        <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}}>
+          <View style={styles.grabber} />
+          <Text style={styles.sheetTitle}>Switch business</Text>
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+            <Option
+              testID="biz-option-all"
+              label={`All businesses (${businesses.length})`}
+              sub="See everything in one list"
+              active={activeBizId === ALL_BUSINESSES}
+              onPress={() => { switchBusiness(ALL_BUSINESSES); setOpen(false); }}
+            />
+            {businesses.map((b) => (
+              <Option
+                key={b.id}
+                testID={`biz-option-${b.id}`}
+                label={b.company_name}
+                sub={`${b.site_count ?? 0} site${(b.site_count ?? 0) === 1 ? "" : "s"} · ${b.contract_count ?? 0} contract${(b.contract_count ?? 0) === 1 ? "" : "s"}`}
+                active={activeBizId === b.id}
+                onPress={() => { switchBusiness(b.id); setOpen(false); }}
+              />
+            ))}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
+  // Compact inline pill used on the dashboard header.
+  if (variant === "dashboard") {
+    return (
+      <>
+        <Pressable
+          testID={testID || "dashboard-business-chip"}
+          onPress={() => setOpen(true)}
+          style={styles.compact}
+        >
+          <Icon name="building" size={14} color={colors.brandPrimary} />
+          <Text style={styles.compactText} numberOfLines={1}>{name}</Text>
+          <Icon name="chevronDown" size={14} color={colors.muted} />
+        </Pressable>
+        {renderSheet()}
+      </>
+    );
+  }
+
+  const vs = VARIANT_STYLE[variant];
+  const kicker = variant === "reports" ? "VIEWING REPORTS FOR" : "VIEWING SITES FOR";
 
   return (
     <>
@@ -55,33 +104,7 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
         <Text style={[styles.switch, { color: vs.kicker }]}>Switch</Text>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}}>
-            <View style={styles.grabber} />
-            <Text style={styles.sheetTitle}>Switch business</Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-              <Option
-                testID="biz-option-all"
-                label={`All businesses (${businesses.length})`}
-                sub="See everything in one list"
-                active={activeBizId === ALL_BUSINESSES}
-                onPress={() => { switchBusiness(ALL_BUSINESSES); setOpen(false); }}
-              />
-              {businesses.map((b) => (
-                <Option
-                  key={b.id}
-                  testID={`biz-option-${b.id}`}
-                  label={b.company_name}
-                  sub={`${b.site_count ?? 0} site${(b.site_count ?? 0) === 1 ? "" : "s"} · ${b.contract_count ?? 0} contract${(b.contract_count ?? 0) === 1 ? "" : "s"}`}
-                  active={activeBizId === b.id}
-                  onPress={() => { switchBusiness(b.id); setOpen(false); }}
-                />
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {renderSheet()}
     </>
   );
 }
@@ -112,6 +135,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   chipIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  compact: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+  },
+  compactText: { flexShrink: 1, fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
   chipKicker: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.4, textTransform: "uppercase" },
   chipName: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 1 },
   switch: { fontFamily: font.semibold, fontSize: type.sm },

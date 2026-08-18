@@ -268,3 +268,13 @@ No login/live-data writes used — everything reconstructed from the bundle.
   meter-install-modal.tsx and add-business-modal.tsx. Verified via screenshots (full header now visible).
 - Audited all other modals/sheets: request-change & have-a-query are content-sized (no maxHeight) => OK;
   business-switcher & profile-delete sheets sit under a full-screen flex:1 backdrop => % resolves OK.
+
+### Business-on-dashboard chip (original-grounded) + seeding investigation
+- Added compact "dashboard" variant to BusinessSwitcherChip; rendered under the dashboard greeting
+  (only when businesses.length>1). Shows active business name ("All businesses (2)" / company name) +
+  chevron; opens the same Switch-business sheet. Matches original ("Added dashboard switcher chip").
+  Refactored the sheet into renderSheet() shared by sites/reports/dashboard variants. Verified via screenshot.
+- SEEDING BLOCKED via customer API: POST /properties -> 403 (broker-managed); POST /contracts requires
+  property_id (unobtainable); POST /scans -> 502/OCR-heavy & needs broker confirmation. So sites/contracts
+  cannot be injected from the app side by design — needs backend/broker to seed a demo account, or the
+  user scans a real bill on-device.
