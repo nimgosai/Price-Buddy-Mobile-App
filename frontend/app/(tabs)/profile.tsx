@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -7,16 +7,13 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import * as LocalAuthentication from "expo-local-authentication";
 
-import { storage } from "@/src/utils/storage";
-
-import { Button, Card } from "@/src/components/ui";
+import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
@@ -25,421 +22,229 @@ import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 export default function Profile() {
   const insets = useSafeAreaInsets();
-  const toast = useToast();
   const router = useRouter();
+  const toast = useToast();
   const { user, signOut, refreshUser } = useAuth();
 
-  const [email, setEmail] = useState(!!user?.email_notifications_enabled);
-  const [push, setPush] = useState(!!user?.push_notifications_enabled);
-  const [alertsOptOut, setAlertsOptOut] = useState(false);
-  const [biometricOn, setBiometricOn] = useState(false);
-  const [loadingAlerts, setLoadingAlerts] = useState(true);
-  const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [savingPref, setSavingPref] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState("");
+  const [deleteDone, setDeleteDone] = useState(false);
 
-  const loadAlerts = useCallback(async () => {
-    try {
-      const res = await apiRequest<{ alerts_opt_out: boolean }>("/me/alerts");
-      setAlertsOptOut(!!res?.alerts_opt_out);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingAlerts(false);
-    }
-  }, []);
+  const initials = (user?.full_name || user?.email || "U").split(/\s+/).map((s) => s[0]).slice(0, 2).join("").toUpperCase();
 
-  useEffect(() => {
-    loadAlerts();
-    storage.getItem<boolean>("uch_biometric_enabled", false).then((v) => setBiometricOn(!!v));
-  }, [loadAlerts]);
-
-  const toggleBiometric = async (v: boolean) => {
-    if (v) {
-      const ok = (await LocalAuthentication.hasHardwareAsync()) && (await LocalAuthentication.isEnrolledAsync());
-      if (!ok) {
-        toast("No Face ID / fingerprint is set up on this device.", "info");
-        return;
-      }
-    }
-    setBiometricOn(v);
-    await storage.setItem("uch_biometric_enabled", v);
-  };
-
-  useEffect(() => {
-    setEmail(!!user?.email_notifications_enabled);
-    setPush(!!user?.push_notifications_enabled);
-  }, [user]);
-
-  const savePrefs = async (nextEmail: boolean, nextPush: boolean, key: string) => {
-    setSavingKey(key);
-    const prevEmail = email;
-    const prevPush = push;
-    setEmail(nextEmail);
-    setPush(nextPush);
+  const setPref = async (patch: { email?: boolean; push?: boolean }) => {
+    setSavingPref(true);
     try {
       await apiRequest("/me/preferences", {
         method: "PUT",
-        body: { email_notifications_enabled: nextEmail, push_notifications_enabled: nextPush },
+        body: {
+          email_notifications_enabled: patch.email ?? user?.email_notifications_enabled ?? true,
+          push_notifications_enabled: patch.push ?? user?.push_notifications_enabled ?? false,
+        },
       });
       refreshUser().catch(() => {});
-    } catch (e) {
-      setEmail(prevEmail);
-      setPush(prevPush);
-      toast(e instanceof ApiError ? e.message : "Couldn't save your preference.", "error");
+    } catch {
+      toast("Couldn't update your preferences.", "error");
     } finally {
-      setSavingKey(null);
+      setSavingPref(false);
     }
   };
 
-  const saveAlerts = async (nextOptOut: boolean) => {
-    setSavingKey("alerts");
-    const prev = alertsOptOut;
-    setAlertsOptOut(nextOptOut);
-    try {
-      await apiRequest("/me/alerts", { method: "PUT", body: { alerts_opt_out: nextOptOut } });
-    } catch (e) {
-      setAlertsOptOut(prev);
-      toast(e instanceof ApiError ? e.message : "Couldn't save your preference.", "error");
-    } finally {
-      setSavingKey(null);
+  const submitDelete = async () => {
+    if (confirmText.trim().toUpperCase() !== "DELETE") {
+      setDeleteErr("Type DELETE to confirm.");
+      return;
     }
-  };
-
-  const deleteAccount = async () => {
-    if (deleting) return;
     setDeleting(true);
+    setDeleteErr("");
     try {
-      await apiRequest("/me", { method: "DELETE" });
-      setConfirmOpen(false);
-      toast("Your account has been deleted.", "success");
-      await signOut();
+      await apiRequest("/change-requests", {
+        method: "POST",
+        body: { request_type: "account_deletion", message: "Customer requested account deletion from the mobile app." },
+      });
+      setDeleteDone(true);
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Couldn't delete your account.", "error");
+      setDeleteErr(e instanceof ApiError ? e.message : "Could not submit. Please try again.");
     } finally {
       setDeleting(false);
     }
   };
 
-  const displayName = user?.full_name || user?.company_name || "Your account";
-  const initial = (displayName || "?").trim().charAt(0).toUpperCase();
-
   return (
     <View style={styles.root}>
-      <ScreenHeader testID="profile-header" title="Profile" />
+      <ScreenHeader testID="profile-header" title="Profile" onBack={() => router.push("/dashboard")} />
       <ScrollView
+        testID="profile-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Account */}
-        <Card testID="profile-account" style={styles.account}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
+        <View style={styles.userCard}>
+          <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.userName} numberOfLines={1}>{user?.full_name || user?.email}</Text>
+            <Text style={styles.userEmail} numberOfLines={1}>{user?.email}</Text>
+            {!!user?.company_name && <Text style={styles.userCompany} numberOfLines={1}>{user.company_name}</Text>}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
-            <Text style={styles.emailText} numberOfLines={1}>{user?.email}</Text>
-          </View>
-        </Card>
-
-        {/* Quick links */}
-        <Text style={styles.sectionTitle}>Insights</Text>
-        <Card style={styles.settingsCard}>
-          <Pressable testID="profile-reports-link" onPress={() => router.push("/reports")} style={styles.linkRow}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="bar-chart-outline" size={20} color={colors.brandPrimary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Spend reports</Text>
-              <Text style={styles.rowSub}>Your annual utility spend</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </Pressable>
-          <View style={styles.rowDivider} />
-          <Pressable testID="profile-news-link" onPress={() => router.push("/news")} style={styles.linkRow}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="newspaper-outline" size={20} color={colors.brandPrimary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Industry news</Text>
-              <Text style={styles.rowSub}>Latest UK energy updates</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </Pressable>
-          <View style={styles.rowDivider} />
-          <Pressable testID="profile-contracts-link" onPress={() => router.push("/contracts")} style={styles.linkRow}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="documents-outline" size={20} color={colors.brandPrimary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>All contracts</Text>
-              <Text style={styles.rowSub}>Browse every contract we track</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </Pressable>
-        </Card>
-
-        {/* Notifications */}
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <Card style={styles.settingsCard}>
-          <Row
-            testID="toggle-email"
-            icon="mail-outline"
-            title="Email notifications"
-            subtitle="Updates about your bills and account"
-            value={email}
-            disabled={savingKey === "email"}
-            onValueChange={(v) => savePrefs(v, push, "email")}
-          />
-          <View style={styles.rowDivider} />
-          <Row
-            testID="toggle-push"
-            icon="notifications-outline"
-            title="Push notifications"
-            subtitle="Alerts on your device"
-            value={push}
-            disabled={savingKey === "push"}
-            onValueChange={(v) => savePrefs(email, v, "push")}
-          />
-          <View style={styles.rowDivider} />
-          <Row
-            testID="toggle-alerts"
-            icon="alarm-outline"
-            title="Renewal reminders"
-            subtitle="Emails when a contract is due to renew"
-            value={!alertsOptOut}
-            disabled={loadingAlerts || savingKey === "alerts"}
-            onValueChange={(v) => saveAlerts(!v)}
-          />
-          <View style={styles.rowDivider} />
-          <Row
-            testID="toggle-biometric"
-            icon="finger-print-outline"
-            title="Unlock with Face ID / fingerprint"
-            subtitle="Require biometrics when opening the app"
-            value={biometricOn}
-            onValueChange={toggleBiometric}
-          />
-        </Card>
-
-        {/* Actions */}
-        <Text style={styles.sectionTitle}>Support & legal</Text>
-        <Card style={styles.settingsCard}>
-          <Pressable testID="profile-help-link" onPress={() => router.push("/help")} style={styles.linkRow}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="help-circle-outline" size={20} color={colors.brandPrimary} />
-            </View>
-            <Text style={styles.linkText}>How it works</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </Pressable>
-          <View style={styles.rowDivider} />
-          <Pressable testID="profile-privacy-link" onPress={() => router.push("/privacy")} style={styles.linkRow}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="lock-closed-outline" size={20} color={colors.brandPrimary} />
-            </View>
-            <Text style={styles.linkText}>Privacy</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </Pressable>
-          <View style={styles.rowDivider} />
-          <Pressable testID="profile-terms-link" onPress={() => router.push("/terms")} style={styles.linkRow}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="document-text-outline" size={20} color={colors.brandPrimary} />
-            </View>
-            <Text style={styles.linkText}>Terms</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </Pressable>
-        </Card>
-
-        {/* Account actions */}
-        <View style={styles.actions}>
-          <Button
-            testID="profile-signout-button"
-            label="Sign out"
-            variant="secondary"
-            icon="log-out-outline"
-            onPress={signOut}
-          />
-          <Pressable
-            testID="profile-delete-button"
-            onPress={() => setConfirmOpen(true)}
-            style={styles.deleteBtn}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.error} />
-            <Text style={styles.deleteText}>Delete my account</Text>
-          </Pressable>
         </View>
+
+        <ToggleRow
+          icon="mail" bg={colors.pastel.yellow} fg={colors.pastel.yellowIcon}
+          label="Email alerts"
+          description="Renewal emails at 365 / 180 / 90 / 60 / 30 / 21 / 14 / 7 / 3 / 1 days before energy contracts end."
+          value={user?.email_notifications_enabled ?? true}
+          disabled={savingPref}
+          onChange={(v) => setPref({ email: v })}
+          testID="profile-alerts-toggle"
+        />
+        <ToggleRow
+          icon="bell" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
+          label="Phone push notifications"
+          description="Get a heads-up on your phone the moment a renewal window opens."
+          value={user?.push_notifications_enabled ?? false}
+          disabled={savingPref}
+          onChange={(v) => setPref({ push: v })}
+          testID="profile-push-toggle"
+        />
+
+        <LinkRow icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon} label="My sites" onPress={() => router.push("/sites")} testID="profile-sites" />
+        <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My contracts" onPress={() => router.push("/contracts")} testID="profile-contracts" />
+        <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
+
+        <Pressable testID="profile-logout" onPress={() => { signOut(); router.replace("/signin"); }} style={styles.logout}>
+          <Icon name="logout" size={16} color={colors.onSurfaceSecondary} />
+          <Text style={styles.logoutText}>Sign out</Text>
+        </Pressable>
+
+        <Pressable testID="profile-delete-open" onPress={() => setShowDelete(true)} style={styles.danger}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.dangerTitle}>Request account deletion</Text>
+            <Text style={styles.dangerSub}>Permanently remove your account. We may retain some records where required.</Text>
+          </View>
+          <Icon name="chevronRight" size={16} color={colors.muted} />
+        </Pressable>
       </ScrollView>
 
-      {/* Delete confirmation */}
-      <Modal
-        visible={confirmOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmOpen(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard} testID="delete-confirm-sheet">
-            <View style={styles.modalIcon}>
-              <Ionicons name="warning" size={28} color={colors.error} />
-            </View>
-            <Text style={styles.modalTitle}>Delete your account?</Text>
-            <Text style={styles.modalText}>
-              This permanently removes your account and all your data. This cannot be undone.
-            </Text>
-            <View style={styles.modalActions}>
-              <Button
-                testID="delete-cancel"
-                label="Cancel"
-                variant="secondary"
-                onPress={() => setConfirmOpen(false)}
-                style={{ flex: 1 }}
-              />
-              <Pressable
-                testID="delete-confirm"
-                onPress={deleteAccount}
-                disabled={deleting}
-                style={[styles.confirmDelete, deleting && { opacity: 0.6 }]}
-              >
-                {deleting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.confirmDeleteText}>Delete</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
+      <Modal visible={showDelete} transparent animationType="slide" onRequestClose={() => setShowDelete(false)}>
+        <Pressable style={styles.backdrop} onPress={() => !deleting && setShowDelete(false)}>
+          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}} testID="delete-account-sheet">
+            <View style={styles.grabber} />
+            {deleteDone ? (
+              <View style={styles.doneWrap}>
+                <Icon name="check" size={40} color={colors.pastel.mintIcon} />
+                <Text style={styles.doneTitle}>Request received</Text>
+                <Text style={styles.doneSub}>Our team will process your deletion request and confirm by email.</Text>
+                <Pressable onPress={() => { setShowDelete(false); setDeleteDone(false); setConfirmText(""); }} style={styles.doneBtn}>
+                  <Text style={styles.doneBtnText}>Close</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <Text style={styles.mTitle}>Confirm account deletion</Text>
+                <Text style={styles.mSub}>Please read carefully before continuing.</Text>
+                <Text style={styles.mHead}>What gets deleted</Text>
+                {["Your sign-in details and profile.", "All businesses, sites, and meters you've added.", "Contracts, bill scans, quotes, and alerts.", "Concierge message history with our team."].map((t) => (
+                  <View key={t} style={styles.bullet}><Text style={styles.bulletDot}>•</Text><Text style={styles.bulletText}>{t}</Text></View>
+                ))}
+                <Text style={styles.mHead}>What we may retain</Text>
+                <Text style={styles.retain}>Some records are retained where UK law or our suppliers require it — typically up to 6 years. These records can no longer be linked back to your login.</Text>
+                <Text style={[styles.mHead, { marginTop: spacing.md }]}>Type DELETE to confirm</Text>
+                <TextInput
+                  testID="profile-delete-input"
+                  value={confirmText}
+                  onChangeText={setConfirmText}
+                  placeholder="Type DELETE"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="characters"
+                  style={styles.input}
+                />
+                {!!deleteErr && <Text testID="profile-delete-error" style={styles.err}>{deleteErr}</Text>}
+                <View style={styles.mActions}>
+                  <Pressable onPress={() => setShowDelete(false)} disabled={deleting} style={[styles.mBtn, styles.mGhost]}>
+                    <Text style={styles.mGhostText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable testID="profile-delete-confirm" onPress={submitDelete} disabled={deleting} style={[styles.mBtn, styles.mDanger, { flex: 2 }, deleting && { opacity: 0.6 }]}>
+                    {deleting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.mDangerText}>Request deletion</Text>}
+                  </Pressable>
+                </View>
+              </ScrollView>
+            )}
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
 }
 
-function Row({
-  icon,
-  title,
-  subtitle,
-  value,
-  onValueChange,
-  disabled,
-  testID,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-  disabled?: boolean;
-  testID?: string;
+function ToggleRow({ icon, bg, fg, label, description, value, onChange, disabled, testID }: {
+  icon: IconName; bg: string; fg: string; label: string; description: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean; testID?: string;
 }) {
   return (
-    <View style={styles.row} testID={testID}>
-      <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={20} color={colors.brandPrimary} />
+    <View style={styles.row}>
+      <View style={[styles.rowIcon, { backgroundColor: bg }]}><Icon name={icon} size={18} color={fg} /></View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <Text style={styles.rowDesc}>{description}</Text>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        <Text style={styles.rowSub}>{subtitle}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        disabled={disabled}
-        trackColor={{ false: colors.surfaceTertiary, true: colors.brandPrimary }}
-        thumbColor="#FFFFFF"
-      />
+      <Switch testID={testID} value={value} onValueChange={onChange} disabled={disabled} trackColor={{ true: colors.brandPrimary, false: "#D1D5DB" }} thumbColor="#FFFFFF" />
     </View>
+  );
+}
+
+function LinkRow({ icon, bg, fg, label, onPress, testID }: { icon: IconName; bg: string; fg: string; label: string; onPress: () => void; testID?: string }) {
+  return (
+    <Pressable testID={testID} onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.9 }]}>
+      <View style={[styles.rowIcon, { backgroundColor: bg }]}><Icon name={icon} size={18} color={fg} /></View>
+      <Text style={[styles.rowLabel, { flex: 1 }]}>{label}</Text>
+      <Icon name="chevronRight" size={18} color={colors.muted} />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
-  scroll: { padding: spacing.lg, gap: spacing.md },
+  scroll: { padding: spacing.lg, gap: 10 },
+  userCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm },
+  avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.pastel.lavender, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontFamily: font.bold, fontSize: type.xl, color: colors.pastel.lavenderIcon },
+  userName: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
+  userEmail: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
+  userCompany: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4 },
 
-  account: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.sm,
-    backgroundColor: colors.brandPrimary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: { fontFamily: font.bold, fontSize: type["2xl"], color: colors.onBrandPrimary },
-  name: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
-  emailText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md },
+  rowIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  rowLabel: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  rowDesc: { fontFamily: font.regular, fontSize: 11.5, color: colors.muted, marginTop: 2, lineHeight: 16 },
 
-  sectionTitle: {
-    fontFamily: font.bold,
-    fontSize: type.lg,
-    color: colors.heading,
-    marginTop: spacing.sm,
-  },
-  settingsCard: { padding: 0, overflow: "hidden" },
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg },
-  linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg },
-  linkText: { flex: 1, fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
-  rowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.brandTertiary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rowTitle: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
-  rowSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
-  rowDivider: { height: 1, backgroundColor: colors.divider, marginLeft: spacing.lg + 40 + spacing.md },
+  logout: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.md, marginTop: spacing.md },
+  logoutText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurfaceSecondary },
+  danger: { flexDirection: "row", alignItems: "center", gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.lg },
+  dangerTitle: { fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
+  dangerSub: { fontFamily: font.regular, fontSize: 11.5, color: colors.muted, marginTop: 2 },
 
-  actions: { marginTop: spacing.lg, gap: spacing.lg },
-  deleteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  deleteText: { fontFamily: font.semibold, fontSize: type.base, color: colors.error },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(31,42,68,0.55)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  modalCard: {
-    width: "100%",
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    alignItems: "center",
-  },
-  modalIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.md,
-    backgroundColor: "#FEECEC",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.lg,
-  },
-  modalTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, textAlign: "center" },
-  modalText: {
-    fontFamily: font.regular,
-    fontSize: type.base,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: spacing.sm,
-    lineHeight: 20,
-  },
-  modalActions: { flexDirection: "row", gap: spacing.md, marginTop: spacing.xl, alignSelf: "stretch" },
-  confirmDelete: {
-    flex: 1,
-    height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.error,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmDeleteText: { fontFamily: font.semibold, fontSize: type.lg, color: "#FFFFFF" },
+  backdrop: { flex: 1, backgroundColor: "rgba(20,15,40,0.55)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: spacing.lg, maxHeight: "88%" },
+  grabber: { width: 40, height: 4, borderRadius: 4, backgroundColor: colors.border, alignSelf: "center", marginBottom: spacing.md },
+  mTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading },
+  mSub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2, marginBottom: spacing.md },
+  mHead: { fontFamily: font.bold, fontSize: type.sm, color: colors.heading, marginTop: spacing.sm, marginBottom: 6 },
+  bullet: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  bulletDot: { fontFamily: font.bold, color: colors.brandPrimary },
+  bulletText: { flex: 1, fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, lineHeight: 18 },
+  retain: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, lineHeight: 18 },
+  input: { height: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.md, fontFamily: font.semibold, fontSize: type.lg, letterSpacing: 1, color: colors.onSurface, backgroundColor: colors.surface, marginTop: 6 },
+  err: { fontFamily: font.medium, fontSize: type.sm, color: colors.error, marginTop: spacing.sm },
+  mActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+  mBtn: { flex: 1, height: 50, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  mGhost: { backgroundColor: colors.surfaceTertiary },
+  mGhostText: { fontFamily: font.semibold, fontSize: type.lg, color: colors.onSurfaceSecondary },
+  mDanger: { backgroundColor: "#DC2626" },
+  mDangerText: { fontFamily: font.semibold, fontSize: type.lg, color: "#FFFFFF" },
+  doneWrap: { alignItems: "center", paddingVertical: spacing.lg, gap: 6 },
+  doneTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: spacing.sm },
+  doneSub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, textAlign: "center" },
+  doneBtn: { marginTop: spacing.lg, alignSelf: "stretch", height: 50, borderRadius: radius.sm, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  doneBtnText: { fontFamily: font.semibold, fontSize: type.lg, color: "#FFFFFF" },
 });

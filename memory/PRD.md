@@ -188,3 +188,11 @@ No login/live-data writes used — everything reconstructed from the bundle.
   + subtle Continue + asterisks + prefilled email).
 - STILL TODO (next): Profile (Request account deletion), Support (concierge chat, phone 0800 368 9822),
   Reports layout/wording, then splash/landing/auth.
+
+### BATCH 4 (partial) COMPLETE — Profile + Support (verified via screenshot)
+- app/(tabs)/profile.tsx: user card, Email alerts + Phone push toggles -> PUT /me/preferences (useAuth signOut/refreshUser),
+  My sites/My contracts/Contact support rows, Sign out, "Request account deletion" -> delete-account-sheet (type DELETE)
+  -> POST /change-requests {request_type:"account_deletion"} -> "Request received". Exact icons + theme tokens.
+- app/(tabs)/support.tsx: "We're here to help", AM card "Your PriceBuddy team" + Call the desk (tel 0800 368 9822),
+  "Mon-Fri 9am-4pm UK" + email link (hello@pricebuddy.co.uk), HaveAQueryPill, "How our team can help" 5 items (eo array).
+- REMAINING: Reports layout/wording polish; Entry screens (splash slides, landing, signin/signup) to match original.
