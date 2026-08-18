@@ -1,6 +1,10 @@
 import { storage } from "@/src/utils/storage";
 
-const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+// This app is a frontend for the EXTERNAL, live Utility Contract Hub backend.
+// It must always talk to that fixed service — never the local preview proxy
+// (EXPO_PUBLIC_BACKEND_URL gets reset to the preview host on fork).
+const LIVE_BACKEND = "https://utility-contract-hub.emergent.host";
+const BASE_URL = process.env.EXPO_PUBLIC_UCH_BACKEND_URL || LIVE_BACKEND;
 export const API_URL = `${BASE_URL}/api`;
 
 export const TOKEN_KEY = "uch_auth_token";

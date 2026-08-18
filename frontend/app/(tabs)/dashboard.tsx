@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,97 +10,86 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import dayjs from "dayjs";
 
-import { Button, Card, StatusPill } from "@/src/components/ui";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
-import { apiRequest, ApiError } from "@/src/api/client";
+import { AddBusinessModal } from "@/src/components/add-business-modal";
+import { MeterInstallModal } from "@/src/components/meter-install-modal";
+import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
-const EMPTY_IMG =
-  "https://images.unsplash.com/photo-1683921055230-c3ba01e70131?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzF8MHwxfHNlYXJjaHwxfHxjbGVhbiUyMG1vZGVybiUyMG9mZmljZSUyMGRlc2slMjBmbGF0bGF5fGVufDB8fHx8MTc4NjcwMzUzMnww&ixlib=rb-4.1.0&q=85";
-
-type Overview = {
-  properties: any[];
-  total_contracts: number;
-  urgency_summary: Record<string, number>;
-  expiring_contracts: any[];
-  all_contracts: any[];
+const UTILITY_LABEL: Record<string, string> = {
+  electricity: "Electricity",
+  electric: "Electricity",
+  gas: "Gas",
+  water: "Water",
+  telecoms: "Telecoms",
+  broadband: "Broadband",
 };
 
-const URGENCY_ORDER = ["critical", "high", "medium", "renewable", "low", "normal"];
-const URGENCY_LABEL: Record<string, string> = {
-  critical: "Critical",
-  high: "High",
-  medium: "Medium",
-  renewable: "Renewable",
-  low: "Low",
-  normal: "Normal",
+function utilityLabel(u?: string): string {
+  const k = (u || "").toLowerCase();
+  if (UTILITY_LABEL[k]) return UTILITY_LABEL[k];
+  return u ? u.charAt(0).toUpperCase() + u.slice(1) : "Utility";
+}
+
+// Mirrors the live web app urgency function fl(daysLeft, utility)
+function urgencyFor(days: number | null | undefined, utility?: string): string {
+  if (days === null || days === undefined) return "missing";
+  if (days <= 0) return "expired";
+  if (days <= 30) return "critical";
+  if (days <= 60) return "high";
+  if (days <= 90) return "medium";
+  const u = (utility || "").toLowerCase();
+  if (["electricity", "electric", "gas"].includes(u) && days <= 365) return "renewable";
+  if (days <= 180) return "low";
+  return "normal";
+}
+
+type Cfg = { title: string; pill: string; accent: string; bg: string; border: string };
+const URGENCY_CFG: Record<string, Cfg> = {
+  missing: { title: "Action required: end date missing", pill: "No end date", accent: "#EA580C", bg: "#FFF1ED", border: "#FFE0D6" },
+  expired: { title: "Action required: contract has ended", pill: "Expired", accent: "#991B1B", bg: "#FEE2E2", border: "#FECACA" },
+  critical: { title: "Action required: Avoid out-of-contract rates", pill: "Critical", accent: "#DC2626", bg: "#FFE7E1", border: "#FECACA" },
+  high: { title: "Action required: Avoid out-of-contract rates", pill: "Ending soon", accent: "#EA580C", bg: "#FFF1ED", border: "#FFE0D6" },
+  medium: { title: "Renewal window opening", pill: "Approaching", accent: "#B45309", bg: "#FEF3C7", border: "#FDE68A" },
+  renewable: { title: "Renewable now — lock in a new rate", pill: "Renewable now", accent: "#6D28D9", bg: "#EDE9FE", border: "#DDD6FE" },
+  low: { title: "Upcoming contract renewals", pill: "Tracking", accent: "#6D28D9", bg: "#F5F3FF", border: "#DDD6FE" },
+  normal: { title: "All good — tracking your contracts", pill: "Locked in", accent: "#059669", bg: "#ECFDF5", border: "#A7F3D0" },
 };
 
-function daysUntil(dateStr?: string): number | null {
-  if (!dateStr) return null;
-  const d = dayjs(dateStr);
-  if (!d.isValid()) return null;
-  return d.startOf("day").diff(dayjs().startOf("day"), "day");
-}
-
-function urgencyForDays(days: number | null): string {
-  if (days === null) return "normal";
-  if (days <= 14) return "critical";
-  if (days <= 30) return "high";
-  if (days <= 60) return "medium";
-  if (days <= 90) return "renewable";
-  return "low";
-}
-
-function scanStatusMeta(status?: string): { label: string; color: string } {
-  const s = (status || "").toLowerCase();
-  if (["verified", "confirmed", "approved", "completed"].includes(s))
-    return { label: "Verified", color: "#10B981" };
-  if (["rejected", "failed", "error"].includes(s))
-    return { label: "Rejected", color: "#EF4444" };
-  if (["pending", "processing", "uploaded", "extracting"].includes(s))
-    return { label: "Processing", color: "#F59E0B" };
-  if (["awaiting_review", "submitted", "in_review", "reviewing"].includes(s))
-    return { label: "In review", color: "#4A5169" };
-  return { label: s ? s.replace(/_/g, " ") : "Submitted", color: "#4A5169" };
+function greeting(): { salutation: string; subtitle: string } {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12)
+    return { salutation: "Good Morning", subtitle: "A fresh start — let's see what's ahead today." };
+  if (h >= 12 && h < 17)
+    return { salutation: "Good Afternoon", subtitle: "Mid-day check-in — here's where things stand." };
+  return { salutation: "Good Evening", subtitle: "Winding down — quick scan before you log off?" };
 }
 
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [renewals, setRenewals] = useState<any[]>([]);
-  const [audits, setAudits] = useState<any[]>([]);
-  const [scans, setScans] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [callingId, setCallingId] = useState<string | null>(null);
+  const [addBiz, setAddBiz] = useState(false);
+  const [meter, setMeter] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  const [turningOn, setTurningOn] = useState(false);
 
   const load = useCallback(async () => {
-    setError(null);
     try {
-      const [ov, rn, au] = await Promise.all([
-        apiRequest<Overview>("/dashboard/overview"),
-        apiRequest<{ items: any[] }>("/renewals/urgent"),
-        apiRequest<any[]>("/my/audits-in-progress"),
-      ]);
-      setOverview(ov);
-      setRenewals(Array.isArray(rn?.items) ? rn.items : []);
-      setAudits(Array.isArray(au) ? au : []);
-      apiRequest<any[]>("/scans")
-        .then((s) => setScans(Array.isArray(s) ? s : []))
-        .catch(() => {});
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Couldn't load your dashboard.");
+      const res = await apiRequest<{ items: any[] }>("/renewals/urgent");
+      const list = Array.isArray(res?.items) ? res.items : [];
+      list.sort((a, b) => (a.days_until_expiry ?? 9999) - (b.days_until_expiry ?? 9999));
+      setItems(list);
+    } catch {
+      setItems([]);
     }
   }, []);
 
@@ -124,55 +113,65 @@ export default function Dashboard() {
     setRefreshing(false);
   }, [load]);
 
-  const requestCall = async (scanId: string) => {
-    if (!scanId || callingId) return;
-    setCallingId(scanId);
+  const firstName = useMemo(() => {
+    const fn = user?.full_name?.trim();
+    if (fn) return fn.split(/\s+/)[0];
+    if (user?.email) return user.email.split("@")[0];
+    return "there";
+  }, [user]);
+
+  const initials = useMemo(() => {
+    const base = user?.full_name || user?.email || "U";
+    return base
+      .split(/\s+/)
+      .map((s) => s[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  }, [user]);
+
+  const g = greeting();
+  const first = items[0];
+  const cfg = first ? URGENCY_CFG[urgencyFor(first.days_until_expiry, first.utility_type)] : null;
+  const uniqueUtils = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    items.forEach((it) => {
+      const l = utilityLabel(it.utility_type);
+      if (!seen.has(l)) {
+        seen.add(l);
+        out.push(l);
+      }
+    });
+    return out;
+  }, [items]);
+
+  const showNudge = !nudgeDismissed && !user?.push_notifications_enabled;
+
+  const turnOnAlerts = async () => {
+    setTurningOn(true);
     try {
-      await apiRequest(`/scans/${scanId}/request-call`, { method: "POST" });
-      toast("We'll call you back shortly.", "success");
-    } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Couldn't request a call.", "error");
+      await apiRequest("/me/preferences", {
+        method: "PUT",
+        body: {
+          email_notifications_enabled: user?.email_notifications_enabled ?? true,
+          push_notifications_enabled: true,
+        },
+      });
+      refreshUser().catch(() => {});
+      toast("Alerts are on — we'll keep you posted.", "success");
+      setNudgeDismissed(true);
+    } catch {
+      toast("Couldn't turn on alerts.", "error");
     } finally {
-      setCallingId(null);
+      setTurningOn(false);
     }
   };
 
-  const greetingName =
-    user?.full_name || user?.company_name || user?.email?.split("@")[0] || "there";
-
-  const totalContracts = overview?.total_contracts ?? 0;
-  const isEmpty = !loading && !error && totalContracts === 0;
-  const renewalList = renewals.length > 0 ? renewals : overview?.expiring_contracts ?? [];
-
   return (
     <View style={styles.root}>
-      {/* Sticky header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <View style={styles.headerLeft}>
-          <Image
-            source={require("../../assets/images/pricebuddy-logo.webp")}
-            style={styles.logo}
-            contentFit="contain"
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerKicker}>Welcome back</Text>
-            <Text testID="dashboard-greeting" style={styles.headerTitle} numberOfLines={1}>
-              Hi, {greetingName}
-            </Text>
-          </View>
-        </View>
-        <Pressable
-          testID="dashboard-scan-icon"
-          onPress={() => router.push("/scan")}
-          hitSlop={10}
-          style={styles.iconBtn}
-        >
-          <Ionicons name="scan-outline" size={22} color={colors.brandPrimary} />
-        </Pressable>
-      </View>
-
       {loading ? (
-        <View style={styles.center} testID="dashboard-loading">
+        <View style={[styles.center, { paddingTop: insets.top }]} testID="dashboard-loading">
           <ActivityIndicator size="large" color={colors.brandPrimary} />
         </View>
       ) : (
@@ -180,429 +179,391 @@ export default function Dashboard() {
           testID="dashboard-scroll"
           contentContainerStyle={[
             styles.scroll,
-            { paddingBottom: insets.bottom + spacing["2xl"] },
+            { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing["2xl"] },
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {error ? (
-            <Card testID="dashboard-error" style={styles.errorCard}>
-              <Ionicons name="cloud-offline-outline" size={28} color={colors.error} />
-              <Text style={styles.errorText}>{error}</Text>
-              <Button label="Try again" variant="secondary" onPress={onRefresh} />
-            </Card>
-          ) : (
-            <>
-              {audits.map((a, i) => {
-                const scanId = a?.id || a?.scan_id || a?._id || "";
-                return (
-                  <View key={scanId || i} testID={`audit-banner-${i}`} style={styles.auditBanner}>
-                    <View style={styles.auditIconWrap}>
-                      <Ionicons name="time-outline" size={20} color={colors.warning} />
-                    </View>
-                    <View style={styles.auditBody}>
-                      <Text style={styles.auditTitle}>Audit in progress</Text>
-                      <Text style={styles.auditText}>
-                        Our team is verifying your bill. We&apos;ll confirm within a day.
-                      </Text>
-                      <Pressable
-                        testID={`audit-request-call-${i}`}
-                        onPress={() => requestCall(scanId)}
-                        disabled={callingId === scanId}
-                        style={styles.auditCta}
-                      >
-                        {callingId === scanId ? (
-                          <ActivityIndicator size="small" color={colors.brandPrimary} />
-                        ) : (
-                          <>
-                            <Ionicons name="call-outline" size={16} color={colors.brandPrimary} />
-                            <Text style={styles.auditCtaText}>Request a call now</Text>
-                          </>
-                        )}
-                      </Pressable>
-                    </View>
-                  </View>
-                );
-              })}
+          {/* Greeting */}
+          <View style={styles.greetRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text testID="dashboard-greeting" style={styles.greetTitle} numberOfLines={1}>
+                {g.salutation}, {firstName}
+              </Text>
+              <Text style={styles.greetSub} numberOfLines={1}>
+                {g.subtitle}
+              </Text>
+            </View>
+            <Pressable
+              testID="dashboard-bell"
+              onPress={() => router.push("/profile")}
+              hitSlop={8}
+              style={styles.bell}
+            >
+              <Ionicons name="notifications-outline" size={20} color={colors.heading} />
+            </Pressable>
+          </View>
 
-              {scans.length > 0 && (
-                <>
-                  <Text style={styles.sectionTitle}>Recent bills</Text>
-                  {scans.slice(0, 4).map((sc: any, i: number) => {
-                    const meta = scanStatusMeta(sc.status);
-                    const when = sc.created_at || sc.uploaded_at || sc.date;
-                    const sid = sc.id || sc._id || sc.scan_id;
-                    return (
-                      <Pressable
-                        key={sid || i}
-                        testID={`bill-history-${i}`}
-                        onPress={() => sid && router.push(`/scan/review/${sid}`)}
-                        style={({ pressed }) => [pressed && { opacity: 0.9 }]}
-                      >
-                        <Card style={styles.billCard}>
-                          <View style={styles.billIcon}>
-                            <Ionicons name="receipt-outline" size={20} color={colors.brandPrimary} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.billTitle} numberOfLines={1}>
-                              {sc.supplier_name || sc.supplier || "Scanned bill"}
-                            </Text>
-                            <Text style={styles.billMeta} numberOfLines={1}>
-                              {when ? dayjs(when).format("D MMM YYYY") : "Recently uploaded"}
-                            </Text>
-                          </View>
-                          <StatusPill label={meta.label} color={meta.color} />
-                        </Card>
-                      </Pressable>
-                    );
-                  })}
-                </>
-              )}
-
-              {isEmpty ? (
-                <View style={styles.emptyWrap} testID="dashboard-empty">
-                  <Image
-                    source={{ uri: EMPTY_IMG }}
-                    style={styles.emptyImg}
-                    contentFit="cover"
-                    transition={200}
-                  />
-                  <Text style={styles.emptyTitle}>No contracts uploaded yet</Text>
-                  <Text style={styles.emptySub}>
-                    Snap a photo of a utility bill and we&apos;ll extract the details and
-                    track your renewals automatically.
-                  </Text>
-                  <Button
-                    testID="empty-scan-button"
-                    label="Scan a bill"
-                    icon="scan-outline"
-                    onPress={() => router.push("/scan")}
-                    style={{ alignSelf: "stretch", marginTop: spacing.lg }}
-                  />
-                </View>
-              ) : (
-                <>
-                  <View style={styles.sectionRow}>
-                    <Text style={styles.sectionTitle}>Utility health</Text>
-                    <Pressable testID="dashboard-see-contracts" onPress={() => router.push("/contracts")}>
-                      <Text style={styles.sectionLink}>All contracts</Text>
-                    </Pressable>
-                  </View>
-                  <Card testID="utility-health-card">
-                    <View style={styles.healthTop}>
-                      <View>
-                        <Text style={styles.healthCount}>{totalContracts}</Text>
-                        <Text style={styles.healthLabel}>
-                          {totalContracts === 1 ? "contract" : "contracts"} tracked
-                        </Text>
-                      </View>
-                      <View style={styles.healthProps}>
-                        <Ionicons name="business-outline" size={16} color={colors.muted} />
-                        <Text style={styles.healthPropsText}>
-                          {overview?.properties?.length ?? 0} site
-                          {(overview?.properties?.length ?? 0) === 1 ? "" : "s"}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.urgencyGrid}>
-                      {URGENCY_ORDER.filter(
-                        (k) => (overview?.urgency_summary?.[k] ?? 0) > 0,
-                      ).map((k) => (
-                        <View key={k} style={styles.urgencyStat} testID={`urgency-${k}`}>
-                          <View style={[styles.urgencyDot, { backgroundColor: colors.urgency[k] }]} />
-                          <Text style={styles.urgencyNum}>{overview?.urgency_summary?.[k]}</Text>
-                          <Text style={styles.urgencyName}>{URGENCY_LABEL[k]}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </Card>
-
-                  {renewalList.length > 0 && (
-                    <>
-                      <View style={styles.sectionRow}>
-                        <Text style={styles.sectionTitle}>Upcoming renewals</Text>
-                        <Pressable testID="dashboard-see-renewals" onPress={() => router.push("/renewals")}>
-                          <Text style={styles.sectionLink}>See all</Text>
-                        </Pressable>
-                      </View>
-                      {renewalList.slice(0, 4).map((c: any, i: number) => {
-                        const end = c.end_date || c.contract_end_date || c.renewal_date;
-                        const days = daysUntil(end);
-                        const urg = c.urgency || urgencyForDays(days);
-                        const color = colors.urgency[urg] || colors.urgency.normal;
-                        return (
-                          <Card key={c.id || c._id || i} testID={`renewal-card-${i}`} style={styles.renewalCard}>
-                            <View style={styles.renewalTop}>
-                              <View style={{ flex: 1 }}>
-                                <Text style={styles.renewalSupplier} numberOfLines={1}>
-                                  {c.supplier_name || c.supplier || "Contract"}
-                                </Text>
-                                <Text style={styles.renewalMeta} numberOfLines={1}>
-                                  {(c.utility_type || "utility").toString().replace(/_/g, " ")}
-                                  {c.property_name ? ` • ${c.property_name}` : ""}
-                                </Text>
-                              </View>
-                              <StatusPill
-                                label={
-                                  days === null
-                                    ? URGENCY_LABEL[urg] || "Normal"
-                                    : days < 0
-                                      ? "Expired"
-                                      : `${days}d left`
-                                }
-                                color={color}
-                              />
-                            </View>
-                            {end && (
-                              <Text style={styles.renewalDate}>Ends {dayjs(end).format("D MMM YYYY")}</Text>
-                            )}
-                          </Card>
-                        );
-                      })}
-                    </>
-                  )}
-
-                  <Pressable
-                    testID="dashboard-scan-tile"
-                    onPress={() => router.push("/scan")}
-                    style={({ pressed }) => [styles.scanTile, pressed && { opacity: 0.9 }]}
-                  >
-                    <View style={styles.scanTileIcon}>
-                      <Ionicons name="scan-outline" size={24} color={colors.onBrandPrimary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.scanTileTitle}>Scan a bill</Text>
-                      <Text style={styles.scanTileSub}>Snap a utility bill to add or update a contract</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.onBrandPrimary} />
-                  </Pressable>
-
-                  <Pressable
-                    testID="dashboard-reports-tile"
-                    onPress={() => router.push("/reports")}
-                    style={({ pressed }) => [styles.reportsTile, pressed && { opacity: 0.9 }]}
-                  >
-                    <View style={styles.reportsIcon}>
-                      <Ionicons name="bar-chart-outline" size={22} color={colors.brandPrimary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.reportsTitle}>View spend report</Text>
-                      <Text style={styles.reportsSub}>Your annual utility spend across all sites</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-                  </Pressable>
-                </>
-              )}
-            </>
+          {/* Alerts nudge */}
+          {showNudge && (
+            <View style={styles.nudge} testID="notif-nudge">
+              <View style={styles.nudgeIcon}>
+                <Ionicons name="notifications" size={18} color={colors.brandPrimary} />
+              </View>
+              <Text style={styles.nudgeText}>Turn on alerts so you never miss a renewal deadline.</Text>
+              <Pressable
+                testID="notif-nudge-turn-on"
+                onPress={turnOnAlerts}
+                disabled={turningOn}
+                style={styles.nudgeBtn}
+              >
+                {turningOn ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.nudgeBtnText}>Turn on</Text>
+                )}
+              </Pressable>
+              <Pressable
+                testID="notif-nudge-dismiss"
+                onPress={() => setNudgeDismissed(true)}
+                hitSlop={8}
+                style={styles.nudgeClose}
+              >
+                <Ionicons name="close" size={16} color={colors.muted} />
+              </Pressable>
+            </View>
           )}
+
+          {/* Trust banner (nothing urgent) OR Action-required card */}
+          {items.length === 0 ? (
+            <View style={styles.trust} testID="trust-banner">
+              <View style={styles.trustIcon}>
+                <Ionicons name="shield-checkmark" size={26} color="#FFFFFF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.trustKicker}>Fully secured</Text>
+                <Text style={styles.trustTitle}>You&apos;re completely covered</Text>
+                <Text style={styles.trustSub}>
+                  No utility contracts expiring soon — our systems are watching everything.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              testID="expiring-soon-card"
+              onPress={() => router.push("/renewals")}
+              style={({ pressed }) => [styles.attnCard, pressed && { opacity: 0.95 }]}
+            >
+              <View style={styles.attnTop}>
+                <View
+                  testID="expiring-count"
+                  style={[
+                    styles.attnCount,
+                    { backgroundColor: cfg?.bg, borderColor: cfg?.border },
+                  ]}
+                >
+                  <Text style={[styles.attnCountText, { color: cfg?.accent }]}>{items.length}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.attnDaysRow}>
+                    <View style={[styles.attnDot, { backgroundColor: cfg?.accent }]} />
+                    <Text style={[styles.attnDays, { color: cfg?.accent }]}>
+                      {first.days_until_expiry < 0
+                        ? `${Math.abs(first.days_until_expiry)} days overdue`
+                        : `${first.days_until_expiry} days remaining`}
+                    </Text>
+                  </View>
+                  <Text style={styles.attnMeta} numberOfLines={1}>
+                    {utilityLabel(first.utility_type)}
+                    {first.supplier_name ? ` · ${first.supplier_name}` : ""}
+                    {first.business_name ? ` · ${first.business_name}` : ""}
+                    {items.length > 1 ? ` · +${items.length - 1} more` : ""}
+                  </Text>
+                </View>
+                {first.renewable_now ? (
+                  <View
+                    style={[styles.renewPill, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}
+                  >
+                    <Text style={[styles.renewPillText, { color: cfg?.accent }]}>Renewable now</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <Text style={styles.attnTitle}>{cfg?.title}</Text>
+
+              {uniqueUtils.length > 0 && (
+                <View style={styles.chipRow}>
+                  {uniqueUtils.map((u) => (
+                    <View key={u} style={styles.chip}>
+                      <Text style={styles.chipText}>{u}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.attnLink}>
+                <Text style={styles.attnLinkText}>
+                  {items.length > 1 ? `View these ${items.length} contracts` : "View this contract"}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.heading} />
+              </View>
+            </Pressable>
+          )}
+
+          {/* Quick actions */}
+          <Text style={styles.quickLabel}>QUICK ACTIONS</Text>
+          <View style={styles.quickGrid}>
+            <QuickAction
+              testID="quick-action-scan"
+              icon="scan-outline"
+              bg={colors.pastel.peach}
+              fg={colors.pastel.peachIcon}
+              title="Smart Bill Upload"
+              desc="Upload electric or gas bills. We'll handle your renewal."
+              onPress={() => router.push("/scan")}
+            />
+            <QuickAction
+              testID="quick-action-add-business"
+              icon="business-outline"
+              bg={colors.pastel.blue}
+              fg={colors.pastel.blueIcon}
+              title="Add another business"
+              desc="Manage multiple companies under one account."
+              onPress={() => setAddBiz(true)}
+            />
+            <QuickAction
+              testID="quick-action-meter"
+              icon="speedometer-outline"
+              bg={colors.pastel.lavender}
+              fg={colors.pastel.lavenderIcon}
+              title="Meter Installation"
+              desc="Smart meter, new electric or gas supply."
+              onPress={() => setMeter(true)}
+            />
+          </View>
+
+          {/* Lower-bills quote promo */}
+          <Pressable
+            testID="lower-bills-cta"
+            onPress={() => router.push("/quote/new")}
+            style={({ pressed }) => [styles.promo, pressed && { opacity: 0.95 }]}
+          >
+            <View style={styles.promoIcon}>
+              <Ionicons name="cash-outline" size={24} color={colors.pastel.mintIcon} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.promoTitle}>Need to lower your business utility bills in the UK?</Text>
+              <Text style={styles.promoSub}>
+                <Text style={styles.promoSubStrong}>Get a quote</Text> — we&apos;ll market-check your contract.
+              </Text>
+            </View>
+            <View style={styles.promoPill}>
+              <Text style={styles.promoPillText}>Get Quote</Text>
+              <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+            </View>
+          </Pressable>
         </ScrollView>
       )}
+
+      <AddBusinessModal
+        visible={addBiz}
+        onClose={() => setAddBiz(false)}
+        onCreated={() => {
+          setAddBiz(false);
+          toast("Business added.", "success");
+          load();
+        }}
+      />
+      <MeterInstallModal visible={meter} onClose={() => setMeter(false)} />
     </View>
+  );
+}
+
+function QuickAction({
+  icon,
+  bg,
+  fg,
+  title,
+  desc,
+  onPress,
+  testID,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  bg: string;
+  fg: string;
+  title: string;
+  desc: string;
+  onPress: () => void;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      style={({ pressed }) => [styles.qa, pressed && { opacity: 0.9 }]}
+    >
+      <View style={[styles.qaIcon, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={22} color={fg} />
+      </View>
+      <Text style={styles.qaTitle}>{title}</Text>
+      <Text style={styles.qaDesc}>{desc}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 },
-  logo: { width: 40, height: 40 },
-  headerKicker: {
-    fontFamily: font.medium,
-    fontSize: type.sm,
-    color: colors.muted,
-  },
-  headerTitle: {
-    fontFamily: font.bold,
-    fontSize: type.xl,
-    color: colors.heading,
-    letterSpacing: -0.4,
-  },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.brandTertiary,
-  },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: { padding: spacing.lg, gap: spacing.md },
 
-  errorCard: { alignItems: "center", gap: spacing.md },
-  errorText: {
-    fontFamily: font.medium,
-    fontSize: type.base,
-    color: colors.onSurfaceSecondary,
-    textAlign: "center",
-  },
-
-  auditBanner: {
-    flexDirection: "row",
-    gap: spacing.md,
-    backgroundColor: "#FFF7ED",
-    borderWidth: 1,
-    borderColor: "#FCD9A8",
-    borderRadius: radius.md,
-    padding: spacing.lg,
-  },
-  auditIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: "#FDEBCF",
+  greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.pastel.lavender,
     alignItems: "center",
     justifyContent: "center",
   },
-  auditBody: { flex: 1, gap: spacing.xs },
-  auditTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
-  auditText: {
-    fontFamily: font.regular,
-    fontSize: type.base,
-    color: colors.onSurfaceSecondary,
-  },
-  auditCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    alignSelf: "flex-start",
+  avatarText: { fontFamily: font.bold, fontSize: type.lg, color: colors.pastel.lavenderIcon },
+  greetTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, letterSpacing: -0.3 },
+  greetSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
+  bell: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  auditCtaText: { fontFamily: font.semibold, fontSize: type.base, color: colors.brandPrimary },
-
-  sectionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.sm,
-  },
-  sectionTitle: {
-    fontFamily: font.bold,
-    fontSize: type.lg,
-    color: colors.heading,
-    marginTop: spacing.sm,
-  },
-  sectionLink: {
-    fontFamily: font.semibold,
-    fontSize: type.base,
-    color: colors.brandPrimary,
-    marginTop: spacing.sm,
-  },
-
-  healthTop: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
-  healthCount: { fontFamily: font.bold, fontSize: 40, color: colors.heading, letterSpacing: -1 },
-  healthLabel: { fontFamily: font.medium, fontSize: type.base, color: colors.muted },
-  healthProps: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  healthPropsText: { fontFamily: font.medium, fontSize: type.base, color: colors.muted },
-  urgencyGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md, marginTop: spacing.lg },
-  urgencyStat: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceSecondary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-  },
-  urgencyDot: { width: 8, height: 8, borderRadius: 4 },
-  urgencyNum: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
-  urgencyName: { fontFamily: font.medium, fontSize: type.base, color: colors.muted },
-
-  renewalCard: { gap: spacing.sm },
-  renewalTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  renewalSupplier: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
-  renewalMeta: {
-    fontFamily: font.regular,
-    fontSize: type.base,
-    color: colors.muted,
-    marginTop: 2,
-    textTransform: "capitalize",
-  },
-  renewalDate: { fontFamily: font.medium, fontSize: type.base, color: colors.onSurfaceSecondary },
-
-  billCard: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  billIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.brandTertiary,
     alignItems: "center",
     justifyContent: "center",
-  },
-  billTitle: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
-  billMeta: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
-
-  scanTile: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.brandPrimary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.sm,
     ...shadow.card,
   },
-  scanTileIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.sm,
-    backgroundColor: "rgba(255,255,255,0.18)",
+
+  nudge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.brandTertiary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  nudgeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  scanTileTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.onBrandPrimary },
-  scanTileSub: {
-    fontFamily: font.regular,
-    fontSize: type.base,
-    color: "rgba(255,255,255,0.85)",
-    marginTop: 2,
+  nudgeText: { flex: 1, fontFamily: font.medium, fontSize: type.sm, color: colors.heading, lineHeight: 18 },
+  nudgeBtn: {
+    backgroundColor: colors.brandPrimary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    minWidth: 66,
+    alignItems: "center",
   },
+  nudgeBtnText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
+  nudgeClose: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
 
-  reportsTile: {
+  trust: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    backgroundColor: "#D1FAE5",
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: "#A7F3D0",
+    borderRadius: radius.md,
     padding: spacing.lg,
   },
-  reportsIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.sm,
-    backgroundColor: colors.brandTertiary,
+  trustIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
   },
-  reportsTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
-  reportsSub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
+  trustKicker: { fontFamily: font.bold, fontSize: type.sm, color: "#065F46" },
+  trustTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: 2 },
+  trustSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4, lineHeight: 18 },
 
-  emptyWrap: { alignItems: "center", paddingVertical: spacing["2xl"], paddingHorizontal: spacing.sm },
-  emptyImg: { width: "100%", height: 180, borderRadius: radius.md, marginBottom: spacing.xl },
-  emptyTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, textAlign: "center" },
-  emptySub: {
-    fontFamily: font.regular,
-    fontSize: type.base,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: spacing.sm,
-    lineHeight: 20,
+  attnCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    ...shadow.card,
   },
+  attnTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  attnCount: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attnCountText: { fontFamily: font.bold, fontSize: type.xl },
+  attnDaysRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  attnDot: { width: 8, height: 8, borderRadius: 4 },
+  attnDays: { fontFamily: font.bold, fontSize: type.sm },
+  attnMeta: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 3 },
+  renewPill: { paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1 },
+  renewPillText: { fontFamily: font.semibold, fontSize: 11 },
+  attnTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: spacing.md },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.md },
+  chip: { backgroundColor: colors.surfaceSecondary, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill },
+  chipText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
+  attnLink: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: spacing.md },
+  attnLinkText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+
+  quickLabel: {
+    fontFamily: font.bold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    color: colors.muted,
+    marginTop: spacing.sm,
+    marginLeft: 2,
+  },
+  quickGrid: { flexDirection: "row", gap: spacing.sm },
+  qa: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  qaIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
+  qaTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  qaDesc: { fontFamily: font.regular, fontSize: 11.5, color: colors.muted, marginTop: 4, lineHeight: 16 },
+
+  promo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.pastel.mint,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  promoIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  promoTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  promoSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4 },
+  promoSubStrong: { fontFamily: font.bold, color: colors.heading },
+  promoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.pastel.mintIcon,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+  },
+  promoPillText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
 });

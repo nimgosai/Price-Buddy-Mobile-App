@@ -38,6 +38,20 @@ export const colors = {
     low: "#6B7280",
     normal: "#1F2A44",
   } as Record<string, string>,
+
+  // Soft pastel tints — mirror the live web app (--hu-pastel-*)
+  pastel: {
+    blue: "#BFDBFE",
+    blueIcon: "#2563EB",
+    lavender: "#DDD6FE",
+    lavenderIcon: "#7C3AED",
+    mint: "#BBF7D0",
+    mintIcon: "#059669",
+    peach: "#FED7AA",
+    peachIcon: "#EA580C",
+    yellow: "#FEF3C7",
+    yellowIcon: "#F59E0B",
+  },
 };
 
 export const spacing = {
