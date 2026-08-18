@@ -196,3 +196,11 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - app/(tabs)/support.tsx: "We're here to help", AM card "Your PriceBuddy team" + Call the desk (tel 0800 368 9822),
   "Mon-Fri 9am-4pm UK" + email link (hello@pricebuddy.co.uk), HaveAQueryPill, "How our team can help" 5 items (eo array).
 - REMAINING: Reports layout/wording polish; Entry screens (splash slides, landing, signin/signup) to match original.
+
+### PROFILE/SUPPORT CORRECTED to match original (user flagged deviations)
+- Support AM card: dark #1A1F36 banner "Hi {firstName}, we've got you." + "Any question, any time — we're a single
+  tap away."; accent (#FF6B47) avatar w/ initials overlapping; "Your account team" / "Price Buddy support team";
+  Call the desk; Mon–Fri 9am–4pm UK · Drop us an email. (Was wrongly lavender chat avatar + "Your PriceBuddy team".)
+- Profile rows corrected: My sites · My quote requests (->/quote/new) · Replay product tour (->/splash) · Contact support.
+  (Was wrongly "My contracts".)
+- TODO next: (1) verification pass of Home/Sites/Scan/Quote wording vs originals; (2) Reports polish; (3) Entry screens.

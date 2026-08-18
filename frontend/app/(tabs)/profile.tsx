@@ -110,7 +110,8 @@ export default function Profile() {
         />
 
         <LinkRow icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon} label="My sites" onPress={() => router.push("/sites")} testID="profile-sites" />
-        <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My contracts" onPress={() => router.push("/contracts")} testID="profile-contracts" />
+        <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My quote requests" onPress={() => router.push("/quote/new")} testID="profile-quotes" />
+        <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={() => router.push("/splash")} testID="profile-tour" />
         <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
 
         <Pressable testID="profile-logout" onPress={() => { signOut(); router.replace("/signin"); }} style={styles.logout}>

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
+import { useAuth } from "@/src/auth/auth-context";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 const PHONE = "0800 368 9822";
@@ -19,21 +20,28 @@ const HELP: { icon: IconName; title: string; body: string; bg: string; fg: strin
 
 export default function Support() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const firstName = (user?.full_name?.trim()?.split(/\s+/)[0]) || (user?.email?.split("@")[0]) || "there";
+  const initials = (user?.full_name || user?.email || "U").split(/\s+/).map((s) => s[0]).slice(0, 2).join("").toUpperCase();
 
   return (
     <View style={styles.root}>
-      <ScreenHeader testID="support-header" title="Support" subtitle="We're here to help" />
+      <ScreenHeader testID="support-header" title="Support" />
       <ScrollView
         testID="support-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.amCard} testID="support-account-manager-card">
-          <View style={styles.amAvatar} testID="support-am-avatar">
-            <Icon name="chat" size={24} color={colors.pastel.lavenderIcon} />
+          <View style={styles.amBanner}>
+            <Text style={styles.amGreeting}>Hi {firstName}, we&apos;ve got you.</Text>
+            <Text style={styles.amBannerSub}>Any question, any time — we&apos;re a single tap away.</Text>
           </View>
-          <Text style={styles.amName} testID="support-am-name">Your PriceBuddy team</Text>
-          <Text style={styles.amSub}>Any question, any time — we&apos;re a single tap away.</Text>
+          <View style={styles.amAvatar} testID="support-am-avatar">
+            <Text style={styles.amAvatarText}>{initials}</Text>
+          </View>
+          <Text style={styles.amName} testID="support-am-name">Your account team</Text>
+          <Text style={styles.amSub}>Price Buddy support team</Text>
 
           <Pressable testID="support-call-desk" onPress={() => Linking.openURL(`tel:${PHONE.replace(/\s/g, "")}`)} style={styles.callBtn}>
             <Icon name="phone" size={18} color="#FFFFFF" />
@@ -75,11 +83,15 @@ export default function Support() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   scroll: { padding: spacing.lg, gap: spacing.md },
-  amCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, alignItems: "center" },
-  amAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.pastel.lavender, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
-  amName: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
-  amSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, textAlign: "center", marginTop: 4, marginBottom: spacing.lg },
-  callBtn: { alignSelf: "stretch", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, height: 50, borderRadius: radius.md, backgroundColor: colors.brandPrimary },
+  amCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingBottom: spacing.lg, alignItems: "center", overflow: "hidden" },
+  amBanner: { alignSelf: "stretch", backgroundColor: "#1A1F36", paddingTop: spacing.lg, paddingBottom: 44, paddingHorizontal: spacing.lg },
+  amGreeting: { fontFamily: font.bold, fontSize: type.xl, color: "#FFFFFF" },
+  amBannerSub: { fontFamily: font.regular, fontSize: type.sm, color: "rgba(255,255,255,0.75)", marginTop: 4 },
+  amAvatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", marginTop: -36, borderWidth: 4, borderColor: colors.surface },
+  amAvatarText: { fontFamily: font.bold, fontSize: type.xl, color: "#FFFFFF" },
+  amName: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: spacing.sm },
+  amSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, textAlign: "center", marginTop: 2, marginBottom: spacing.lg },
+  callBtn: { alignSelf: "stretch", marginHorizontal: spacing.lg, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, height: 50, borderRadius: radius.md, backgroundColor: colors.brandPrimary },
   callText: { fontFamily: font.semibold, fontSize: type.lg, color: "#FFFFFF" },
   afterHours: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8, marginTop: spacing.md },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#10B981" },
