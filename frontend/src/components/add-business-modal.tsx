@@ -12,25 +12,25 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 
+import { Icon, IconName } from "@/src/components/icon";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 type BizType = {
   key: string;
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   bg: string;
   fg: string;
 };
 
 const BIZ_TYPES: BizType[] = [
-  { key: "limited_company", label: "Limited Company", icon: "business-outline", bg: colors.pastel.blue, fg: colors.pastel.blueIcon },
-  { key: "sole_trader", label: "Sole Trader", icon: "person-outline", bg: colors.pastel.lavender, fg: colors.pastel.lavenderIcon },
-  { key: "partnership", label: "Partnership", icon: "people-outline", bg: colors.pastel.yellow, fg: colors.pastel.yellowIcon },
-  { key: "charity", label: "Charity", icon: "heart-outline", bg: colors.pastel.peach, fg: colors.pastel.peachIcon },
-  { key: "other", label: "Other", icon: "clipboard-outline", bg: colors.pastel.mint, fg: colors.pastel.mintIcon },
+  { key: "limited_company", label: "Limited Company", icon: "building", bg: colors.pastel.blue, fg: colors.pastel.blueIcon },
+  { key: "sole_trader", label: "Sole Trader", icon: "user", bg: colors.pastel.lavender, fg: colors.pastel.lavenderIcon },
+  { key: "partnership", label: "Partnership", icon: "users", bg: colors.pastel.yellow, fg: colors.pastel.yellowIcon },
+  { key: "charity", label: "Charity", icon: "heart", bg: colors.pastel.peach, fg: colors.pastel.peachIcon },
+  { key: "other", label: "Other", icon: "clipboard", bg: colors.pastel.mint, fg: colors.pastel.mintIcon },
 ];
 
 export function AddBusinessModal({
@@ -125,7 +125,7 @@ export function AddBusinessModal({
                       style={[styles.typeCard, active && styles.typeCardActive]}
                     >
                       <View style={[styles.typeIcon, { backgroundColor: t.bg }]}>
-                        <Ionicons name={t.icon} size={18} color={t.fg} />
+                        <Icon name={t.icon} size={18} color={t.fg} />
                       </View>
                       <Text style={styles.typeLabel}>{t.label}</Text>
                     </Pressable>

@@ -6,9 +6,9 @@ import {
   KeyboardStickyView,
 } from "react-native-keyboard-controller";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
 import { Button } from "@/src/components/ui";
+import { Icon } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
@@ -64,7 +64,7 @@ export default function NewSite() {
         <ScreenHeader testID="add-site-success-header" title="Request received" onBack={goToSites} />
         <View style={styles.successWrap} testID="add-site-success">
           <View style={styles.successIcon}>
-            <Ionicons name="checkmark" size={28} color={colors.pastel.mintIcon} />
+            <Icon name="check" size={28} color={colors.pastel.mintIcon} />
           </View>
           <Text style={styles.successTitle}>We&apos;re on it</Text>
           <Text style={styles.successSub}>
@@ -98,7 +98,7 @@ export default function NewSite() {
       >
         <View style={styles.notice} testID="add-site-notice">
           <View style={styles.noticeIcon}>
-            <Ionicons name="document-text" size={14} color="#FFFFFF" />
+            <Icon name="document" size={14} color="#FFFFFF" />
           </View>
           <Text style={styles.noticeText}>
             Your account manager will create this site for you and confirm by email — usually within

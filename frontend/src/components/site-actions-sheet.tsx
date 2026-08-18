@@ -1,15 +1,15 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
+import { Icon, IconName } from "@/src/components/icon";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 type Action = {
   key: string;
   title: string;
   desc: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   bg: string;
   fg: string;
   to: string;
@@ -20,7 +20,7 @@ const ACTIONS: Action[] = [
     key: "scan",
     title: "Scan a bill",
     desc: "Snap a photo or upload a PDF — we'll handle the rest.",
-    icon: "scan-outline",
+    icon: "scan",
     bg: colors.pastel.lavender,
     fg: colors.pastel.lavenderIcon,
     to: "/scan",
@@ -29,7 +29,7 @@ const ACTIONS: Action[] = [
     key: "quote",
     title: "Get a quote",
     desc: "Market check for a new acquisition or potential switch.",
-    icon: "document-text-outline",
+    icon: "document",
     bg: colors.pastel.mint,
     fg: colors.pastel.mintIcon,
     to: "/quote/new",
@@ -38,7 +38,7 @@ const ACTIONS: Action[] = [
     key: "manual",
     title: "Add site manually",
     desc: "No bill? Tell us the address and we'll set it up for you.",
-    icon: "business-outline",
+    icon: "building",
     bg: colors.pastel.peach,
     fg: colors.pastel.peachIcon,
     to: "/sites/new",
@@ -86,13 +86,13 @@ export function SiteActionsSheet({
                 style={({ pressed }) => [styles.row, pressed && { opacity: 0.9 }]}
               >
                 <View style={[styles.rowIcon, { backgroundColor: a.bg }]}>
-                  <Ionicons name={a.icon} size={20} color={a.fg} />
+                  <Icon name={a.icon} size={20} color={a.fg} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.rowTitle}>{a.title}</Text>
                   <Text style={styles.rowDesc}>{a.desc}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                <Icon name="chevronRight" size={18} color={colors.muted} />
               </Pressable>
             ))}
           </View>

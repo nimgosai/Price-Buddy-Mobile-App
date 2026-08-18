@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { Icon } from "@/src/components/icon";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -85,14 +86,14 @@ export function RequestChangeModal({
             <View style={styles.grabber} />
             {done ? (
               <View style={styles.doneWrap}>
-                <Ionicons name="checkmark-circle" size={44} color={colors.pastel.mintIcon} />
+                <Icon name="check" size={44} color={colors.pastel.mintIcon} />
                 <Text style={styles.doneTitle}>Submitted for review</Text>
                 <Text style={styles.doneSub}>We&apos;ll be in touch within 24 hours.</Text>
               </View>
             ) : (
               <>
                 <View style={styles.titleRow}>
-                  <Ionicons name="lock-closed" size={18} color={colors.heading} />
+                  <Icon name="lock" size={18} color={colors.heading} />
                   <Text style={styles.title}>Request a change</Text>
                 </View>
                 <Text style={styles.sub}>

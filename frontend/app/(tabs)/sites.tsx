@@ -14,6 +14,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Button, Card } from "@/src/components/ui";
+import { Icon } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { SiteActionsSheet } from "@/src/components/site-actions-sheet";
 import { apiRequest, ApiError } from "@/src/api/client";
@@ -100,7 +101,7 @@ export default function Sites() {
           ) : sites.length === 0 ? (
             <View style={styles.emptyCard} testID="sites-empty">
               <View style={styles.emptyIcon}>
-                <Ionicons name="business-outline" size={22} color={colors.brandPrimary} />
+                <Icon name="building" size={22} color={colors.brandPrimary} />
               </View>
               <Text style={styles.emptyTitle}>No sites yet</Text>
               <Text style={styles.emptySub}>
@@ -119,7 +120,7 @@ export default function Sites() {
             <>
               {sites.length > 5 && (
                 <View style={styles.searchWrap}>
-                  <Ionicons name="search" size={16} color={colors.muted} />
+                  <Icon name="search" size={16} color={colors.muted} />
                   <TextInput
                     testID="sites-search"
                     value={query}
@@ -154,7 +155,7 @@ export default function Sites() {
                   >
                     <Card style={styles.card}>
                       <View style={styles.siteIcon}>
-                        <Ionicons name="business" size={20} color={colors.brandPrimary} />
+                        <Icon name="building" size={20} color={colors.brandPrimary} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.name} numberOfLines={1}>
@@ -164,7 +165,7 @@ export default function Sites() {
                           {[s.address, s.postcode].filter(Boolean).join(", ") || "Address on file"}
                         </Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                      <Icon name="chevronRight" size={18} color={colors.muted} />
                     </Card>
                   </Pressable>
                 ))
@@ -175,7 +176,7 @@ export default function Sites() {
                 onPress={() => setSheet(true)}
                 style={({ pressed }) => [styles.addNew, pressed && { opacity: 0.9 }]}
               >
-                <Ionicons name="add" size={18} color={colors.brandPrimary} />
+                <Icon name="plus" size={18} color={colors.brandPrimary} />
                 <Text style={styles.addNewText}>Add a new site</Text>
               </Pressable>
             </>

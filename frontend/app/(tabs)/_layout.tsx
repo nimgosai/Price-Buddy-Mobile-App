@@ -1,8 +1,8 @@
 import { Tabs, Redirect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { Platform } from "react-native";
 
 import { useAuth } from "@/src/auth/auth-context";
+import { Icon, IconName } from "@/src/components/icon";
 import { colors, font } from "@/src/theme/theme";
 
 export default function TabsLayout() {
@@ -10,6 +10,11 @@ export default function TabsLayout() {
 
   if (!ready) return null;
   if (!user) return <Redirect href="/signin" />;
+
+  const tabIcon =
+    (name: IconName) =>
+    ({ color, size }: { color: string; size: number }) =>
+      <Icon name={name} size={size} color={color} />;
 
   return (
     <Tabs
@@ -30,51 +35,13 @@ export default function TabsLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="renewals"
-        options={{
-          title: "Renewals",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="refresh-circle" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="sites"
-        options={{
-          title: "Sites",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="business" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="support"
-        options={{
-          title: "Support",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="dashboard" options={{ title: "Home", tabBarIcon: tabIcon("home") }} />
+      <Tabs.Screen name="sites" options={{ title: "Sites", tabBarIcon: tabIcon("building") }} />
+      <Tabs.Screen name="reports" options={{ title: "Reports", tabBarIcon: tabIcon("bolt") }} />
+      <Tabs.Screen name="support" options={{ title: "Support", tabBarIcon: tabIcon("phone") }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: tabIcon("user") }} />
+      {/* Renewals is reachable from the dashboard card, not a bottom-nav tab */}
+      <Tabs.Screen name="renewals" options={{ href: null }} />
     </Tabs>
   );
 }

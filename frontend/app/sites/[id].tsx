@@ -13,19 +13,20 @@ import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 
 import { Button } from "@/src/components/ui";
+import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { RequestChangeModal } from "@/src/components/request-change-modal";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
-type UMeta = { label: string; icon: keyof typeof Ionicons.glyphMap; color: string };
+type UMeta = { label: string; icon: IconName; color: string };
 const UTIL_ORDER = ["electricity", "gas", "water", "broadband", "telecoms"] as const;
 const UTIL_META: Record<string, UMeta> = {
-  electricity: { label: "Electricity", icon: "flash", color: "#F59E0B" },
-  gas: { label: "Gas", icon: "flame", color: "#EA580C" },
-  water: { label: "Water", icon: "water", color: "#2563EB" },
+  electricity: { label: "Electricity", icon: "bolt", color: "#F59E0B" },
+  gas: { label: "Gas", icon: "fire", color: "#EA580C" },
+  water: { label: "Water", icon: "droplet", color: "#2563EB" },
   broadband: { label: "Broadband", icon: "wifi", color: "#7C3AED" },
-  telecoms: { label: "Telecoms", icon: "call", color: "#059669" },
+  telecoms: { label: "Telecoms", icon: "phone", color: "#059669" },
 };
 
 function fmt(d?: string) {
@@ -116,11 +117,11 @@ export default function SiteDetail() {
                       style={styles.cardHead}
                     >
                       <View style={[styles.uIcon, { backgroundColor: `${meta.color}22` }]}>
-                        <Ionicons name={meta.icon} size={18} color={meta.color} />
+                        <Icon name={meta.icon} size={18} color={meta.color} />
                       </View>
                       <Text style={styles.uLabel}>{meta.label}</Text>
-                      <Ionicons
-                        name={open ? "chevron-down" : "chevron-forward"}
+                      <Icon
+                        name={open ? "chevronDown" : "chevronRight"}
                         size={18}
                         color={colors.muted}
                       />
@@ -194,7 +195,7 @@ export default function SiteDetail() {
                                 onPress={() => setRcContract({ ...c, property_id: c.property_id || params.id })}
                                 style={[styles.actBtn, styles.actGhost]}
                               >
-                                <Ionicons name="lock-closed" size={15} color={colors.heading} />
+                                <Icon name="lock" size={15} color={colors.heading} />
                                 <Text style={styles.actGhostText}>Request change</Text>
                               </Pressable>
                             </View>
@@ -209,7 +210,7 @@ export default function SiteDetail() {
                               onPress={() => router.push("/scan")}
                               style={styles.scanUBtn}
                             >
-                              <Ionicons name="add" size={16} color={colors.onBrandPrimary} />
+                              <Icon name="plus" size={16} color={colors.onBrandPrimary} />
                               <Text style={styles.scanUText}>Scan your {meta.label.toLowerCase()} bill</Text>
                             </Pressable>
                             <Text style={styles.emptyUHint}>Once reviewed, we&apos;ll add it to your account.</Text>

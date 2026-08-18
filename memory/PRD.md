@@ -123,3 +123,14 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Phase 4 — Reports, Profile (exact sections + "Request account deletion"), Support (phone 0800 368 9822), Partners
 - Phase 5 — Entry & Auth: splash, landing ("Never overpay on utilities again."), signin/signup wording
 - Note: multi-business switcher chip (>1 business) + spotlight tour intentionally deferred (single-biz test acct)
+
+### BATCH 1 COMPLETE (icons + Home/Sites + nav)
+- src/components/icon.tsx: exact SVG replica of web icon set (33 icons). USE THIS everywhere (not Ionicons).
+- Dashboard: added HaveAQueryPill (src/components/have-a-query-pill.tsx → POST /concierge/messages),
+  animated "Try it" sparkle badge (shows when items.length===0 / new user), audit-in-progress card
+  (GET /my/audits-in-progress). All icons swapped to Icon.
+- Bottom nav FIXED to match web: Home(/dashboard,home) · Sites(/sites,building) · Reports(/reports,bolt)
+  · Support(/support,phone) · Profile(/profile,user). NO Renewals tab (renewals href:null, opened from
+  dashboard card). Moved app/reports.tsx -> app/(tabs)/reports.tsx.
+- Sites cluster re-skinned with exact icons.
+- Colors: accent #FF6B47 used for Try-it badge. Consider aligning brandPrimary to #FF6B47 app-wide (currently #F25028) — CHECK with user.

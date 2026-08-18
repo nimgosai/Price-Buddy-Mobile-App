@@ -12,24 +12,24 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 
+import { Icon, IconName } from "@/src/components/icon";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
-type Opt = { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; bg: string; fg: string };
+type Opt = { key: string; label: string; icon: IconName; bg: string; fg: string };
 
 const TYPES: Opt[] = [
-  { key: "smart_meter", label: "Smart Meter", icon: "speedometer-outline", bg: colors.pastel.blue, fg: colors.pastel.blueIcon },
-  { key: "new_supply", label: "New Supply", icon: "flash-outline", bg: colors.pastel.yellow, fg: colors.pastel.yellowIcon },
-  { key: "upgrade", label: "Upgrade", icon: "arrow-up-outline", bg: colors.pastel.mint, fg: colors.pastel.mintIcon },
-  { key: "other", label: "Something else", icon: "chatbubble-outline", bg: colors.pastel.lavender, fg: colors.pastel.lavenderIcon },
+  { key: "smart_meter", label: "Smart Meter", icon: "meter", bg: colors.pastel.blue, fg: colors.pastel.blueIcon },
+  { key: "new_supply", label: "New Supply", icon: "bolt", bg: colors.pastel.yellow, fg: colors.pastel.yellowIcon },
+  { key: "upgrade", label: "Upgrade", icon: "arrowUp", bg: colors.pastel.mint, fg: colors.pastel.mintIcon },
+  { key: "other", label: "Something else", icon: "chat", bg: colors.pastel.lavender, fg: colors.pastel.lavenderIcon },
 ];
 
 const FUELS: Opt[] = [
-  { key: "electricity", label: "Electricity", icon: "flash", bg: colors.pastel.yellow, fg: colors.pastel.yellowIcon },
-  { key: "gas", label: "Gas", icon: "flame", bg: colors.pastel.peach, fg: colors.pastel.peachIcon },
-  { key: "both", label: "Both", icon: "business", bg: colors.pastel.lavender, fg: colors.pastel.lavenderIcon },
+  { key: "electricity", label: "Electricity", icon: "bolt", bg: colors.pastel.yellow, fg: colors.pastel.yellowIcon },
+  { key: "gas", label: "Gas", icon: "fire", bg: colors.pastel.peach, fg: colors.pastel.peachIcon },
+  { key: "both", label: "Both", icon: "building", bg: colors.pastel.lavender, fg: colors.pastel.lavenderIcon },
 ];
 
 const CONTACTS = [
@@ -119,7 +119,7 @@ export function MeterInstallModal({
             {done ? (
               <View style={styles.doneWrap}>
                 <View style={styles.doneIcon}>
-                  <Ionicons name="checkmark" size={36} color={colors.pastel.mintIcon} />
+                  <Icon name="check" size={36} color={colors.pastel.mintIcon} />
                 </View>
                 <Text style={styles.doneTitle}>Request sent</Text>
                 <Text style={styles.doneSub}>Our team will be in touch soon.</Text>
@@ -128,7 +128,7 @@ export function MeterInstallModal({
               <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <View style={styles.header}>
                   <View style={[styles.headerIcon, { backgroundColor: colors.pastel.blue }]}>
-                    <Ionicons name="speedometer-outline" size={22} color={colors.pastel.blueIcon} />
+                    <Icon name="meter" size={22} color={colors.pastel.blueIcon} />
                   </View>
                   <View>
                     <Text style={styles.title}>Meter installation</Text>
@@ -147,7 +147,7 @@ export function MeterInstallModal({
                         style={[styles.typeCard, active && styles.cardActive]}
                       >
                         <View style={[styles.typeIcon, { backgroundColor: t.bg }]}>
-                          <Ionicons name={t.icon} size={18} color={t.fg} />
+                          <Icon name={t.icon} size={18} color={t.fg} />
                         </View>
                         <Text style={styles.typeLabel}>{t.label}</Text>
                       </Pressable>
@@ -169,7 +169,7 @@ export function MeterInstallModal({
                             style={[styles.fuelCard, active && styles.cardActive]}
                           >
                             <View style={[styles.fuelIcon, { backgroundColor: f.bg }]}>
-                              <Ionicons name={f.icon} size={16} color={f.fg} />
+                              <Icon name={f.icon} size={16} color={f.fg} />
                             </View>
                             <Text style={styles.fuelLabel}>{f.label}</Text>
                           </Pressable>
