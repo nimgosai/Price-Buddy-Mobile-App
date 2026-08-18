@@ -6,7 +6,8 @@ import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
 import { useAuth } from "@/src/auth/auth-context";
-import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useScrollTopOnFocus } from "@/src/hooks/use-scroll-top-on-focus";
+import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 const PHONE = "0800 368 9822";
 const EMAIL = "hello@pricebuddy.co.uk";
@@ -25,11 +26,13 @@ export default function Support() {
   const { user } = useAuth();
   const firstName = (user?.full_name?.trim()?.split(/\s+/)[0]) || (user?.email?.split("@")[0]) || "there";
   const initials = (user?.full_name || user?.email || "U").split(/\s+/).map((s) => s[0]).slice(0, 2).join("").toUpperCase();
+  const scrollRef = useScrollTopOnFocus();
 
   return (
     <View style={styles.root}>
       <ScreenHeader testID="support-header" title="Support" onBack={() => router.push("/dashboard")} />
       <ScrollView
+        ref={scrollRef}
         testID="support-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}
@@ -45,7 +48,7 @@ export default function Support() {
           <Text style={styles.amName} testID="support-am-name">Your account team</Text>
           <Text style={styles.amSub}>Price Buddy support team</Text>
 
-          <Pressable testID="support-call-desk" onPress={() => Linking.openURL(`tel:${PHONE.replace(/\s/g, "")}`)} style={styles.callBtn}>
+          <Pressable testID="support-call-desk" onPress={() => Linking.openURL(`tel:${PHONE.replace(/\s/g, "")}`)} style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.9 }]}>
             <Icon name="phone" size={18} color="#FFFFFF" />
             <Text style={styles.callText}>Call the desk</Text>
           </Pressable>
@@ -85,7 +88,7 @@ export default function Support() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   scroll: { padding: spacing.lg, gap: spacing.md },
-  amCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingBottom: spacing.lg, alignItems: "center", overflow: "hidden" },
+  amCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingBottom: spacing.lg, alignItems: "center", overflow: "hidden", ...shadow.card },
   amBanner: { alignSelf: "stretch", backgroundColor: "#1A1F36", paddingTop: spacing.lg, paddingBottom: 44, paddingHorizontal: spacing.lg },
   amGreeting: { fontFamily: font.bold, fontSize: type.xl, color: "#FFFFFF" },
   amBannerSub: { fontFamily: font.regular, fontSize: type.sm, color: "rgba(255,255,255,0.75)", marginTop: 4 },
@@ -101,7 +104,7 @@ const styles = StyleSheet.create({
   sep: { color: colors.muted, opacity: 0.4 },
   emailLink: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, textDecorationLine: "underline" },
 
-  helpCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, gap: spacing.md },
+  helpCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, gap: spacing.md, ...shadow.card },
   helpKicker: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.5, color: colors.muted, textTransform: "uppercase" },
   helpTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, marginBottom: spacing.xs, letterSpacing: -0.3 },
   helpItem: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },

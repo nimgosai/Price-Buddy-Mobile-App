@@ -94,10 +94,10 @@ export const type = {
 
 export const shadow = {
   card: {
-    shadowColor: "#1F2A44",
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    shadowColor: "#111827",
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
   },
 };

@@ -278,3 +278,12 @@ No login/live-data writes used — everything reconstructed from the bundle.
   property_id (unobtainable); POST /scans -> 502/OCR-heavy & needs broker confirmation. So sites/contracts
   cannot be injected from the app side by design — needs backend/broker to seed a demo account, or the
   user scans a real bill on-device.
+
+### FIX — tab scroll persistence + card shadow fidelity + press states [user video Emergent(12)]
+- Scroll reset: new hook src/hooks/use-scroll-top-on-focus.ts scrolls a tab's ScrollView back to top on
+  blur (useFocusEffect cleanup). Wired into Profile, Support, Sites, Reports. Verified: Support scrollTop
+  106 -> 0 after switching away and back.
+- Shadows: strengthened theme.shadow.card toward original (0 10px 18px rgba(17,24,39,0.08), elev 3) and
+  applied ...shadow.card to Support amCard/helpCard and Profile userCard/row (were border-only/flat).
+- Press feedback: added pressed opacity to Support 'Call the desk', Profile 'Sign out' & 'Request account
+  deletion' (LinkRow already had it). Button/quick-actions already had press states.

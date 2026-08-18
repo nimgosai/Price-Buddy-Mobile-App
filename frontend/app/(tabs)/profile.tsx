@@ -19,7 +19,8 @@ import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
-import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useScrollTopOnFocus } from "@/src/hooks/use-scroll-top-on-focus";
+import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 export default function Profile() {
   const insets = useSafeAreaInsets();
@@ -60,6 +61,7 @@ export default function Profile() {
 
   const onToggleEmail = (v: boolean) => { setEmailOn(v); savePrefs(v, pushOn); };
   const onTogglePush = (v: boolean) => { setPushOn(v); savePrefs(emailOn, v); };
+  const scrollRef = useScrollTopOnFocus();
 
   const submitDelete = async () => {
     if (confirmText.trim().toUpperCase() !== "DELETE") {
@@ -85,6 +87,7 @@ export default function Profile() {
     <View style={styles.root}>
       <ScreenHeader testID="profile-header" title="Profile" onBack={() => router.push("/dashboard")} />
       <ScrollView
+        ref={scrollRef}
         testID="profile-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}
@@ -120,12 +123,12 @@ export default function Profile() {
         <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={async () => { await storage.setItem("uch_tour_replay", true); router.push("/dashboard"); }} testID="profile-tour" />
         <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
 
-        <Pressable testID="profile-logout" onPress={() => { signOut(); router.replace("/signin"); }} style={styles.logout}>
+        <Pressable testID="profile-logout" onPress={() => { signOut(); router.replace("/signin"); }} style={({ pressed }) => [styles.logout, pressed && { opacity: 0.9 }]}>
           <Icon name="logout" size={16} color={colors.onSurfaceSecondary} />
           <Text style={styles.logoutText}>Sign out</Text>
         </Pressable>
 
-        <Pressable testID="profile-delete-open" onPress={() => setShowDelete(true)} style={styles.danger}>
+        <Pressable testID="profile-delete-open" onPress={() => setShowDelete(true)} style={({ pressed }) => [styles.danger, pressed && { opacity: 0.9 }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.dangerTitle}>Request account deletion</Text>
             <Text style={styles.dangerSub}>Permanently remove your account. We may retain some records where required.</Text>
@@ -213,14 +216,14 @@ function LinkRow({ icon, bg, fg, label, onPress, testID }: { icon: IconName; bg:
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   scroll: { padding: spacing.lg, gap: 10 },
-  userCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm },
+  userCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.card },
   avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.pastel.lavender, alignItems: "center", justifyContent: "center" },
   avatarText: { fontFamily: font.bold, fontSize: type.xl, color: colors.pastel.lavenderIcon },
   userName: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
   userEmail: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
   userCompany: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4 },
 
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, ...shadow.card },
   rowIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   rowLabel: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   rowDesc: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2, lineHeight: 16 },
