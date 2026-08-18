@@ -19,7 +19,6 @@ import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
-import { useScrollTopOnFocus } from "@/src/hooks/use-scroll-top-on-focus";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 export default function Profile() {
@@ -61,7 +60,6 @@ export default function Profile() {
 
   const onToggleEmail = (v: boolean) => { setEmailOn(v); savePrefs(v, pushOn); };
   const onTogglePush = (v: boolean) => { setPushOn(v); savePrefs(emailOn, v); };
-  const scrollRef = useScrollTopOnFocus();
 
   const submitDelete = async () => {
     if (confirmText.trim().toUpperCase() !== "DELETE") {
@@ -87,7 +85,6 @@ export default function Profile() {
     <View style={styles.root}>
       <ScreenHeader testID="profile-header" title="Profile" onBack={() => router.push("/dashboard")} />
       <ScrollView
-        ref={scrollRef}
         testID="profile-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}

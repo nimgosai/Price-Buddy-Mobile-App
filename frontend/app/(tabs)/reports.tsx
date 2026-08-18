@@ -15,7 +15,6 @@ import { Button, Card } from "@/src/components/ui";
 import { ScreenHeader, EmptyState } from "@/src/components/screen";
 import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
 import { useBusiness } from "@/src/business/business-context";
-import { useScrollTopOnFocus } from "@/src/hooks/use-scroll-top-on-focus";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -81,7 +80,6 @@ export default function Reports() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeBizId, bizQuery } = useBusiness();
-  const scrollRef = useScrollTopOnFocus();
 
   const [data, setData] = useState<Spend | null>(null);
   const [loading, setLoading] = useState(true);
@@ -134,7 +132,6 @@ export default function Reports() {
         </View>
       ) : (
         <ScrollView
-          ref={scrollRef}
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

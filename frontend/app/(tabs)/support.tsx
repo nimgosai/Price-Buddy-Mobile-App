@@ -6,7 +6,6 @@ import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
 import { useAuth } from "@/src/auth/auth-context";
-import { useScrollTopOnFocus } from "@/src/hooks/use-scroll-top-on-focus";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 const PHONE = "0800 368 9822";
@@ -26,13 +25,11 @@ export default function Support() {
   const { user } = useAuth();
   const firstName = (user?.full_name?.trim()?.split(/\s+/)[0]) || (user?.email?.split("@")[0]) || "there";
   const initials = (user?.full_name || user?.email || "U").split(/\s+/).map((s) => s[0]).slice(0, 2).join("").toUpperCase();
-  const scrollRef = useScrollTopOnFocus();
 
   return (
     <View style={styles.root}>
       <ScreenHeader testID="support-header" title="Support" onBack={() => router.push("/dashboard")} />
       <ScrollView
-        ref={scrollRef}
         testID="support-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}
