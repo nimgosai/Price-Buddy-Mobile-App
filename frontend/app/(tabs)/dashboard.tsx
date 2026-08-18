@@ -132,18 +132,6 @@ export default function Dashboard() {
   const g = greeting();
   const first = items[0];
   const cfg = first ? URGENCY_CFG[urgencyFor(first.days_until_expiry, first.utility_type)] : null;
-  const uniqueUtils = useMemo(() => {
-    const seen = new Set<string>();
-    const out: string[] = [];
-    items.forEach((it) => {
-      const l = utilityLabel(it.utility_type);
-      if (!seen.has(l)) {
-        seen.add(l);
-        out.push(l);
-      }
-    });
-    return out;
-  }, [items]);
 
   const showNudge = !nudgeDismissed && !user?.push_notifications_enabled;
   const isNewUser = items.length === 0; // brand-new / empty account → prompt first bill
@@ -201,9 +189,9 @@ export default function Dashboard() {
           {showNudge && (
             <View style={styles.nudge} testID="notif-nudge">
               <View style={styles.nudgeIcon}>
-                <Icon name="bell" size={18} color={colors.brandPrimary} />
+                <Icon name="bell" size={16} color={colors.brandPrimary} />
               </View>
-              <Text style={styles.nudgeText}>Turn on alerts so you never miss a renewal deadline.</Text>
+              <Text style={styles.nudgeText}>Turn on renewal alerts</Text>
               <Pressable testID="notif-nudge-turn-on" onPress={turnOnAlerts} disabled={turningOn} style={styles.nudgeBtn}>
                 {turningOn ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.nudgeBtnText}>Turn on</Text>}
               </Pressable>
@@ -213,58 +201,31 @@ export default function Dashboard() {
             </View>
           )}
 
-          {/* Trust banner OR Action-required card */}
+          {/* Compact status badge */}
           {items.length === 0 ? (
-            <View style={styles.trust} testID="trust-banner">
-              <View style={styles.trustIcon}>
-                <Icon name="shield" size={26} color="#FFFFFF" />
+            <View style={styles.statusBadge} testID="trust-banner">
+              <View style={styles.statusIconOk}>
+                <Icon name="shield" size={18} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.trustKicker}>Fully secured</Text>
-                <Text style={styles.trustTitle}>You&apos;re completely covered</Text>
-                <Text style={styles.trustSub}>No utility contracts expiring soon — our systems are watching everything.</Text>
+                <Text style={styles.statusTitle}>All contracts secured</Text>
+                <Text style={styles.statusSub}>Nothing due soon</Text>
               </View>
             </View>
           ) : (
-            <Pressable testID="expiring-soon-card" onPress={() => router.push("/renewals")} style={({ pressed }) => [styles.attnCard, pressed && { opacity: 0.95 }]}>
-              <View style={styles.attnTop}>
-                <View testID="expiring-count" style={[styles.attnCount, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
-                  <Text style={[styles.attnCountText, { color: cfg?.accent }]}>{items.length}</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={styles.attnDaysRow}>
-                    <View style={[styles.attnDot, { backgroundColor: cfg?.accent }]} />
-                    <Text style={[styles.attnDays, { color: cfg?.accent }]}>
-                      {first.days_until_expiry < 0 ? `${Math.abs(first.days_until_expiry)} days overdue` : `${first.days_until_expiry} days remaining`}
-                    </Text>
-                  </View>
-                  <Text style={styles.attnMeta} numberOfLines={1}>
-                    {utilityLabel(first.utility_type)}
-                    {first.supplier_name ? ` · ${first.supplier_name}` : ""}
-                    {first.business_name ? ` · ${first.business_name}` : ""}
-                    {items.length > 1 ? ` · +${items.length - 1} more` : ""}
-                  </Text>
-                </View>
-                {first.renewable_now ? (
-                  <View style={[styles.renewPill, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
-                    <Text style={[styles.renewPillText, { color: cfg?.accent }]}>Renewable now</Text>
-                  </View>
-                ) : null}
+            <Pressable testID="expiring-soon-card" onPress={() => router.push("/renewals")} style={({ pressed }) => [styles.statusBadge, pressed && { opacity: 0.9 }]}>
+              <View testID="expiring-count" style={[styles.statusCount, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
+                <Text style={[styles.statusCountText, { color: cfg?.accent }]}>{items.length}</Text>
               </View>
-              <Text style={styles.attnTitle}>{cfg?.title}</Text>
-              {uniqueUtils.length > 0 && (
-                <View style={styles.chipRow}>
-                  {uniqueUtils.map((u) => (
-                    <View key={u} style={styles.chip}><Text style={styles.chipText}>{u}</Text></View>
-                  ))}
-                </View>
-              )}
-              <View style={styles.attnLink}>
-                <Text style={styles.attnLinkText}>
-                  {items.length > 1 ? `View these ${items.length} contracts` : "View this contract"}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.statusTitle}>
+                  {items.length === 1 ? "1 contract needs attention" : `${items.length} contracts need attention`}
                 </Text>
-                <Icon name="chevronRight" size={16} color={colors.heading} />
+                <Text style={[styles.statusSub, { color: cfg?.accent }]} numberOfLines={1}>
+                  {first.days_until_expiry < 0 ? `${Math.abs(first.days_until_expiry)} days overdue` : `${first.days_until_expiry} days left`} · {utilityLabel(first.utility_type)}
+                </Text>
               </View>
+              <Icon name="chevronRight" size={18} color={colors.muted} />
             </Pressable>
           )}
 
@@ -272,42 +233,36 @@ export default function Dashboard() {
           {audits.length > 0 && (
             <View style={styles.audit} testID="audit-in-progress-card">
               <View style={styles.auditIcon}>
-                <Icon name="document" size={18} color="#B45309" />
+                <Icon name="document" size={16} color="#B45309" />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.auditTitle}>Audit in progress</Text>
-                <Text style={styles.auditText}>
-                  Our team is verifying {audits.length} {audits.length === 1 ? "bill" : "bills"}. We&apos;ll be in touch once everything&apos;s confirmed.
-                </Text>
-              </View>
+              <Text style={styles.auditText}>
+                Verifying {audits.length} {audits.length === 1 ? "bill" : "bills"}
+              </Text>
             </View>
           )}
 
-          {/* Quick actions */}
+          {/* Quick actions — compact 2-column grid */}
           <Text style={styles.quickLabel}>QUICK ACTIONS</Text>
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
-              title="Smart Bill Upload" desc="Upload electric or gas bills. We'll handle your renewal."
-              badge={isNewUser ? "Try it" : undefined} onPress={() => router.push("/scan")} />
+              title="Scan bill" badge={isNewUser ? "Try it" : undefined} onPress={() => router.push("/scan")} />
             <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
-              title="Add another business" desc="Manage multiple companies under one account." onPress={() => setAddBiz(true)} />
+              title="Add business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="quick-action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
-              title="Meter Installation" desc="Smart meter, new electric or gas supply." onPress={() => setMeter(true)} />
+              title="Meter install" onPress={() => setMeter(true)} />
           </View>
 
           {/* Have a query pill */}
           <HaveAQueryPill />
 
-          {/* Lower-bills quote promo */}
+          {/* Lower-bills quote promo — concise */}
           <Pressable testID="lower-bills-cta" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promo, pressed && { opacity: 0.95 }]}>
             <View style={styles.promoIcon}>
-              <Icon name="pound" size={24} color={colors.pastel.mintIcon} />
+              <Icon name="pound" size={22} color={colors.pastel.mintIcon} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.promoTitle}>Need to lower your business utility bills in the UK?</Text>
-              <Text style={styles.promoSub}>
-                <Text style={styles.promoSubStrong}>Get a quote</Text> — we&apos;ll market-check your contract.
-              </Text>
+              <Text style={styles.promoTitle}>Lower your utility bills</Text>
+              <Text style={styles.promoSub}>Free market check on your contract</Text>
             </View>
             <View style={styles.promoPill}>
               <Text style={styles.promoPillText}>Get Quote</Text>
@@ -323,8 +278,8 @@ export default function Dashboard() {
   );
 }
 
-function QuickAction({ icon, bg, fg, title, desc, onPress, testID, badge }: {
-  icon: any; bg: string; fg: string; title: string; desc: string; onPress: () => void; testID?: string; badge?: string;
+function QuickAction({ icon, bg, fg, title, onPress, testID, badge }: {
+  icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -350,8 +305,7 @@ function QuickAction({ icon, bg, fg, title, desc, onPress, testID, badge }: {
       <View style={[styles.qaIcon, { backgroundColor: bg }]}>
         <Icon name={icon} size={22} color={fg} />
       </View>
-      <Text style={styles.qaTitle}>{title}</Text>
-      <Text style={styles.qaDesc}>{desc}</Text>
+      <Text style={styles.qaTitle} numberOfLines={1}>{title}</Text>
     </Pressable>
   );
 }
@@ -359,67 +313,59 @@ function QuickAction({ icon, bg, fg, title, desc, onPress, testID, badge }: {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scroll: { padding: spacing.lg, gap: spacing.md },
+  scroll: { padding: spacing.lg, gap: spacing.sm },
 
-  greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.xs },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.pastel.lavender, alignItems: "center", justifyContent: "center" },
   avatarText: { fontFamily: font.bold, fontSize: type.lg, color: colors.pastel.lavenderIcon },
   greetTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, letterSpacing: -0.3 },
   greetSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
   bell: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", ...shadow.card },
 
-  nudge: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.md },
-  nudgeIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  nudgeText: { flex: 1, fontFamily: font.medium, fontSize: type.sm, color: colors.heading, lineHeight: 18 },
-  nudgeBtn: { backgroundColor: colors.brandPrimary, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, minWidth: 66, alignItems: "center" },
+  nudge: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.brandTertiary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  nudgeIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  nudgeText: { flex: 1, fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
+  nudgeBtn: { backgroundColor: colors.brandPrimary, paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: radius.pill, minWidth: 62, alignItems: "center" },
   nudgeBtnText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
-  nudgeClose: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
+  nudgeClose: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
 
-  trust: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: "#D1FAE5", borderWidth: 1, borderColor: "#A7F3D0", borderRadius: radius.md, padding: spacing.lg },
-  trustIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
-  trustKicker: { fontFamily: font.bold, fontSize: type.sm, color: "#065F46" },
-  trustTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: 2 },
-  trustSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4, lineHeight: 18 },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...shadow.card,
+  },
+  statusIconOk: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
+  statusCount: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  statusCountText: { fontFamily: font.bold, fontSize: type.lg },
+  statusTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  statusSub: { fontFamily: font.medium, fontSize: type.sm, color: colors.muted, marginTop: 2 },
 
-  attnCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, ...shadow.card },
-  attnTop: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  attnCount: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  attnCountText: { fontFamily: font.bold, fontSize: type.xl },
-  attnDaysRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  attnDot: { width: 8, height: 8, borderRadius: 4 },
-  attnDays: { fontFamily: font.bold, fontSize: type.sm },
-  attnMeta: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 3 },
-  renewPill: { paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1 },
-  renewPillText: { fontFamily: font.semibold, fontSize: 11 },
-  attnTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: spacing.md },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.md },
-  chip: { backgroundColor: colors.surfaceSecondary, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill },
-  chipText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
-  attnLink: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: spacing.md },
-  attnLinkText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
-
-  audit: { flexDirection: "row", gap: spacing.md, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A", borderRadius: radius.md, padding: spacing.lg },
-  auditIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  auditTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
-  auditText: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 2, lineHeight: 18 },
+  audit: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A", borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  auditIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  auditText: { flex: 1, fontFamily: font.semibold, fontSize: type.sm, color: "#92400E" },
 
   quickLabel: { fontFamily: font.bold, fontSize: 11, letterSpacing: 0.8, color: colors.muted, marginTop: spacing.sm, marginLeft: 2 },
-  quickGrid: { flexDirection: "row", gap: spacing.sm },
-  qa: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md },
-  qaIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
-  qaTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
-  qaDesc: { fontFamily: font.regular, fontSize: 11.5, color: colors.muted, marginTop: 4, lineHeight: 16 },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  qa: { width: "48%", flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  qaIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  qaTitle: { flex: 1, fontFamily: font.bold, fontSize: type.base, color: colors.heading },
   qaBadge: {
-    position: "absolute", top: 8, right: 8, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
-    backgroundColor: "#FF6B47", paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill,
+    position: "absolute", top: 6, right: 6, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: colors.brandPrimary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
   },
   qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.3 },
 
-  promo: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.pastel.mint, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.sm },
-  promoIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  promo: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.pastel.mint, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginTop: spacing.xs },
+  promoIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   promoTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
-  promoSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4 },
-  promoSubStrong: { fontFamily: font.bold, color: colors.heading },
+  promoSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 2 },
   promoPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.pastel.mintIcon, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill },
   promoPillText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
 });

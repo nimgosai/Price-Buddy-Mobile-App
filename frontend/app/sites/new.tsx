@@ -20,6 +20,9 @@ export default function NewSite() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [meterNumber, setMeterNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +47,9 @@ export default function NewSite() {
         name.trim() ? `Site name: ${name.trim()}` : null,
         `Address: ${address.trim()}`,
         `Postcode: ${postcode.trim().toUpperCase()}`,
+        supplier.trim() ? `Existing supplier: ${supplier.trim()}` : null,
+        endDate.trim() ? `Current contract end date: ${endDate.trim()}` : null,
+        meterNumber.trim() ? `Meter number (MPAN/MPRN): ${meterNumber.trim()}` : null,
         notes.trim() ? `Notes: ${notes.trim()}` : null,
       ].filter(Boolean);
       await apiRequest("/change-requests", {
@@ -141,6 +147,36 @@ export default function NewSite() {
               placeholder="SW1A 1AA"
               placeholderTextColor={colors.muted}
               autoCapitalize="characters"
+              style={styles.input}
+            />
+          </Field>
+          <Field label="Existing supplier (optional)">
+            <TextInput
+              testID="add-site-supplier"
+              value={supplier}
+              onChangeText={setSupplier}
+              placeholder="e.g. British Gas, EDF, Octopus"
+              placeholderTextColor={colors.muted}
+              style={styles.input}
+            />
+          </Field>
+          <Field label="Current contract end date (optional)">
+            <TextInput
+              testID="add-site-end-date"
+              value={endDate}
+              onChangeText={setEndDate}
+              placeholder="e.g. Mar 2026"
+              placeholderTextColor={colors.muted}
+              style={styles.input}
+            />
+          </Field>
+          <Field label="Meter number — gas or electric (optional)">
+            <TextInput
+              testID="add-site-meter"
+              value={meterNumber}
+              onChangeText={setMeterNumber}
+              placeholder="MPAN (electric) or MPRN (gas)"
+              placeholderTextColor={colors.muted}
               style={styles.input}
             />
           </Field>
