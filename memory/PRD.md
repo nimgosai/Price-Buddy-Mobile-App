@@ -155,3 +155,12 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - NOTE: review/success need real OCR bill data to fully verify end-to-end.
 
 ### REMAINING: Batch 3 (Quote wizard + Reports), Batch 4 (Profile/Support/Partners/News), Batch 5 (Auth/splash/landing)
+
+### DASHBOARD MOBILE REFACTOR + GLOBAL TYPOGRAPHY (user-directed, overrides exact-web-match for Home)
+- Home: compact status badge; 2x2 Quick Actions (Scan Bill / Add Business / Meter Installation / View Contracts)
+  vertical tiles, responsive font (useWindowDimensions), badge absolute top-right; greeting single line no subtitle;
+  12px section gap. Have-a-query = full-width card (radius.md). Promo = single Get Quote CTA.
+- Tab bar: safe-area bottom inset (paddingBottom = max(insets.bottom, android 10)) so it clears Android system nav.
+- Add-site form: optional Existing supplier, Contract end date, Meter type (Electric/Gas segmented), Meter number.
+- GLOBAL theme tokens (theme.ts) updated for contrast: heading #1A1D1E, onSurface #1E293B,
+  onSurfaceSecondary #475569, muted #64748B. Section headers 12px/0.05em/semibold/muted. Accent #FF6B47.

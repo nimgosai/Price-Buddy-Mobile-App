@@ -250,8 +250,8 @@ export default function Dashboard() {
               title="Add Business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="quick-action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
               title="Meter Installation" onPress={() => setMeter(true)} />
-            <QuickAction testID="quick-action-quote" icon="pound" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
-              title="Get Quote" onPress={() => router.push("/quote/new")} />
+            <QuickAction testID="quick-action-contracts" icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
+              title="View Contracts" onPress={() => router.push("/contracts")} />
           </View>
 
           {/* Have a query pill */}
