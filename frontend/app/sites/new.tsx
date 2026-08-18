@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { StyleSheet, Text, View, TextInput } from "react-native";
+import { StyleSheet, Text, View, TextInput, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   KeyboardAwareScrollView,
@@ -22,6 +22,7 @@ export default function NewSite() {
   const [postcode, setPostcode] = useState("");
   const [supplier, setSupplier] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [meterType, setMeterType] = useState<"" | "electric" | "gas">("");
   const [meterNumber, setMeterNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
@@ -49,7 +50,8 @@ export default function NewSite() {
         `Postcode: ${postcode.trim().toUpperCase()}`,
         supplier.trim() ? `Existing supplier: ${supplier.trim()}` : null,
         endDate.trim() ? `Current contract end date: ${endDate.trim()}` : null,
-        meterNumber.trim() ? `Meter number (MPAN/MPRN): ${meterNumber.trim()}` : null,
+        meterType ? `Meter type: ${meterType === "gas" ? "Gas (MPRN)" : "Electric (MPAN)"}` : null,
+        meterNumber.trim() ? `Meter number: ${meterNumber.trim()}` : null,
         notes.trim() ? `Notes: ${notes.trim()}` : null,
       ].filter(Boolean);
       await apiRequest("/change-requests", {
@@ -170,12 +172,32 @@ export default function NewSite() {
               style={styles.input}
             />
           </Field>
-          <Field label="Meter number — gas or electric (optional)">
+          <Field label="Meter type (optional)">
+            <View style={styles.segmentRow}>
+              {(["electric", "gas"] as const).map((t) => {
+                const on = meterType === t;
+                return (
+                  <Pressable
+                    key={t}
+                    testID={`add-site-meter-type-${t}`}
+                    onPress={() => setMeterType(on ? "" : t)}
+                    style={[styles.segment, on && styles.segmentOn]}
+                  >
+                    <Icon name={t === "gas" ? "fire" : "bolt"} size={16} color={on ? colors.brandPrimary : colors.muted} />
+                    <Text style={[styles.segmentText, on && styles.segmentTextOn]}>
+                      {t === "gas" ? "Gas" : "Electric"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Field>
+          <Field label="Meter number (optional)">
             <TextInput
               testID="add-site-meter"
               value={meterNumber}
               onChangeText={setMeterNumber}
-              placeholder="MPAN (electric) or MPRN (gas)"
+              placeholder={meterType === "gas" ? "MPRN (gas)" : meterType === "electric" ? "MPAN (electric)" : "MPAN (electric) or MPRN (gas)"}
               placeholderTextColor={colors.muted}
               style={styles.input}
             />
@@ -260,6 +282,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   textarea: { minHeight: 90, textAlignVertical: "top" },
+  segmentRow: { flexDirection: "row", gap: spacing.sm },
+  segment: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, height: 52, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  segmentOn: { borderWidth: 2, borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  segmentText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurfaceSecondary },
+  segmentTextOn: { color: colors.brandPrimary },
   error: { fontFamily: font.medium, fontSize: type.base, color: colors.error },
   footer: {
     paddingHorizontal: spacing.lg,

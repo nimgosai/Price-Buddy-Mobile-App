@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -175,7 +176,7 @@ export default function Dashboard() {
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text testID="dashboard-greeting" style={styles.greetTitle} numberOfLines={1}>
+              <Text testID="dashboard-greeting" style={styles.greetTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
                 {g.salutation}, {firstName}
               </Text>
               <Text style={styles.greetSub} numberOfLines={1}>{g.subtitle}</Text>
@@ -245,11 +246,11 @@ export default function Dashboard() {
           <Text style={styles.quickLabel}>QUICK ACTIONS</Text>
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
-              title="Scan bill" badge={isNewUser ? "Try it" : undefined} onPress={() => router.push("/scan")} />
+              title="Scan Bill" badge={isNewUser ? "Try it" : undefined} onPress={() => router.push("/scan")} />
             <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
-              title="Add business" onPress={() => setAddBiz(true)} />
+              title="Add Business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="quick-action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
-              title="Meter install" onPress={() => setMeter(true)} />
+              title="Meter Setup" onPress={() => setMeter(true)} />
           </View>
 
           {/* Have a query pill */}
@@ -281,6 +282,8 @@ export default function Dashboard() {
 function QuickAction({ icon, bg, fg, title, onPress, testID, badge }: {
   icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string;
 }) {
+  const { width } = useWindowDimensions();
+  const fontSize = Math.max(12, Math.min(15, width * 0.037));
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (!badge) return;
@@ -305,7 +308,9 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge }: {
       <View style={[styles.qaIcon, { backgroundColor: bg }]}>
         <Icon name={icon} size={22} color={fg} />
       </View>
-      <Text style={styles.qaTitle} numberOfLines={1}>{title}</Text>
+      <Text style={[styles.qaTitle, { fontSize, lineHeight: fontSize * 1.25 }]} numberOfLines={2}>
+        {title}
+      </Text>
     </Pressable>
   );
 }
@@ -318,7 +323,7 @@ const styles = StyleSheet.create({
   greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.xs },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.pastel.lavender, alignItems: "center", justifyContent: "center" },
   avatarText: { fontFamily: font.bold, fontSize: type.lg, color: colors.pastel.lavenderIcon },
-  greetTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, letterSpacing: -0.3 },
+  greetTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, letterSpacing: -0.3 },
   greetSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
   bell: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", ...shadow.card },
 
@@ -353,9 +358,9 @@ const styles = StyleSheet.create({
 
   quickLabel: { fontFamily: font.bold, fontSize: 11, letterSpacing: 0.8, color: colors.muted, marginTop: spacing.sm, marginLeft: 2 },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  qa: { width: "48%", flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  qa: { width: "48%", flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 60 },
   qaIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  qaTitle: { flex: 1, fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  qaTitle: { flexShrink: 1, fontFamily: font.bold, color: colors.heading },
   qaBadge: {
     position: "absolute", top: 6, right: 6, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: colors.brandPrimary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
