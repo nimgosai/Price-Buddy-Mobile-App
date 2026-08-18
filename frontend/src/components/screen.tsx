@@ -2,7 +2,7 @@ import { StyleSheet, Text, View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 /** Sticky, safe-area-aware screen header. */
 export function ScreenHeader({
@@ -32,7 +32,7 @@ export function ScreenHeader({
             hitSlop={10}
             style={styles.iconBtn}
           >
-            <Ionicons name="chevron-back" size={24} color={colors.heading} />
+            <Ionicons name="arrow-back" size={20} color={colors.heading} />
           </Pressable>
         ) : null}
         <View style={{ flex: 1 }}>
@@ -40,7 +40,7 @@ export function ScreenHeader({
             {title}
           </Text>
           {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text style={styles.subtitle} numberOfLines={2}>
               {subtitle}
             </Text>
           ) : null}
@@ -67,7 +67,7 @@ export function EmptyState({
   return (
     <View style={styles.empty} testID={testID}>
       <View style={styles.emptyIcon}>
-        <Ionicons name={icon} size={34} color={colors.brandPrimary} />
+        <Ionicons name={icon} size={28} color={colors.brandPrimary} />
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyMsg}>{message}</Text>
@@ -84,24 +84,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  row: { flexDirection: "row", alignItems: "center", gap: 14 },
   iconBtn: {
     width: 40,
     height: 40,
     borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.surface,
+    ...shadow.card,
   },
   title: {
     fontFamily: font.bold,
     fontSize: type.xl,
     color: colors.heading,
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontFamily: font.regular,
-    fontSize: type.base,
+    fontSize: type.sm,
     color: colors.muted,
     marginTop: 2,
   },
@@ -111,8 +112,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   emptyIcon: {
-    width: 76,
-    height: 76,
+    width: 64,
+    height: 64,
     borderRadius: radius.md,
     backgroundColor: colors.brandTertiary,
     alignItems: "center",
@@ -124,10 +125,11 @@ const styles = StyleSheet.create({
     fontSize: type.xl,
     color: colors.heading,
     textAlign: "center",
+    letterSpacing: -0.3,
   },
   emptyMsg: {
     fontFamily: font.regular,
-    fontSize: type.base,
+    fontSize: type.sm,
     color: colors.muted,
     textAlign: "center",
     marginTop: spacing.sm,

@@ -72,10 +72,10 @@ export default function SignIn() {
         </View>
 
         <Text testID="signin-title" style={styles.title}>
-          Sign in
+          Welcome back
         </Text>
         <Text style={styles.subtitle}>
-          Manage your utility contracts, renewals and bills.
+          Sign in to manage your contracts.
         </Text>
 
         <View style={styles.form}>
@@ -88,7 +88,7 @@ export default function SignIn() {
               if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
             }}
             error={errors.email}
-            placeholder="you@company.co.uk"
+            placeholder="you@business.co.uk"
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"

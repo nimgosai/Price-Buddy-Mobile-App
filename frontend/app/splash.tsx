@@ -5,38 +5,40 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Button } from "@/src/components/ui";
+import { useAuth } from "@/src/auth/auth-context";
 import { storage } from "@/src/utils/storage";
 import { SEEN_SPLASH_KEY } from "./index";
 import { colors, font, spacing, type } from "@/src/theme/theme";
 
 const SLIDES = [
   {
-    icon: "scan" as const,
+    icon: "document-text-outline" as const,
     title: "Snap a bill",
-    body: "Take a photo of any utility bill and we read the supplier, rates and dates for you — no typing.",
+    body: "Upload a bill and we'll pull in the key details for you.",
   },
   {
-    icon: "trending-down" as const,
-    title: "Better rates",
-    body: "Our team shops the market on your behalf to cut what you pay for energy, water and telecoms.",
+    icon: "trending-down-outline" as const,
+    title: "Find better rates",
+    body: "We compare the market and line up better options before renewal.",
   },
   {
-    icon: "alarm" as const,
-    title: "Never miss a renewal",
-    body: "We track every contract and flag renewals early, so you never roll onto an expensive tariff.",
+    icon: "alarm-outline" as const,
+    title: "Stay ahead of renewals",
+    body: "Get reminders before contracts end, so you stay in control.",
   },
 ];
 
 export default function Splash() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuth();
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
 
   const finish = async () => {
     await storage.setItem(SEEN_SPLASH_KEY, true);
-    router.replace("/landing");
+    router.replace(user ? "/dashboard" : "/signup");
   };
 
   const onScroll = (e: any) => {

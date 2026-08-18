@@ -216,14 +216,14 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md },
   rowIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  rowLabel: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
-  rowDesc: { fontFamily: font.regular, fontSize: 11.5, color: colors.muted, marginTop: 2, lineHeight: 16 },
+  rowLabel: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  rowDesc: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2, lineHeight: 16 },
 
   logout: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.md, marginTop: spacing.md },
   logoutText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurfaceSecondary },
   danger: { flexDirection: "row", alignItems: "center", gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.lg },
-  dangerTitle: { fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
-  dangerSub: { fontFamily: font.regular, fontSize: 11.5, color: colors.muted, marginTop: 2 },
+  dangerTitle: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  dangerSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
 
   backdrop: { flex: 1, backgroundColor: "rgba(20,15,40,0.55)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: spacing.lg, maxHeight: "88%" },

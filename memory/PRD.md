@@ -204,3 +204,25 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Profile rows corrected: My sites · My quote requests (->/quote/new) · Replay product tour (->/splash) · Contact support.
   (Was wrongly "My contracts".)
 - TODO next: (1) verification pass of Home/Sites/Scan/Quote wording vs originals; (2) Reports polish; (3) Entry screens.
+
+### CONSISTENCY PASS + REPORTS + ENTRY SCREENS (verified by testing_agent iter 11)
+- GLOBAL TYPE SCALE (theme.ts) aligned to original web (hu-* classes): kicker 11, sm 13 (hu-muted),
+  title 15 (card/row titles), xl 18 (hu-h3 page/header titles), 2xl 24, 3xl 30. This ripples app-wide
+  so every ScreenHeader/title/body is consistent.
+- Shared ScreenHeader: 18px bold title + 13px muted subtitle (2 lines) + white shadowed back button
+  (arrow-back). Added onBack (->/dashboard) to Sites & Support so all tabs share one header treatment.
+- Shared EmptyState + Sites empty aligned: 64px brand-tint tile, 28px icon, 18px title, 13px message.
+- Normalized card/row titles to 15 and secondary/desc text to 13 across Sites/Reports/Support/Profile/Dashboard.
+  Section kickers (QUICK ACTIONS / WHAT WE DO) -> 11px uppercase muted. Card headings -> 18px.
+- REPORTS rebuilt to original (app/(tabs)/reports.tsx): title "Your spend" + "Annual estimate based on
+  your current tariffs and usage."; empty "No data yet" + "Scan a bill to get started"; populated =
+  navy "ESTIMATED ANNUAL SPEND" total card (38px + faint £ watermark) + "By utility" (emoji+color bars)
+  + "By site" (>1) + "Top contracts" (left-border utility color). Removed non-original monthly trend.
+- ENTRY JOURNEY rebuilt to original copy: index unauth -> /landing. Landing = marketing hero
+  ("Never overpay on utilities again." + "Real human support — not bots." + trust strip + 4 features +
+  stats + bottom CTA); "Create free account" -> /splash -> /signup; "I already have an account" -> /signin.
+  Splash 3 slides (Snap a bill / Find better rates / Stay ahead of renewals); finish -> /signup (or
+  /dashboard when replayed while logged in). Signin "Welcome back" / "Sign in to manage your contracts."
+  Signup step1 "Create your account" (Your name / you@business.co.uk) -> step2 "Tell us about your business".
+- OPEN (next): optional side-by-side polish of Scan & Quote inner-screen wording/spacing (headers already
+  consistent via the global scale).

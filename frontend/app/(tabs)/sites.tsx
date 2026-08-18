@@ -80,6 +80,7 @@ export default function Sites() {
         testID="sites-header"
         title="Your sites"
         subtitle={`${sites.length} ${sites.length === 1 ? "site" : "sites"}`}
+        onBack={() => router.push("/dashboard")}
       />
       {loading ? (
         <View style={styles.center} testID="sites-loading">
@@ -101,7 +102,7 @@ export default function Sites() {
           ) : sites.length === 0 ? (
             <View style={styles.emptyCard} testID="sites-empty">
               <View style={styles.emptyIcon}>
-                <Icon name="building" size={22} color={colors.brandPrimary} />
+                <Icon name="building" size={28} color={colors.brandPrimary} />
               </View>
               <Text style={styles.emptyTitle}>No sites yet</Text>
               <Text style={styles.emptySub}>
@@ -210,18 +211,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyIcon: {
-    width: 52,
-    height: 52,
+    width: 64,
+    height: 64,
     borderRadius: radius.md,
     backgroundColor: colors.brandTertiary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  emptyTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
+  emptyTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, letterSpacing: -0.3 },
   emptySub: {
     fontFamily: font.regular,
-    fontSize: type.base,
+    fontSize: type.sm,
     color: colors.muted,
     textAlign: "center",
     marginTop: spacing.sm,
@@ -253,8 +254,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  name: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
-  addr: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
+  name: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  addr: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
 
   addNew: {
     flexDirection: "row",

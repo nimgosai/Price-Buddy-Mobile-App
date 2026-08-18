@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   auditIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   auditText: { flex: 1, fontFamily: font.semibold, fontSize: type.sm, color: "#92400E" },
 
-  quickLabel: { fontFamily: font.semibold, fontSize: 12, letterSpacing: 0.6, color: colors.muted, marginTop: 2, marginLeft: 2 },
+  quickLabel: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.5, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 2 },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   qa: { width: "47.5%", flexGrow: 1, gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 12, minHeight: 92, justifyContent: "flex-start" },
   qaIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },

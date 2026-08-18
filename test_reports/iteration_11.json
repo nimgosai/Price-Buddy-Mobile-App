@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 11 - frontend-only Playwright verification on mobile viewport (390x844) against preview https://bill-verify-7.preview.emergentagent.com with LIVE backend https://utility-contract-hub.emergent.host. ALL 8 review-request flows PASS. (1) Sign-in with test creds -> lands on /dashboard, all 5 bottom tabs render (Home, Sites, Reports, Support, Profile). (2) Typography consistency verified programmatically: Sites 'Your sites' title = 18px, Reports 'Your spend' title = 18px (IDENTICAL); Sites subtitle '0 sites' = 13px rgb(100,116,139), Reports subtitle 'Annual estimate...' = 13px rgb(100,116,139) (IDENTICAL muted style). Empty states: Sites 'No sites yet' icon-tile = 64x64, Reports 'No data yet' icon-tile = 64x64 (IDENTICAL); Sites empty title = 18px, Reports empty title = 18px (IDENTICAL). Back chevron rendered by ScreenHeader on all tab screens (header-back-button testID). (3) Reports tab: title 'Your spend' present, subtitle 'Annual estimate based on your current tariffs and usage.' present, empty state 'No data yet' visible with reports-scan-button 'Scan a bill to get started' visible (test account has no spend data, expected). (4) Profile tab: all 6 rows render (Email alerts, Phone push notifications, My sites, My quote requests, Replay product tour, Contact support). (5) Support tab: dark banner 'Hi e2e_test_1786703401, we've got you.' + 'How our team can help' list render correctly. (6) Landing (/landing): landing-title = 'Never overpay on utilities again.', trust strip visible, all 4 features rendered, both CTA buttons (landing-create-account, landing-signin) visible. (7) 'Create free account' navigates to /splash and all 3 slides render in order ('Snap a bill' -> 'Find better rates' -> 'Stay ahead of renewals') via splash-next; splash-skip visible. (8) /signup step 1 header 'Create your account' + 'Step 1 of 2' with 3 inputs and Continue; after filling valid data, Continue advances to step 2 header 'Tell us about your business' + 'Step 2 of 2' with business-type chips (limited_company, sole_trader visible) and signup-company-input visible. Did NOT click signup-submit (per spec). /signin renders 'Welcome back' + 'Sign in to manage your contracts.'. No red screens, no pageerrors. Only pre-existing web-only warnings (shadow* props, pointerEvents) unchanged from prior iterations.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "shadow* style props (theme.ts)", "issue": "Web-only warning carried from prior iterations: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Non-blocking. Reference: /app/frontend/src/theme/theme.ts" },
+      { "component": "props.pointerEvents (reports.tsx watermark Text)", "issue": "Web-only cosmetic warning: 'props.pointerEvents is deprecated. Use style.pointerEvents'. Reference: /app/frontend/app/(tabs)/reports.tsx:159" }
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_11.json"],
+  "action_items": [
+    "No fixes required. Optional cleanup: replace pointerEvents={'none'} with style={{ pointerEvents: 'none' }} on the Reports total-card watermark Text to silence a web-only deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "ScreenHeader (src/components/screen.tsx) centralizes header typography (title type.xl=18px bold, subtitle type.sm=13px muted) - all 5 tab screens use it, ensuring consistency verified at runtime.",
+    "Sites empty state (sites.tsx) is inlined rather than using shared EmptyState component but uses identical dimensions (64x64 icon tile, radius.md, brandTertiary bg, type.xl bold title) - verified at runtime to match reports EmptyState.",
+    "Landing (/app/frontend/app/landing.tsx) correctly wires 'Create free account' -> /splash and 'I already have an account' -> /signin via router.push; testIDs present on all critical elements.",
+    "Splash (/app/frontend/app/splash.tsx) finish() correctly branches to /dashboard when user is signed in and /signup otherwise (via useAuth); slides use pagingEnabled ScrollView with proper testIDs splash-slide-{0,1,2}.",
+    "Signup (/app/frontend/app/signup.tsx) uses ScreenHeader with dynamic title ('Create your account' -> 'Tell us about your business') and subtitle ('Step 1 of 2' / 'Step 2 of 2') matching the requested copy.",
+    "Signin (/app/frontend/app/signin.tsx) copy matches spec ('Welcome back' + 'Sign in to manage your contracts.'); has forgot-password and signup-link affordances."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend-only iteration; live backend used only for signin)", "frontend": "100% (8/8 review-request flows passed)" },
+  "seed_data_creation": "None. Shared test account e2e_test_1786703401@example.com used for signin only. Signup wizard advanced to step 2 but signup-submit was NOT clicked (no live-backend write).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preview: https://bill-verify-7.preview.emergentagent.com. Live backend (EXPO_PUBLIC_UCH_BACKEND_URL): https://utility-contract-hub.emergent.host. Test creds: e2e_test_1786703401@example.com / Password123! (no contracts/sites). Sign-in submit testID = 'signin-submit-button'. Tab screens use ScreenHeader with testIDs *-header and shared back button 'header-back-button'. Entry-flow testIDs: landing-title, landing-trust-strip, landing-create-account, landing-signin, landing-feature-{0..3}; splash-slide-{0..2}, splash-next, splash-skip; signup-header, signup-name-input, signup-email-input, signup-password-input, signup-next, signup-type-{limited_company|sole_trader|partnership|charity}, signup-company-input, signup-submit (DO NOT CLICK). Reports empty testIDs: reports-empty, reports-scan-button.",
+  "rca_of_issue": "N/A - no issues found this iteration; all requested consistency/layout/copy/navigation checks passed."
+}

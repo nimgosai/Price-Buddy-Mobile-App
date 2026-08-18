@@ -9,10 +9,13 @@ import { Button } from "@/src/components/ui";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 const FEATURES = [
-  { icon: "scan-outline" as const, title: "Snap any bill", body: "We read the details automatically" },
-  { icon: "trending-down-outline" as const, title: "Cut your costs", body: "We shop the market for better rates" },
-  { icon: "alarm-outline" as const, title: "Renewal reminders", body: "Never roll onto an expensive tariff" },
+  { icon: "alarm-outline" as const, title: "Renewal reminders", body: "Get alerted before contracts end, so nothing rolls over unnoticed." },
+  { icon: "scan-outline" as const, title: "Snap a bill", body: "Upload a bill and we'll pull in the details for you." },
+  { icon: "trending-down-outline" as const, title: "Better rates", body: "We compare the market before renewal and line up better options." },
+  { icon: "headset-outline" as const, title: "Human support", body: "Speak to a dedicated account manager when you need help." },
 ];
+
+const TRUST = ["For UK businesses", "Real human support", "No bot handoffs"];
 
 export default function Landing() {
   const insets = useSafeAreaInsets();
@@ -26,27 +29,38 @@ export default function Landing() {
       >
         <LinearGradient
           colors={["#FDE7DF", "#F8F9FC"]}
-          style={[styles.hero, { paddingTop: insets.top + spacing["2xl"] }]}
+          style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}
         >
           <Image
             source={require("../assets/images/pricebuddy-logo.webp")}
             style={styles.logo}
             contentFit="contain"
           />
+          <Text style={styles.eyebrow}>Built for UK businesses of all sizes</Text>
           <Text testID="landing-title" style={styles.headline}>
-            Take control of your business utilities
+            Never overpay on utilities again.
           </Text>
+          <Text style={styles.accent}>Real human support — not bots.</Text>
           <Text style={styles.sub}>
-            Utility Contract Hub keeps your energy, water and telecoms contracts in one place — and
-            helps you pay less.
+            Snap a bill, stay ahead of renewals, and get better-rate options before contracts end —
+            with a dedicated account manager when you need clear answers.
           </Text>
+
+          <View style={styles.trustStrip} testID="landing-trust-strip">
+            {TRUST.map((t, i) => (
+              <View key={t} style={styles.trustItem}>
+                {i > 0 && <Text style={styles.trustDot}>·</Text>}
+                <Text style={styles.trustText}>{t}</Text>
+              </View>
+            ))}
+          </View>
         </LinearGradient>
 
         <View style={styles.features}>
           {FEATURES.map((f, i) => (
             <View key={i} style={styles.feature} testID={`landing-feature-${i}`}>
               <View style={styles.featureIcon}>
-                <Ionicons name={f.icon} size={24} color={colors.brandPrimary} />
+                <Ionicons name={f.icon} size={22} color={colors.brandPrimary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.featureTitle}>{f.title}</Text>
@@ -54,6 +68,17 @@ export default function Landing() {
               </View>
             </View>
           ))}
+
+          <View style={styles.stats}>
+            <Stat value="365 days" label="earliest renewal alert before expiry" />
+            <Stat value="Same day" label="account manager reply, in working hours" />
+            <Stat value="Named manager" label="dedicated to every account from day one" />
+          </View>
+
+          <View style={styles.bottomCta}>
+            <Text style={styles.bottomCtaTitle}>Ready to take control of your utility bills?</Text>
+            <Text style={styles.bottomCtaSub}>Sign up in 30 seconds. No card needed.</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -61,7 +86,8 @@ export default function Landing() {
         <Button
           testID="landing-create-account"
           label="Create free account"
-          onPress={() => router.push("/signup")}
+          icon="chevron-forward"
+          onPress={() => router.push("/splash")}
         />
         <Button
           testID="landing-signin"
@@ -77,17 +103,33 @@ export default function Landing() {
   );
 }
 
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing["2xl"], alignItems: "flex-start" },
-  logo: { width: 96, height: 80, marginBottom: spacing.lg },
-  headline: { fontFamily: font.bold, fontSize: type["3xl"], color: colors.heading, letterSpacing: -0.5, lineHeight: 36 },
-  sub: { fontFamily: font.regular, fontSize: type.lg, color: colors.onSurfaceSecondary, marginTop: spacing.md, lineHeight: 24 },
+  logo: { width: 96, height: 72, marginBottom: spacing.md },
+  eyebrow: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.5, color: colors.brandPrimary, textTransform: "uppercase", marginBottom: spacing.sm },
+  headline: { fontFamily: font.bold, fontSize: type["3xl"], color: colors.heading, letterSpacing: -0.6, lineHeight: 36 },
+  accent: { fontFamily: font.semibold, fontSize: type.lg, color: colors.brandPrimary, marginTop: spacing.sm },
+  sub: { fontFamily: font.regular, fontSize: type.base, color: colors.onSurfaceSecondary, marginTop: spacing.md, lineHeight: 22 },
+  trustStrip: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: spacing.lg },
+  trustItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  trustDot: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
+  trustText: { fontFamily: font.medium, fontSize: type.sm, color: colors.muted },
+
   features: { padding: spacing.xl, gap: spacing.lg },
   feature: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   featureIcon: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -95,10 +137,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  featureTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
-  featureBody: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2 },
+  featureTitle: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  featureBody: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2, lineHeight: 18 },
+
+  stats: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs },
+  stat: {
+    flexGrow: 1,
+    minWidth: "30%",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+  },
+  statValue: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  statLabel: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2, lineHeight: 14 },
+
+  bottomCta: { backgroundColor: colors.surfaceInverse, borderRadius: radius.md, padding: spacing.xl, marginTop: spacing.sm },
+  bottomCtaTitle: { fontFamily: font.bold, fontSize: type.xl, color: "#FFFFFF", letterSpacing: -0.3 },
+  bottomCtaSub: { fontFamily: font.regular, fontSize: type.sm, color: "rgba(255,255,255,0.75)", marginTop: spacing.xs },
+
   partnersLink: { alignSelf: "center", paddingVertical: spacing.xs },
-  partnersText: { fontFamily: font.semibold, fontSize: type.base, color: colors.brandPrimary },
+  partnersText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
   cta: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,

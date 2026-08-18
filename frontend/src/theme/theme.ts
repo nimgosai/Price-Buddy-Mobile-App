@@ -78,11 +78,16 @@ export const font = {
   bold: "Geist-Bold",
 };
 
+// Canonical type scale — mirrors the original web app (hu-* classes):
+//  kicker 11 (hu-mini), sm 13 (hu-muted), title 15 (card/row titles),
+//  xl 18 (hu-h3 page/header titles), 2xl 24 (hu-h2), 3xl 30 (hu-h1).
 export const type = {
-  sm: 12,
+  kicker: 11,
+  sm: 13,
   base: 14,
+  title: 15,
   lg: 16,
-  xl: 20,
+  xl: 18,
   "2xl": 24,
   "3xl": 30,
 };

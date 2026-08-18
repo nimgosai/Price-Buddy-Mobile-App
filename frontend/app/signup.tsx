@@ -96,7 +96,7 @@ export default function SignUp() {
     <View style={styles.root}>
       <ScreenHeader
         testID="signup-header"
-        title="Create account"
+        title={step === 1 ? "Create your account" : "Tell us about your business"}
         subtitle={`Step ${step} of 2`}
         onBack={goBack}
       />
@@ -107,17 +107,17 @@ export default function SignUp() {
           bottomOffset={90}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.lead}>Tell us who you are.</Text>
+          <Text style={styles.lead}>Start free — no card needed.</Text>
           <TextField
             testID="signup-name-input"
-            label="Full name"
+            label="Your name"
             value={fullName}
             onChangeText={(t) => {
               setFullName(t);
               if (errors.fullName) setErrors((p) => ({ ...p, fullName: "" }));
             }}
             error={errors.fullName}
-            placeholder="Jane Smith"
+            placeholder="Adebayo Okafor"
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current?.focus()}
           />
@@ -131,7 +131,7 @@ export default function SignUp() {
               if (errors.email) setErrors((p) => ({ ...p, email: "" }));
             }}
             error={errors.email}
-            placeholder="you@company.co.uk"
+            placeholder="you@business.co.uk"
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
@@ -173,7 +173,7 @@ export default function SignUp() {
           bottomOffset={90}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.lead}>About your business.</Text>
+          <Text style={styles.lead}>This helps us set up the right contracts for you.</Text>
           <Text style={styles.label}>Business type</Text>
           <View style={styles.typeGrid}>
             {BUSINESS_TYPES.map((b) => {

@@ -101,3 +101,70 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+## user_problem_statement: >
+  React Native (Expo) mobile FRONT-END for "Utility Contract Hub" (PriceBuddy), talking to the
+  LIVE external backend https://utility-contract-hub.emergent.host (prefix /api). This iteration:
+  (1) app-wide typography/UI consistency across all tabs, (2) Reports screen rebuilt to match the
+  original web layout/wording, (3) Entry journey (landing/splash/signin/signup) rebuilt to match
+  original copy. Match the original web app; adapt sensibly for mobile.
+
+## frontend:
+##   - task: "App-wide typography consistency (theme scale + 5 tabs + shared header/empty-state)"
+##     implemented: true
+##     working: "NA"
+##     file: "src/theme/theme.ts, src/components/screen.tsx, app/(tabs)/*.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Aligned type scale to original (kicker 11, sm 13, title 15, xl 18=hu-h3). Unified ScreenHeader (18px title + 13px subtitle + back button on all tabs), unified EmptyState (64px tile, 18px title). Normalized card/row titles to 15 and body to 13 across Sites/Reports/Support/Profile/Dashboard."
+##   - task: "Reports screen rebuilt to match original (Your spend, navy total card, By utility/By site/Top contracts)"
+##     implemented: true
+##     working: "NA"
+##     file: "app/(tabs)/reports.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Title 'Your spend' + subtitle. Empty state 'No data yet'. Populated: navy total card 'ESTIMATED ANNUAL SPEND', By utility (emoji+color bars), By site (>1), Top contracts. Test account has no data -> empty state expected. GET /api/reports/spend."
+##   - task: "Entry journey rebuilt: landing (marketing), splash (3 slides), signin, signup"
+##     implemented: true
+##     working: "NA"
+##     file: "app/index.tsx, app/landing.tsx, app/splash.tsx, app/signin.tsx, app/signup.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Flow: unauth -> /landing. Landing 'Never overpay on utilities again.' + features + trust strip; 'Create free account' -> /splash -> /signup; 'Sign in' -> /signin. Splash slides copy updated. Signin 'Welcome back'. Signup 'Create your account'/'Tell us about your business'."
+
+## metadata:
+##   created_by: "main_agent"
+##   version: "2.0"
+##   test_sequence: 11
+##   run_ui: true
+
+## test_plan:
+##   current_focus:
+##     - "App-wide typography consistency (theme scale + 5 tabs + shared header/empty-state)"
+##     - "Reports screen rebuilt to match original"
+##     - "Entry journey rebuilt: landing/splash/signin/signup"
+##   stuck_tasks: []
+##   test_all: false
+##   test_priority: "high_first"
+
+## agent_communication:
+##     -agent: "main"
+##     -comment: >
+##       Frontend-only testing. Live backend. Login with e2e_test_1786703401@example.com / Password123!.
+##       Verify: (1) all 5 tabs render with consistent header/title sizes and back button; Sites & Reports
+##       empty states look identical in size; (2) Reports shows 'Your spend' + 'No data yet' empty state
+##       for this account; (3) Entry flow: /landing renders hero + CTAs, 'Create free account' -> /splash
+##       (3 slides, Next/Get started) -> /signup; 'I already have an account' -> /signin ('Welcome back');
+##       signup step1 'Create your account' -> step2 'Tell us about your business'. Do NOT create real
+##       accounts on the live backend (registration writes). Sign-in + navigation only.

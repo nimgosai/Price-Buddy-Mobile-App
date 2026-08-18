@@ -32,7 +32,6 @@ export default function Index() {
     if (flags.biometric && !unlocked) return <Redirect href="/welcome-back" />;
     return <Redirect href="/dashboard" />;
   }
-  if (!flags.splash) return <Redirect href="/splash" />;
   return <Redirect href="/landing" />;
 }
 

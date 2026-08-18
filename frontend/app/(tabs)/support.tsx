@@ -1,5 +1,6 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
@@ -20,13 +21,14 @@ const HELP: { icon: IconName; title: string; body: string; bg: string; fg: strin
 
 export default function Support() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user } = useAuth();
   const firstName = (user?.full_name?.trim()?.split(/\s+/)[0]) || (user?.email?.split("@")[0]) || "there";
   const initials = (user?.full_name || user?.email || "U").split(/\s+/).map((s) => s[0]).slice(0, 2).join("").toUpperCase();
 
   return (
     <View style={styles.root}>
-      <ScreenHeader testID="support-header" title="Support" />
+      <ScreenHeader testID="support-header" title="Support" onBack={() => router.push("/dashboard")} />
       <ScrollView
         testID="support-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
@@ -100,10 +102,10 @@ const styles = StyleSheet.create({
   emailLink: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, textDecorationLine: "underline" },
 
   helpCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, gap: spacing.md },
-  helpKicker: { fontFamily: font.bold, fontSize: 10.5, letterSpacing: 0.8, color: colors.pastel.lavenderIcon, textTransform: "uppercase" },
-  helpTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginBottom: spacing.xs },
+  helpKicker: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.5, color: colors.muted, textTransform: "uppercase" },
+  helpTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, marginBottom: spacing.xs, letterSpacing: -0.3 },
   helpItem: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
   helpIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  helpItemTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  helpItemTitle: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   helpItemBody: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2, lineHeight: 18 },
 });
