@@ -242,3 +242,12 @@ No login/live-data writes used — everything reconstructed from the bundle.
   Reports -> GET /reports/spend{?business_id=}; switching reloads. Switcher bottom-sheet lists
   "All businesses (n)" + each business.
 - POLISH: scan/review intent body 11.5->13; Scan/Quote/Site-detail inherit the global type scale.
+
+### BATCH 9 — Try-it once + Renewals/Contracts polish (screenshot-verified)
+- "Try it" Scan badge: now shows ONCE for a brand-new/empty account (persist uch_seen_try_it) and the
+  pulse runs a finite 4 iterations then stops (was infinite loop). Removed unused isNewUser.
+- Renewals: header "Renewals coming up" + back to dashboard; empty "You're all caught up" /
+  "No contracts expiring within 90 days." (matches original renewals-screen copy). Card supplier ->15,
+  meta/date ->13 for consistency.
+- Contracts overview: card supplier ->15, meta/date ->13.
+- Scan success: already matches original (tiered headlines, View Live Quotes / Scan another bill) — left as-is.

@@ -93,8 +93,9 @@ export default function Renewals() {
     <View style={styles.root}>
       <ScreenHeader
         testID="renewals-header"
-        title="Renewals"
+        title="Renewals coming up"
         subtitle="Contracts in the 90-day action window"
+        onBack={() => router.push("/dashboard")}
       />
       {loading ? (
         <View style={styles.center} testID="renewals-loading">
@@ -116,8 +117,8 @@ export default function Renewals() {
             <EmptyState
               testID="renewals-empty"
               icon="checkmark-done-circle-outline"
-              title="Nothing due soon"
-              message="You have no contracts inside the 90-day renewal window. We'll flag them here the moment one gets close."
+              title="You're all caught up"
+              message="No contracts expiring within 90 days. We'll flag them here the moment one gets close."
             >
               <Button
                 testID="renewals-scan-button"
@@ -217,17 +218,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  supplier: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
+  supplier: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   meta: {
     fontFamily: font.regular,
-    fontSize: type.base,
+    fontSize: type.sm,
     color: colors.muted,
     marginTop: 2,
     textTransform: "capitalize",
   },
   divider: { height: 1, backgroundColor: colors.divider },
   bottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  date: { fontFamily: font.medium, fontSize: type.base, color: colors.onSurfaceSecondary },
+  date: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
   cost: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
   quoteBtn: {
     flexDirection: "row",

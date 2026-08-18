@@ -153,9 +153,9 @@ const styles = StyleSheet.create({
   card: { gap: spacing.md },
   top: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   icon: { width: 40, height: 40, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
-  supplier: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
-  meta: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2, textTransform: "capitalize" },
+  supplier: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  meta: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2, textTransform: "capitalize" },
   bottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.md },
-  date: { fontFamily: font.medium, fontSize: type.base, color: colors.onSurfaceSecondary },
+  date: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
   cost: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
 });

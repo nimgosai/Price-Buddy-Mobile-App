@@ -29,6 +29,7 @@ import { storage } from "@/src/utils/storage";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 export const TOUR_REPLAY_KEY = "uch_tour_replay";
+const SEEN_TRY_IT_KEY = "uch_seen_try_it";
 
 const UTILITY_LABEL: Record<string, string> = {
   electricity: "Electricity",
@@ -91,6 +92,7 @@ export default function Dashboard() {
   const [meter, setMeter] = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
+  const [showTryIt, setShowTryIt] = useState(false);
 
   // Guided spotlight tour
   const scanRef = useRef<View>(null);
@@ -194,6 +196,17 @@ export default function Dashboard() {
     }
   }, [loading, user, startTour]);
 
+  // "Try it" nudge on Scan: show ONCE for a brand-new user, then never again.
+  useEffect(() => {
+    if (loading || items.length !== 0) return;
+    storage.getItem<boolean>(SEEN_TRY_IT_KEY, false).then((seen) => {
+      if (!seen) {
+        setShowTryIt(true);
+        storage.setItem(SEEN_TRY_IT_KEY, true).catch(() => {});
+      }
+    });
+  }, [loading, items.length]);
+
   const firstName = useMemo(() => {
     const fn = user?.full_name?.trim();
     if (fn) return fn.split(/\s+/)[0];
@@ -211,7 +224,6 @@ export default function Dashboard() {
   const cfg = first ? URGENCY_CFG[urgencyFor(first.days_until_expiry, first.utility_type)] : null;
 
   const showNudge = !nudgeDismissed && !user?.push_notifications_enabled;
-  const isNewUser = items.length === 0; // brand-new / empty account → prompt first bill
 
   const turnOnAlerts = async () => {
     setTurningOn(true);
@@ -321,7 +333,7 @@ export default function Dashboard() {
           <Text style={styles.quickLabel}>QUICK ACTIONS</Text>
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
-              title="Scan Bill" badge={isNewUser ? "Try it" : undefined} onPress={() => router.push("/scan")} />
+              title="Scan Bill" badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
             <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
               title="Add Business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="quick-action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
@@ -371,6 +383,7 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: 
         Animated.timing(scale, { toValue: 1.12, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         Animated.timing(scale, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
+      { iterations: 4 },
     );
     loop.start();
     return () => loop.stop();
