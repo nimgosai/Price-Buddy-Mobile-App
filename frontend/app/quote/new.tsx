@@ -1,377 +1,416 @@
-import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View, TextInput } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMemo, useState } from "react";
 import {
-  KeyboardAwareScrollView,
-  KeyboardStickyView,
-} from "react-native-keyboard-controller";
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
-import { Button, TextField } from "@/src/components/ui";
+import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
-import { useToast } from "@/src/components/toast";
-import { useAuth } from "@/src/auth/auth-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
-const SERVICES = [
-  { key: "electric", label: "Electricity", icon: "flash" as const },
-  { key: "gas", label: "Gas", icon: "flame" as const },
-  { key: "water", label: "Water", icon: "water" as const },
-  { key: "telecoms", label: "Telecoms", icon: "wifi" as const },
+type Svc = { key: string; label: string; icon: IconName; color: string };
+const SERVICES: Svc[] = [
+  { key: "electric", label: "Electric", icon: "bolt", color: "#F59E0B" },
+  { key: "gas", label: "Gas", icon: "fire", color: "#FB923C" },
+  { key: "water", label: "Water", icon: "droplet", color: "#3B82F6" },
+  { key: "telecoms", label: "Telecoms", icon: "phone", color: "#0EA5E9" },
 ];
 
-function normalizeService(u?: string): string | null {
-  if (!u) return null;
-  const s = u.toLowerCase();
-  if (s.startsWith("elect")) return "electric";
-  if (s.startsWith("gas")) return "gas";
-  if (s.startsWith("water")) return "water";
-  if (s.startsWith("tele")) return "telecoms";
-  return null;
-}
+const WINDOWS = [
+  { value: "out_of_contract", label: "Out of Contract" },
+  { value: "under_6m", label: "Under 6 months" },
+  { value: "6_12m", label: "6–12 months" },
+  { value: "over_12m", label: "Over 12 months" },
+];
 
-export default function QuoteNew() {
-  const insets = useSafeAreaInsets();
+type Meter = { _id: string; utility: "electric" | "gas"; supplier: string; contract_end_window: string };
+
+let mid = 0;
+const newMeter = (u: "electric" | "gas"): Meter => ({ _id: `m${mid++}`, utility: u, supplier: "", contract_end_window: "" });
+
+export default function QuoteWizard() {
   const router = useRouter();
-  const toast = useToast();
-  const { user } = useAuth();
-  const params = useLocalSearchParams<{ utility_type?: string }>();
+  const params = useLocalSearchParams<{ utility?: string; incumbent?: string; property?: string }>();
 
-  const preset = normalizeService(params.utility_type);
-  const [step, setStep] = useState<1 | 2>(1);
-  const [selected, setSelected] = useState<Set<string>>(new Set(preset ? [preset] : []));
-  const [meterElectric, setMeterElectric] = useState("");
-  const [meterGas, setMeterGas] = useState("");
+  const preUtil = (params.utility || "").toLowerCase();
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    if (["electricity", "electric"].includes(preUtil)) s.add("electric");
+    else if (preUtil === "gas") s.add("gas");
+    return s;
+  });
+  const [step, setStep] = useState(0);
+  const [contact, setContact] = useState({ name: "", email: "", phone: "" });
+  const [addr, setAddr] = useState({
+    business_name: "",
+    full_address: "",
+    postcode: "",
+    is_supply_address: true,
+    supply_postcode: "",
+    property_id: params.property || "",
+  });
+  const [meters, setMeters] = useState<Meter[]>(() => {
+    const arr: Meter[] = [];
+    if (["electricity", "electric"].includes(preUtil)) arr.push({ ...newMeter("electric"), supplier: params.incumbent || "" });
+    if (preUtil === "gas") arr.push({ ...newMeter("gas"), supplier: params.incumbent || "" });
+    return arr;
+  });
   const [waterSupplier, setWaterSupplier] = useState("");
   const [telecomsSupplier, setTelecomsSupplier] = useState("");
-
-  const [name, setName] = useState(user?.full_name || user?.company_name || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [phone, setPhone] = useState("");
-  const [line1, setLine1] = useState("");
-  const [city, setCity] = useState("");
-  const [postcode, setPostcode] = useState("");
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const emailRef = useRef<TextInput>(null);
-  const cityRef = useRef<TextInput>(null);
-  const postcodeRef = useRef<TextInput>(null);
+  const flow = useMemo(() => {
+    const f = ["service", "global"];
+    if (selected.has("electric") || selected.has("gas")) f.push("energy");
+    if (selected.has("water")) f.push("water");
+    if (selected.has("telecoms")) f.push("telecoms");
+    f.push("review");
+    return f;
+  }, [selected]);
 
-  // AuthProvider may hydrate after mount — seed contact fields once available.
-  useEffect(() => {
-    if (user) {
-      setName((prev) => prev || user.full_name || user.company_name || "");
-      setEmail((prev) => prev || user.email || "");
-    }
-  }, [user]);
+  const current = flow[step];
+  const isLast = step >= flow.length - 1;
 
-  const has = (k: string) => selected.has(k);
   const toggle = (k: string) => {
     setSelected((prev) => {
       const n = new Set(prev);
       if (n.has(k)) n.delete(k);
       else n.add(k);
+      // sync energy meters
+      setMeters((ms) => {
+        let next = [...ms];
+        if ((k === "electric" || k === "gas")) {
+          const has = next.some((m) => m.utility === k);
+          if (n.has(k) && !has) next.push(newMeter(k as any));
+          if (!n.has(k)) next = next.filter((m) => m.utility !== k);
+        }
+        return next;
+      });
       return n;
     });
   };
 
-  const goBack = () => {
-    if (step === 2) {
-      setStep(1);
+  const updateMeter = (id: string, patch: Partial<Meter>) =>
+    setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...patch } : m)));
+  const removeMeter = (id: string) => setMeters((ms) => ms.filter((m) => m._id !== id));
+
+  const validateStep = (): boolean => {
+    if (current === "service") return selected.size > 0;
+    if (current === "global")
+      return !!(contact.name.trim() && contact.email.trim() && (addr.is_supply_address || addr.supply_postcode.trim()) && (addr.business_name.trim() || addr.full_address.trim()));
+    if (current === "energy") return meters.every((m) => m.supplier.trim() && m.contract_end_window);
+    if (current === "water") return waterSupplier.trim().length > 0;
+    if (current === "telecoms") return telecomsSupplier.trim().length > 0;
+    return true;
+  };
+
+  const next = () => {
+    setError("");
+    if (!validateStep()) {
+      setError("Please complete the highlighted fields.");
       return;
     }
-    if (router.canGoBack()) router.back();
-    else router.replace("/dashboard");
+    setStep((s) => Math.min(flow.length - 1, s + 1));
   };
-
-  const validateStep1 = () => {
-    const next: Record<string, string> = {};
-    if (selected.size === 0) next.services = "Pick at least one utility";
-    if (has("water") && !waterSupplier.trim()) next.water = "Enter your water supplier";
-    if (has("telecoms") && !telecomsSupplier.trim()) next.telecoms = "Enter your telecoms supplier";
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const onNext = () => {
-    if (validateStep1()) setStep(2);
+  const back = () => {
+    setError("");
+    if (step === 0) router.back();
+    else setStep((s) => Math.max(0, s - 1));
   };
 
   const submit = async () => {
     if (submitting) return;
-    const next: Record<string, string> = {};
-    if (!name.trim()) next.name = "Enter a contact name";
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = "Enter a valid email";
-    if (!line1.trim()) next.line1 = "Enter the address";
-    if (!postcode.trim()) next.postcode = "Enter the postcode";
-    setErrors(next);
-    if (Object.keys(next).length) return;
-
-    const energy_meters: any[] = [];
-    if (has("electric")) energy_meters.push({ utility: "electric", meter_number: meterElectric.trim() || undefined });
-    if (has("gas")) energy_meters.push({ utility: "gas", meter_number: meterGas.trim() || undefined });
-
-    const body: any = {
-      selected_services: [...selected],
-      contact: { name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim() || undefined },
-      address: { line1: line1.trim(), city: city.trim(), postcode: postcode.trim().toUpperCase() },
-    };
-    if (energy_meters.length) body.energy_meters = energy_meters;
-    if (has("water")) body.water_supplier = waterSupplier.trim();
-    if (has("telecoms")) body.telecoms_supplier = telecomsSupplier.trim();
-
+    setError("");
     setSubmitting(true);
     try {
-      const res = await apiRequest<{ quote_request_id: string }>("/quotes/multi", {
+      const res = await apiRequest<any>("/quotes/multi", {
         method: "POST",
-        body,
+        body: {
+          selected_services: Array.from(selected),
+          contact,
+          address: addr,
+          energy_meters: meters.map(({ _id, ...m }) => m),
+          water_supplier: selected.has("water") ? waterSupplier : null,
+          telecoms_supplier: selected.has("telecoms") ? telecomsSupplier : null,
+        },
       });
-      router.replace(`/quote/success/${res.quote_request_id}`);
+      const id = res?.quote_request_id || res?.id;
+      router.replace(`/quote/success/${id}`);
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Couldn't submit your request.", "error");
+      setError(e instanceof ApiError ? e.message : "Could not submit. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const electricMeters = meters.filter((m) => m.utility === "electric");
+  const gasMeters = meters.filter((m) => m.utility === "gas");
+
   return (
     <View style={styles.root}>
-      <ScreenHeader
-        testID="quote-header"
-        title="Get a better deal"
-        subtitle={`Step ${step} of 2`}
-        onBack={goBack}
-      />
+      <ScreenHeader testID="quote-header" title="Get a Quote" subtitle={`Step ${step + 1} of ${flow.length}`} onBack={back} />
 
-      {step === 1 ? (
-        <KeyboardAwareScrollView
-          contentContainerStyle={styles.scroll}
-          bottomOffset={90}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.label}>Which utilities?</Text>
-          {!!errors.services && <Text style={styles.errText}>{errors.services}</Text>}
-          <View style={styles.grid}>
-            {SERVICES.map((s) => {
-              const active = has(s.key);
+      <View style={styles.pips}>
+        {flow.map((s, i) => (
+          <View key={s} testID={`quote-step-pip-${i}`} style={[styles.pip, { backgroundColor: i <= step ? colors.heading : colors.border }]} />
+        ))}
+      </View>
+
+      <KeyboardAwareScrollView contentContainerStyle={styles.scroll} bottomOffset={90} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {current === "service" && (
+          <View testID="step-service">
+            <Text style={styles.h2}>Which services do you need a quote for?</Text>
+            <Text style={styles.muted}>Pick all that apply — we&apos;ll only ask the questions we need.</Text>
+            <View style={styles.svcGrid}>
+              {SERVICES.map((s) => {
+                const on = selected.has(s.key);
+                return (
+                  <Pressable key={s.key} testID={`service-${s.key}`} onPress={() => toggle(s.key)} style={[styles.svcCard, on && styles.svcCardOn]}>
+                    <View style={[styles.svcIcon, { backgroundColor: `${s.color}22` }]}>
+                      <Icon name={s.icon} size={24} color={s.color} />
+                    </View>
+                    <Text style={styles.svcLabel}>{s.label}</Text>
+                    {on && <Text style={styles.svcSelected}>SELECTED</Text>}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {current === "global" && (
+          <View testID="step-global" style={{ gap: spacing.md }}>
+            <Text style={styles.h2}>Your details</Text>
+            <Labeled label="Name">
+              <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => setContact((c) => ({ ...c, name: t }))} placeholder="Your name" placeholderTextColor={colors.muted} style={styles.input} />
+            </Labeled>
+            <Labeled label="Email">
+              <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => setContact((c) => ({ ...c, email: t }))} placeholder="you@company.co.uk" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+            </Labeled>
+            <Labeled label="Phone (optional)">
+              <TextInput testID="quote-contact-phone" value={contact.phone} onChangeText={(t) => setContact((c) => ({ ...c, phone: t }))} placeholder="07123 456789" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} />
+            </Labeled>
+            <Labeled label="Business name">
+              <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => setAddr((a) => ({ ...a, business_name: t }))} placeholder="BIOS Ltd" placeholderTextColor={colors.muted} style={styles.input} />
+            </Labeled>
+            <Labeled label="Address">
+              <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => setAddr((a) => ({ ...a, full_address: t }))} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={styles.input} />
+            </Labeled>
+            <Labeled label="Postcode">
+              <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
+            </Labeled>
+            <Labeled label="Is this the supply address?">
+              <View style={styles.segRow}>
+                <Pressable testID="quote-supply-yes" onPress={() => setAddr((a) => ({ ...a, is_supply_address: true }))} style={[styles.seg, addr.is_supply_address && styles.segOn]}>
+                  <Text style={[styles.segText, addr.is_supply_address && styles.segTextOn]}>Yes</Text>
+                </Pressable>
+                <Pressable testID="quote-supply-no" onPress={() => setAddr((a) => ({ ...a, is_supply_address: false }))} style={[styles.seg, !addr.is_supply_address && styles.segOn]}>
+                  <Text style={[styles.segText, !addr.is_supply_address && styles.segTextOn]}>No — different site</Text>
+                </Pressable>
+              </View>
+            </Labeled>
+            {!addr.is_supply_address && (
+              <Labeled label="Supply postcode">
+                <TextInput testID="quote-supply-postcode" value={addr.supply_postcode} onChangeText={(t) => setAddr((a) => ({ ...a, supply_postcode: t.toUpperCase() }))} placeholder="EC2A 4BX" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
+              </Labeled>
+            )}
+          </View>
+        )}
+
+        {current === "energy" && (
+          <View testID="step-energy">
+            <Text style={styles.h2}>Energy details</Text>
+            <Text style={styles.muted}>Tell us about each meter at this site.</Text>
+            {electricMeters.length > 0 && (
+              <MeterGroup title="Electric" color="#F59E0B" icon="bolt" list={electricMeters} onUpdate={updateMeter} onRemove={removeMeter} onAdd={() => setMeters((m) => [...m, newMeter("electric")])} />
+            )}
+            {gasMeters.length > 0 && (
+              <MeterGroup title="Gas" color="#FB923C" icon="fire" list={gasMeters} onUpdate={updateMeter} onRemove={removeMeter} onAdd={() => setMeters((m) => [...m, newMeter("gas")])} />
+            )}
+          </View>
+        )}
+
+        {current === "water" && (
+          <SupplierStep testID="water" title="Who's your current Water supplier?" placeholder="e.g. Anglian Water, Thames Water" value={waterSupplier} onChange={setWaterSupplier} />
+        )}
+        {current === "telecoms" && (
+          <SupplierStep testID="telecoms" title="Who's your current Telecoms supplier?" placeholder="e.g. BT, Virgin, Sky Business" value={telecomsSupplier} onChange={setTelecomsSupplier} />
+        )}
+
+        {current === "review" && (
+          <View testID="step-review" style={{ gap: spacing.md }}>
+            <Text style={styles.h2}>Review</Text>
+            <Text style={styles.muted}>Ready to submit? We&apos;ll handle the rest.</Text>
+            <View style={styles.reviewCard}>
+              <ReviewRow label="Services" value={Array.from(selected).map((k) => SERVICES.find((s) => s.key === k)?.label).join(", ")} />
+              <ReviewRow label="Contact" value={`${contact.name} · ${contact.email}`} />
+              <ReviewRow label="Business" value={addr.business_name || addr.full_address} />
+              {meters.map((m, i) => (
+                <ReviewRow key={m._id} label={`${m.utility === "gas" ? "Gas" : "Electric"} meter ${i + 1}`} value={`${m.supplier || "—"} · ${WINDOWS.find((w) => w.value === m.contract_end_window)?.label || "—"}`} />
+              ))}
+              {selected.has("water") && <ReviewRow label="Water" value={waterSupplier} />}
+              {selected.has("telecoms") && <ReviewRow label="Telecoms" value={telecomsSupplier} />}
+            </View>
+          </View>
+        )}
+
+        {!!error && <Text testID="wizard-error" style={styles.error}>{error}</Text>}
+
+        <View style={styles.navRow}>
+          {step > 0 && (
+            <Pressable testID="wizard-back" onPress={back} style={[styles.navBtn, styles.navBack]}>
+              <Text style={styles.navBackText}>Back</Text>
+            </Pressable>
+          )}
+          {isLast ? (
+            <Pressable testID="wizard-submit" onPress={submit} disabled={submitting} style={[styles.navBtn, styles.navPrimary, { flex: 2 }, submitting && { opacity: 0.6 }]}>
+              {submitting ? <ActivityIndicator color="#FFFFFF" /> : (
+                <>
+                  <Text style={styles.navPrimaryText}>Submit request</Text>
+                  <Icon name="chevronRight" size={16} color="#FFFFFF" />
+                </>
+              )}
+            </Pressable>
+          ) : (
+            <Pressable testID="wizard-next" onPress={next} style={[styles.navBtn, styles.navPrimary, { flex: 2 }]}>
+              <Text style={styles.navPrimaryText}>Continue</Text>
+            </Pressable>
+          )}
+        </View>
+      </KeyboardAwareScrollView>
+    </View>
+  );
+}
+
+function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View style={{ gap: spacing.xs }}>
+      <Text style={styles.label}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.reviewRow} testID={`review-service-${label}`}>
+      <Text style={styles.reviewLabel}>{label}</Text>
+      <Text style={styles.reviewValue} numberOfLines={2}>{value || "—"}</Text>
+    </View>
+  );
+}
+
+function MeterGroup({ title, color, icon, list, onUpdate, onRemove, onAdd }: {
+  title: string; color: string; icon: IconName; list: Meter[];
+  onUpdate: (id: string, p: Partial<Meter>) => void; onRemove: (id: string) => void; onAdd: () => void;
+}) {
+  return (
+    <View style={{ marginTop: spacing.lg }}>
+      <View style={styles.meterHead}>
+        <View style={[styles.meterHeadIcon, { backgroundColor: `${color}22` }]}>
+          <Icon name={icon} size={18} color={color} />
+        </View>
+        <Text style={styles.h3}>{title}</Text>
+      </View>
+      {list.map((m, i) => (
+        <View key={m._id} testID={`meter-${m.utility}-${i}`} style={styles.meterCard}>
+          <View style={styles.meterTopRow}>
+            <Text style={styles.meterTitle}>{title} Meter {i + 1}</Text>
+            {i > 0 && (
+              <Pressable testID={`meter-${m.utility}-${i}-remove`} onPress={() => onRemove(m._id)}>
+                <Text style={styles.removeText}>Remove</Text>
+              </Pressable>
+            )}
+          </View>
+          <Text style={styles.label}>Supplier</Text>
+          <TextInput testID={`meter-${m.utility}-${i}-supplier`} value={m.supplier} onChangeText={(t) => onUpdate(m._id, { supplier: t })} placeholder="e.g. British Gas, EDF, Octopus" placeholderTextColor={colors.muted} style={styles.input} />
+          <Text style={[styles.label, { marginTop: spacing.sm }]}>Contract end date</Text>
+          <View style={styles.chipWrap}>
+            {WINDOWS.map((w) => {
+              const on = m.contract_end_window === w.value;
               return (
-                <Pressable
-                  key={s.key}
-                  testID={`quote-service-${s.key}`}
-                  onPress={() => toggle(s.key)}
-                  style={[styles.tile, active && styles.tileActive]}
-                >
-                  <Ionicons
-                    name={s.icon}
-                    size={22}
-                    color={active ? colors.onBrandPrimary : colors.onSurfaceSecondary}
-                  />
-                  <Text style={[styles.tileText, active && styles.tileTextActive]}>{s.label}</Text>
+                <Pressable key={w.value} testID={`meter-${m.utility}-${i}-end-${w.value}`} onPress={() => onUpdate(m._id, { contract_end_window: w.value })} style={[styles.chip, on && styles.chipOn]}>
+                  <Text style={[styles.chipText, on && styles.chipTextOn]}>{w.label}</Text>
                 </Pressable>
               );
             })}
           </View>
-
-          {(has("electric") || has("gas")) && (
-            <View style={styles.section}>
-              <Text style={styles.label}>Meter numbers (optional)</Text>
-              {has("electric") && (
-                <TextField
-                  testID="quote-meter-electric"
-                  label="Electricity MPAN"
-                  value={meterElectric}
-                  onChangeText={setMeterElectric}
-                  placeholder="13-digit MPAN"
-                  keyboardType="number-pad"
-                />
-              )}
-              {has("gas") && (
-                <TextField
-                  testID="quote-meter-gas"
-                  label="Gas MPRN"
-                  value={meterGas}
-                  onChangeText={setMeterGas}
-                  placeholder="MPRN number"
-                  keyboardType="number-pad"
-                />
-              )}
-            </View>
-          )}
-
-          {has("water") && (
-            <View style={styles.section}>
-              <TextField
-                testID="quote-water-supplier"
-                label="Current water supplier"
-                value={waterSupplier}
-                onChangeText={(t) => {
-                  setWaterSupplier(t);
-                  if (errors.water) setErrors((p) => ({ ...p, water: "" }));
-                }}
-                error={errors.water}
-                placeholder="e.g. Thames Water"
-              />
-            </View>
-          )}
-
-          {has("telecoms") && (
-            <View style={styles.section}>
-              <TextField
-                testID="quote-telecoms-supplier"
-                label="Current telecoms supplier"
-                value={telecomsSupplier}
-                onChangeText={(t) => {
-                  setTelecomsSupplier(t);
-                  if (errors.telecoms) setErrors((p) => ({ ...p, telecoms: "" }));
-                }}
-                error={errors.telecoms}
-                placeholder="e.g. BT"
-              />
-            </View>
-          )}
-        </KeyboardAwareScrollView>
-      ) : (
-        <KeyboardAwareScrollView
-          contentContainerStyle={styles.scroll}
-          bottomOffset={90}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.label}>Where should we reach you?</Text>
-          <TextField
-            testID="quote-contact-name"
-            label="Contact name"
-            value={name}
-            onChangeText={(t) => {
-              setName(t);
-              if (errors.name) setErrors((p) => ({ ...p, name: "" }));
-            }}
-            error={errors.name}
-            placeholder="Full name"
-            returnKeyType="next"
-            onSubmitEditing={() => emailRef.current?.focus()}
-          />
-          <TextField
-            testID="quote-contact-email"
-            ref={emailRef}
-            label="Email"
-            value={email}
-            onChangeText={(t) => {
-              setEmail(t);
-              if (errors.email) setErrors((p) => ({ ...p, email: "" }));
-            }}
-            error={errors.email}
-            placeholder="you@company.co.uk"
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <TextField
-            testID="quote-contact-phone"
-            label="Phone (optional)"
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="07…"
-            keyboardType="phone-pad"
-          />
-          <TextField
-            testID="quote-addr-line1"
-            label="Address"
-            value={line1}
-            onChangeText={(t) => {
-              setLine1(t);
-              if (errors.line1) setErrors((p) => ({ ...p, line1: "" }));
-            }}
-            error={errors.line1}
-            placeholder="Street and building"
-            returnKeyType="next"
-            onSubmitEditing={() => cityRef.current?.focus()}
-          />
-          <TextField
-            testID="quote-addr-city"
-            ref={cityRef}
-            label="Town / city"
-            value={city}
-            onChangeText={setCity}
-            placeholder="e.g. London"
-            returnKeyType="next"
-            onSubmitEditing={() => postcodeRef.current?.focus()}
-          />
-          <TextField
-            testID="quote-addr-postcode"
-            ref={postcodeRef}
-            label="Postcode"
-            value={postcode}
-            onChangeText={(t) => {
-              setPostcode(t.toUpperCase());
-              if (errors.postcode) setErrors((p) => ({ ...p, postcode: "" }));
-            }}
-            error={errors.postcode}
-            placeholder="e.g. SW1A 1AA"
-            autoCapitalize="characters"
-            returnKeyType="go"
-            onSubmitEditing={submit}
-          />
-          <View style={styles.note}>
-            <Ionicons name="shield-checkmark" size={18} color={colors.success} />
-            <Text style={styles.noteText}>No obligation — we&apos;ll only switch you if it saves money.</Text>
-          </View>
-        </KeyboardAwareScrollView>
-      )}
-
-      <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-          {step === 1 ? (
-            <Button testID="quote-next" label="Continue" onPress={onNext} />
-          ) : (
-            <Button testID="quote-submit" label="Request quote" icon="pricetag-outline" onPress={submit} loading={submitting} />
-          )}
         </View>
-      </KeyboardStickyView>
+      ))}
+      <Pressable testID={`add-meter-${title.toLowerCase()}`} onPress={onAdd} style={styles.addMeter}>
+        <Icon name="plus" size={16} color={colors.brandPrimary} />
+        <Text style={styles.addMeterText}>Add another {title.toLowerCase()} meter</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function SupplierStep({ title, placeholder, value, onChange, testID }: { title: string; placeholder: string; value: string; onChange: (t: string) => void; testID: string }) {
+  return (
+    <View testID={`step-${testID}`}>
+      <Text style={styles.h2}>{title}</Text>
+      <Text style={styles.muted}>Just the supplier name is fine — we&apos;ll take it from there.</Text>
+      <TextInput testID={`${testID}-supplier`} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} style={[styles.input, { marginTop: spacing.md }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
-  scroll: { padding: spacing.lg, gap: spacing.lg },
-  label: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
-  errText: { fontFamily: font.regular, fontSize: type.sm, color: colors.error },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  tile: {
-    width: "47%",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    height: 60,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tileActive: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
-  tileText: { fontFamily: font.semibold, fontSize: type.lg, color: colors.onSurfaceSecondary },
-  tileTextActive: { color: colors.onBrandPrimary },
-  section: { gap: spacing.md },
-  note: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    borderRadius: radius.md,
-    padding: spacing.lg,
-  },
-  noteText: { flex: 1, fontFamily: font.medium, fontSize: type.base, color: "#065F46" },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
+  pips: { flexDirection: "row", gap: 4, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+  pip: { flex: 1, height: 4, borderRadius: 999 },
+  scroll: { padding: spacing.lg, paddingBottom: spacing["2xl"] * 2 },
+  h2: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, marginBottom: 6 },
+  h3: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
+  muted: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginBottom: spacing.md, lineHeight: 20 },
+  label: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
+  input: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, backgroundColor: colors.surface },
+
+  svcGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  svcCard: { width: "47%", flexGrow: 1, alignItems: "center", padding: spacing.lg, borderRadius: radius.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
+  svcCardOn: { borderColor: colors.heading, backgroundColor: "#F5F3FF" },
+  svcIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
+  svcLabel: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  svcSelected: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.4, color: colors.heading, marginTop: 4 },
+
+  segRow: { flexDirection: "row", gap: spacing.sm },
+  seg: { flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  segOn: { borderWidth: 2, borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  segText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
+  segTextOn: { fontFamily: font.semibold, color: colors.brandPrimary },
+
+  meterHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
+  meterHeadIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  meterCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, gap: spacing.xs },
+  meterTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs },
+  meterTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  removeText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.error },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  chip: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  chipOn: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  chipText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
+  chipTextOn: { fontFamily: font.semibold, color: colors.brandPrimary },
+  addMeter: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.brandPrimary, borderRadius: radius.md, paddingVertical: spacing.md, marginTop: spacing.xs },
+  addMeterText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
+
+  reviewCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, gap: spacing.sm },
+  reviewRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.md },
+  reviewLabel: { fontFamily: font.medium, fontSize: type.sm, color: colors.muted, flexShrink: 0 },
+  reviewValue: { fontFamily: font.semibold, fontSize: type.sm, color: colors.heading, flex: 1, textAlign: "right" },
+
+  error: { fontFamily: font.medium, fontSize: type.sm, color: colors.error, marginTop: spacing.md },
+  navRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+  navBtn: { height: 52, borderRadius: radius.md, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: spacing.sm },
+  navBack: { flex: 1, backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border },
+  navBackText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  navPrimary: { backgroundColor: colors.brandPrimary },
+  navPrimaryText: { fontFamily: font.semibold, fontSize: type.lg, color: "#FFFFFF" },
 });
