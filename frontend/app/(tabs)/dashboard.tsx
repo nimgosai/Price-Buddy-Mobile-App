@@ -179,7 +179,6 @@ export default function Dashboard() {
               <Text testID="dashboard-greeting" style={styles.greetTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
                 {g.salutation}, {firstName}
               </Text>
-              <Text style={styles.greetSub} numberOfLines={1}>{g.subtitle}</Text>
             </View>
             <Pressable testID="dashboard-bell" onPress={() => router.push("/profile")} hitSlop={8} style={styles.bell}>
               <Icon name="bell" size={20} color={colors.heading} />
@@ -251,6 +250,8 @@ export default function Dashboard() {
               title="Add Business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="quick-action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
               title="Meter Setup" onPress={() => setMeter(true)} />
+            <QuickAction testID="quick-action-quote" icon="pound" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
+              title="Get Quote" onPress={() => router.push("/quote/new")} />
           </View>
 
           {/* Have a query pill */}
@@ -301,7 +302,7 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge }: {
     <Pressable testID={testID} onPress={onPress} style={({ pressed }) => [styles.qa, pressed && { opacity: 0.9 }]}>
       {badge ? (
         <Animated.View testID="quick-action-badge" style={[styles.qaBadge, { transform: [{ scale }] }]}>
-          <Icon name="sparkle" size={11} color="#FFFFFF" />
+          <Icon name="sparkle" size={10} color="#FFFFFF" />
           <Text style={styles.qaBadgeText}>{badge}</Text>
         </Animated.View>
       ) : null}
@@ -318,13 +319,12 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge }: {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  scroll: { padding: spacing.lg, gap: spacing.sm },
+  scroll: { padding: spacing.lg, gap: 12 },
 
-  greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.xs },
+  greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: 4 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.pastel.lavender, alignItems: "center", justifyContent: "center" },
   avatarText: { fontFamily: font.bold, fontSize: type.lg, color: colors.pastel.lavenderIcon },
   greetTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, letterSpacing: -0.3 },
-  greetSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
   bell: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", ...shadow.card },
 
   nudge: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.brandTertiary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
@@ -356,13 +356,13 @@ const styles = StyleSheet.create({
   auditIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   auditText: { flex: 1, fontFamily: font.semibold, fontSize: type.sm, color: "#92400E" },
 
-  quickLabel: { fontFamily: font.bold, fontSize: 11, letterSpacing: 0.8, color: colors.muted, marginTop: spacing.sm, marginLeft: 2 },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  qa: { width: "48%", flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, minHeight: 60 },
+  quickLabel: { fontFamily: font.bold, fontSize: 11, letterSpacing: 0.8, color: colors.muted, marginTop: 2, marginLeft: 2 },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  qa: { width: "47.5%", flexGrow: 1, gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 12, minHeight: 92, justifyContent: "flex-start" },
   qaIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  qaTitle: { flexShrink: 1, fontFamily: font.bold, color: colors.heading },
+  qaTitle: { fontFamily: font.bold, color: colors.heading },
   qaBadge: {
-    position: "absolute", top: 6, right: 6, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
+    position: "absolute", top: 8, right: 8, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: colors.brandPrimary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
   },
   qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.3 },
