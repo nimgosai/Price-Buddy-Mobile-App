@@ -1,4 +1,5 @@
 import { storage } from "@/src/utils/storage";
+import { getDemoResponse } from "@/src/demo/demo-data";
 
 // This app is a frontend for the EXTERNAL, live Utility Contract Hub backend.
 // It must always talk to that fixed service — never the local preview proxy
@@ -47,6 +48,12 @@ export async function apiRequest<T = any>(
   path: string,
   { method = "GET", body, auth = true, timeoutMs = 30000 }: RequestOpts = {},
 ): Promise<T> {
+  // Demo mode: answer supported GET endpoints locally with sample data.
+  if (method === "GET") {
+    const demo = getDemoResponse(path);
+    if (demo !== undefined) return demo as T;
+  }
+
   const headers: Record<string, string> = {};
   if (auth) {
     const token = await storage.secureGet<string>(TOKEN_KEY, "");

@@ -287,3 +287,14 @@ No login/live-data writes used — everything reconstructed from the bundle.
   applied ...shadow.card to Support amCard/helpCard and Profile userCard/row (were border-only/flat).
 - Press feedback: added pressed opacity to Support 'Call the desk', Profile 'Sign out' & 'Request account
   deletion' (LinkRow already had it). Button/quick-actions already had press states.
+
+### DEMO DATA MODE (Option A) — preview app with sample data
+- New src/demo/demo-data.ts: in-memory sample dataset (3 sites, 6 contracts across
+  electricity/gas/water/broadband/telecoms, total £32,600). getDemoResponse(path) answers GET
+  /properties, /reports/spend, /renewals/urgent, /dashboard/overview, /my/audits-in-progress,
+  /properties/{id}/utilities. Flag persisted in storage key uch_demo_mode; loaded at startup.
+- apiRequest (src/api/client.ts) short-circuits GET when demo response exists.
+- Profile: new "Demo data" ToggleRow (profile-demo-toggle). On web it reloads; on native it navigates
+  to dashboard. Sites & Reports now refetch on focus so the toggle reflects immediately.
+- Per-device only (localStorage) — does NOT touch the real backend/account. Verified: Reports charts
+  and Sites list fully populate when ON.

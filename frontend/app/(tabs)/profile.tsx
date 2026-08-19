@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +20,7 @@ import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
+import { DEMO_MODE_KEY, isDemoEnabled, setDemoEnabled } from "@/src/demo/demo-data";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 export default function Profile() {
@@ -60,6 +62,22 @@ export default function Profile() {
 
   const onToggleEmail = (v: boolean) => { setEmailOn(v); savePrefs(v, pushOn); };
   const onTogglePush = (v: boolean) => { setPushOn(v); savePrefs(emailOn, v); };
+
+  const [demoOn, setDemoOn] = useState(isDemoEnabled());
+  useEffect(() => {
+    storage.getItem<boolean>(DEMO_MODE_KEY, false).then((v) => setDemoOn(!!v));
+  }, []);
+  const onToggleDemo = async (v: boolean) => {
+    setDemoOn(v);
+    setDemoEnabled(v);
+    await storage.setItem(DEMO_MODE_KEY, v);
+    toast(v ? "Demo data on — showing sample data." : "Demo data off.", "success");
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      window.location.reload();
+    } else {
+      router.push("/dashboard");
+    }
+  };
 
   const submitDelete = async () => {
     if (confirmText.trim().toUpperCase() !== "DELETE") {
@@ -119,6 +137,15 @@ export default function Profile() {
         <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My quote requests" onPress={() => router.push("/quote/new")} testID="profile-quotes" />
         <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={async () => { await storage.setItem("uch_tour_replay", true); router.push("/dashboard"); }} testID="profile-tour" />
         <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
+
+        <ToggleRow
+          icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
+          label="Demo data"
+          description="Fill the app with sample sites, contracts and spend so you can preview every screen. Doesn't touch your real account."
+          value={demoOn}
+          onChange={onToggleDemo}
+          testID="profile-demo-toggle"
+        />
 
         <Pressable testID="profile-logout" onPress={() => { signOut(); router.replace("/signin"); }} style={({ pressed }) => [styles.logout, pressed && { opacity: 0.9 }]}>
           <Icon name="logout" size={16} color={colors.onSurfaceSecondary} />

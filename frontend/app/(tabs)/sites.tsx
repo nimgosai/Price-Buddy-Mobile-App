@@ -52,6 +52,8 @@ export default function Sites() {
     })();
   }, [load, activeBizId]);
 
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
   useFocusEffect(
     useCallback(() => {
       load();
