@@ -74,9 +74,9 @@ const CONTRACTS: DemoContract[] = [
 ];
 
 const PROPERTIES = [
-  { id: "p1", property_name: "Head Office", address: "100 High Holborn", postcode: "WC1V 6LT" },
-  { id: "p2", property_name: "Manchester Warehouse", address: "22 Trafford Park", postcode: "M17 1WA" },
-  { id: "p3", property_name: "Bristol Retail Unit", address: "5 Park Street", postcode: "BS1 5NG" },
+  { id: "p1", property_name: "Head Office", business_name: "Price Buddy Demo Ltd", address: "100 High Holborn", postcode: "WC1V 6LT" },
+  { id: "p2", property_name: "Manchester Warehouse", business_name: "Price Buddy Demo Ltd", address: "22 Trafford Park", postcode: "M17 1WA" },
+  { id: "p3", property_name: "Bristol Retail Unit", business_name: "Price Buddy Demo Ltd", address: "5 Park Street", postcode: "BS1 5NG" },
 ];
 
 function sumBy<T>(items: T[], pick: (t: T) => number) {
@@ -129,6 +129,9 @@ export function getDemoResponse(path: string): any | undefined {
   const clean = path.split("?")[0];
 
   if (clean === "/properties") return PROPERTIES;
+  if (clean === "/contracts") return CONTRACTS;
+  const one = clean.match(/^\/contracts\/([^/]+)$/);
+  if (one) return CONTRACTS.find((x) => x.id === one[1]) || CONTRACTS[0];
   if (clean === "/reports/spend") return spendReport();
   if (clean === "/renewals/urgent") {
     const items = CONTRACTS.filter((x) => x.days_until_expiry <= 90).sort(

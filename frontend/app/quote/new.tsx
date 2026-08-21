@@ -13,16 +13,23 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { useAuth } from "@/src/auth/auth-context";
-import { apiRequest, ApiError } from "@/src/api/client";
+import { useBusiness } from "@/src/business/business-context";
+import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 type Svc = { key: string; label: string; icon: IconName; color: string };
 const SERVICES: Svc[] = [
-  { key: "electric", label: "Electric", icon: "bolt", color: "#F59E0B" },
+  { key: "electric", label: "Electricity", icon: "bolt", color: "#F59E0B" },
   { key: "gas", label: "Gas", icon: "fire", color: "#FB923C" },
   { key: "water", label: "Water", icon: "droplet", color: "#3B82F6" },
   { key: "telecoms", label: "Telecoms", icon: "phone", color: "#0EA5E9" },
 ];
+const SVC_ICON: Record<string, { icon: IconName; color: string; label: string }> = {
+  electric: { icon: "bolt", color: "#F59E0B", label: "Electricity" },
+  gas: { icon: "fire", color: "#FB923C", label: "Gas" },
+  water: { icon: "droplet", color: "#3B82F6", label: "Water" },
+  telecoms: { icon: "phone", color: "#0EA5E9", label: "Telecoms" },
+};
 
 const WINDOWS = [
   { value: "out_of_contract", label: "Out of Contract" },
@@ -32,178 +39,187 @@ const WINDOWS = [
 ];
 
 type Meter = { _id: string; utility: "electric" | "gas"; supplier: string; contract_end_window: string };
-
 let mid = 0;
 const newMeter = (u: "electric" | "gas"): Meter => ({ _id: `m${mid++}`, utility: u, supplier: "", contract_end_window: "" });
+
+const norm = (u: string) => {
+  const s = (u || "").toLowerCase();
+  if (s === "electricity" || s === "electric") return "electric";
+  return s;
+};
+const outUtil = (k: string) => (k === "electric" ? "electricity" : k);
 
 export default function QuoteWizard() {
   const router = useRouter();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ utility?: string; incumbent?: string; property?: string }>();
+  const { businesses } = useBusiness();
+
+  const params = useLocalSearchParams<{ propertyId?: string; utility?: string; contractId?: string; incumbent?: string }>();
+  const deepUtil = norm(params.utility || "");
+  const deepPropertyId = params.propertyId || "";
+  const contractId = params.contractId || "";
+  const entryA = !!(deepUtil && deepPropertyId);
 
   const [properties, setProperties] = useState<any[]>([]);
-  const [changedSite, setChangedSite] = useState(false);
+  const [forceEditSite, setForceEditSite] = useState(false);
 
-  const preUtil = (params.utility || "").toLowerCase();
-  const [selected, setSelected] = useState<Set<string>>(() => {
-    const s = new Set<string>();
-    if (["electricity", "electric"].includes(preUtil)) s.add("electric");
-    else if (preUtil === "gas") s.add("gas");
-    return s;
-  });
+  // supply branch: "" until chosen (Entry B); Entry A implies "existing"
+  const [supplyKind, setSupplyKind] = useState<"" | "existing" | "new">(entryA ? "existing" : "");
+  const [wizardBizId, setWizardBizId] = useState<string>("");
+  const [propertyId, setPropertyId] = useState<string>(entryA ? deepPropertyId : "");
+
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(entryA ? [deepUtil] : []));
   const [step, setStep] = useState(0);
   const [contact, setContact] = useState({ name: "", email: "", phone: "" });
-  const [addr, setAddr] = useState({
-    business_name: "",
-    full_address: "",
-    postcode: "",
-    is_supply_address: true,
-    supply_postcode: "",
-    property_id: params.property || "",
-  });
+  const [addr, setAddr] = useState({ business_name: "", full_address: "", postcode: "" });
   const [meters, setMeters] = useState<Meter[]>(() => {
     const arr: Meter[] = [];
-    if (["electricity", "electric"].includes(preUtil)) arr.push({ ...newMeter("electric"), supplier: params.incumbent || "" });
-    if (preUtil === "gas") arr.push({ ...newMeter("gas"), supplier: params.incumbent || "" });
+    if (deepUtil === "electric") arr.push({ ...newMeter("electric"), supplier: params.incumbent || "" });
+    if (deepUtil === "gas") arr.push({ ...newMeter("gas"), supplier: params.incumbent || "" });
     return arr;
   });
   const [waterSupplier, setWaterSupplier] = useState("");
   const [telecomsSupplier, setTelecomsSupplier] = useState("");
   const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const scrollRef = useRef<any>(null);
 
-  const clearFieldError = (k: string) =>
-    setFieldErrors((p) => {
-      if (!p[k]) return p;
-      const n = { ...p };
-      delete n[k];
-      return n;
-    });
-
-  const fillFromProperty = (p: any) =>
-    setAddr((a) => ({
-      ...a,
-      property_id: p.id || p._id || "",
-      business_name: a.business_name || p.business_name || "",
-      full_address: p.address || p.property_name || a.full_address,
-      postcode: p.postcode || a.postcode,
-    }));
-
-  // Prefill contact from the signed-in account
+  // prefill contact from the signed-in user
   useEffect(() => {
-    if (user) {
-      setContact((c) => ({
-        name: c.name || user.full_name || "",
-        email: c.email || user.email || "",
-        phone: c.phone || (user as any).phone || "",
-      }));
-    }
-  }, [user]);
+    setContact((c) => ({ ...c, name: c.name || user?.full_name || "", email: c.email || user?.email || "" }));
+  }, [user?.full_name, user?.email]);
 
-  // Load saved sites; auto-fill if arriving from a specific site
+  // load sites
   useEffect(() => {
     apiRequest<any[]>("/properties")
-      .then((list) => {
-        const arr = Array.isArray(list) ? list : [];
-        setProperties(arr);
-        if (params.property) {
-          const match = arr.find((p) => (p.id || p._id) === params.property);
-          if (match) fillFromProperty(match);
-        }
-      })
+      .then((arr) => setProperties(Array.isArray(arr) ? arr : []))
       .catch(() => setProperties([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const lockedSite = useMemo(
-    () => (params.property ? properties.find((p) => (p.id || p._id) === params.property) : null),
-    [params.property, properties],
-  );
+  const resolveBizName = (p: any): string => {
+    if (!p) return "";
+    const owner = businesses.find((b) => b.id === p.business_id);
+    if (owner) return owner.company_name;
+    if (p.business_name) return p.business_name;
+    if (businesses.length === 1) return businesses[0].company_name;
+    return "";
+  };
 
+  const selectProperty = (p: any) => {
+    setPropertyId(p.id || p._id);
+    setAddr({
+      business_name: resolveBizName(p),
+      full_address: `${p.address || ""}${p.postcode ? `, ${p.postcode}` : ""}`.trim(),
+      postcode: p.postcode || "",
+    });
+  };
+
+  // Entry A: auto-select the deep-linked property once sites (and businesses) load.
+  useEffect(() => {
+    if (!entryA || forceEditSite) return;
+    const p = properties.find((x) => (x.id || x._id) === deepPropertyId);
+    if (p) selectProperty(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryA, forceEditSite, properties, deepPropertyId]);
+
+  // Rule #2: back-fill owning-business name once businesses resolve.
+  useEffect(() => {
+    if (!propertyId || addr.business_name) return;
+    const p = properties.find((x) => (x.id || x._id) === propertyId);
+    const name = resolveBizName(p);
+    if (name) setAddr((a) => ({ ...a, business_name: name }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businesses, propertyId, properties]);
+
+  // Entry A: prefill Step 3 from the passed contract (graceful fallback).
+  useEffect(() => {
+    if (!entryA || !contractId) return;
+    apiRequest<any>(`/contracts/${contractId}`)
+      .then((c) => {
+        const sup = c?.supplier_name || c?.supplier || params.incumbent || "";
+        if (sup) setMeters((ms) => ms.map((m) => (m.supplier ? m : { ...m, supplier: sup })));
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryA, contractId]);
+
+  const hasSites = properties.length > 0;
+  const showBranching = !entryA || forceEditSite;
+
+  const sitesForBiz = useMemo(() => {
+    if (businesses.length <= 1 || !wizardBizId) return properties;
+    return properties.filter((p) => p.business_id === wizardBizId);
+  }, [properties, businesses.length, wizardBizId]);
+
+  // Build the step flow.
   const flow = useMemo(() => {
-    const f = ["service", "global"];
+    const f: string[] = [];
+    if (!entryA) f.push("service");
+    f.push("details");
     if (selected.has("electric") || selected.has("gas")) f.push("energy");
     if (selected.has("water")) f.push("water");
     if (selected.has("telecoms")) f.push("telecoms");
     f.push("review");
     return f;
-  }, [selected]);
+  }, [entryA, selected]);
 
-  const current = flow[step];
+  const current = flow[Math.min(step, flow.length - 1)];
   const isLast = step >= flow.length - 1;
 
-  const toggle = (k: string) => {
+  const toggleService = (key: string) => {
     setSelected((prev) => {
       const n = new Set(prev);
-      if (n.has(k)) n.delete(k);
-      else n.add(k);
-      // sync energy meters
+      n.has(key) ? n.delete(key) : n.add(key);
+      // keep meters in sync
       setMeters((ms) => {
-        let next = [...ms];
-        if ((k === "electric" || k === "gas")) {
-          const has = next.some((m) => m.utility === k);
-          if (n.has(k) && !has) next.push(newMeter(k as any));
-          if (!n.has(k)) next = next.filter((m) => m.utility !== k);
-        }
+        let next = ms.slice();
+        (["electric", "gas"] as const).forEach((k) => {
+          const want = n.has(k);
+          const have = next.some((m) => m.utility === k);
+          if (want && !have) next.push(newMeter(k));
+          if (!want) next = next.filter((m) => m.utility !== k);
+        });
         return next;
       });
       return n;
     });
   };
 
-  const updateMeter = (id: string, patch: Partial<Meter>) =>
-    setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...patch } : m)));
+  const updateMeter = (id: string, patch: Partial<Meter>) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...patch } : m)));
   const removeMeter = (id: string) => setMeters((ms) => ms.filter((m) => m._id !== id));
 
-  const validateStep = (): boolean => {
+  const chooseSupply = (kind: "existing" | "new") => {
+    setSupplyKind(kind);
+    if (kind === "new") {
+      // Rule #4: clear site-derived fields; keep business_name only on deep-link.
+      setPropertyId("");
+      setAddr((a) => ({ business_name: entryA ? a.business_name : "", full_address: "", postcode: "" }));
+    }
+  };
+
+  const detailsValid = (): boolean => {
+    if (!contact.name.trim() || !contact.email.trim()) return false;
+    if (entryA && !forceEditSite) return true; // context banner
+    if (!supplyKind) return false;
+    if (supplyKind === "existing") {
+      if (businesses.length > 1 && !wizardBizId) return false;
+      return !!propertyId;
+    }
+    return !!(addr.business_name.trim() && addr.full_address.trim() && addr.postcode.trim());
+  };
+
+  const canContinue = (): boolean => {
     if (current === "service") return selected.size > 0;
-    if (current === "global")
-      return !!(contact.name.trim() && contact.email.trim() && (addr.is_supply_address || addr.supply_postcode.trim()) && (addr.business_name.trim() || addr.full_address.trim()));
+    if (current === "details") return detailsValid();
     if (current === "energy") return meters.every((m) => m.supplier.trim() && m.contract_end_window);
     if (current === "water") return waterSupplier.trim().length > 0;
     if (current === "telecoms") return telecomsSupplier.trim().length > 0;
     return true;
   };
 
-  const globalFieldErrors = (): Record<string, string> => {
-    const e: Record<string, string> = {};
-    if (!contact.name.trim()) e.name = "Name is required";
-    if (!contact.email.trim()) e.email = "Email is required";
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email.trim())) e.email = "Enter a valid email";
-    if (!addr.business_name.trim()) e.business_name = "Business name is required";
-    if (!addr.full_address.trim()) e.full_address = "Address is required";
-    if (!addr.postcode.trim()) e.postcode = "Postcode is required";
-    if (!addr.is_supply_address && !addr.supply_postcode.trim()) e.supply_postcode = "Supply postcode is required";
-    return e;
-  };
-
   const next = () => {
     setError("");
-    if (current === "service") {
-      if (selected.size === 0) {
-        setError("Pick at least one service to continue.");
-        return;
-      }
-    } else if (current === "global") {
-      const fe = globalFieldErrors();
-      if (Object.keys(fe).length > 0) {
-        setFieldErrors(fe);
-        setError("Please complete the required fields marked in red.");
-        scrollRef.current?.scrollTo?.({ y: 0, animated: true });
-        return;
-      }
-    } else if (current === "energy") {
-      if (!meters.every((m) => m.supplier.trim() && m.contract_end_window)) {
-        setError("Add a supplier and contract end date for each meter.");
-        return;
-      }
-    } else if (current === "water" && !waterSupplier.trim()) {
-      setError("Enter your current water supplier.");
-      return;
-    } else if (current === "telecoms" && !telecomsSupplier.trim()) {
-      setError("Enter your current telecoms supplier.");
+    if (!canContinue()) {
+      setError("Please complete the highlighted fields to continue.");
       return;
     }
     setStep((s) => Math.min(flow.length - 1, s + 1));
@@ -215,25 +231,31 @@ export default function QuoteWizard() {
   };
 
   const submit = async () => {
-    if (submitting) return;
-    setError("");
     setSubmitting(true);
+    setError("");
     try {
-      const res = await apiRequest<any>("/quotes/multi", {
-        method: "POST",
-        body: {
-          selected_services: Array.from(selected),
-          contact,
-          address: addr,
-          energy_meters: meters.map(({ _id, ...m }) => m),
-          water_supplier: selected.has("water") ? waterSupplier : null,
-          telecoms_supplier: selected.has("telecoms") ? telecomsSupplier : null,
+      const kind: "existing" | "new" = propertyId ? "existing" : "new";
+      const payload: any = {
+        utilities: Array.from(selected).map(outUtil),
+        address: {
+          property_id: kind === "existing" ? propertyId : null,
+          business_name: addr.business_name,
+          full_address: addr.full_address,
+          postcode: addr.postcode,
+          supply_kind: kind,
         },
-      });
-      const id = res?.quote_request_id || res?.id;
-      router.replace(`/quote/success/${id}`);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not submit. Please try again.");
+        contact: { name: contact.name, email: contact.email, phone: contact.phone || undefined },
+      };
+      if (selected.has("electric") || selected.has("gas")) {
+        payload.energy = meters.map((m) => ({ utility: outUtil(m.utility), supplier: m.supplier, contract_end_window: m.contract_end_window }));
+      }
+      if (selected.has("water")) payload.water = { supplier: waterSupplier };
+      if (selected.has("telecoms")) payload.telecoms = { supplier: telecomsSupplier };
+
+      const res = await apiRequest<any>("/quotes/multi", { method: "POST", body: payload });
+      router.replace({ pathname: "/quote/success", params: { id: res?.id || res?.quote_id || "" } });
+    } catch (e: any) {
+      setError(e?.message || "Something went wrong submitting your quote. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -241,32 +263,32 @@ export default function QuoteWizard() {
 
   const electricMeters = meters.filter((m) => m.utility === "electric");
   const gasMeters = meters.filter((m) => m.utility === "gas");
+  const bannerMeta = SVC_ICON[deepUtil] || SVC_ICON.electric;
+  const deepProperty = properties.find((x) => (x.id || x._id) === deepPropertyId);
 
   return (
     <View style={styles.root}>
       <ScreenHeader testID="quote-header" title="Get a Quote" subtitle={`Step ${step + 1} of ${flow.length}`} onBack={back} />
-
       <View style={styles.pips}>
         {flow.map((s, i) => (
           <View key={s} testID={`quote-step-pip-${i}`} style={[styles.pip, { backgroundColor: i <= step ? colors.heading : colors.border }]} />
         ))}
       </View>
-
-      <KeyboardAwareScrollView ref={scrollRef} contentContainerStyle={styles.scroll} bottomOffset={90} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {current === "service" && (
           <View testID="step-service">
-            <Text style={styles.h2}>Which services do you need a quote for?</Text>
-            <Text style={styles.muted}>Pick all that apply — we&apos;ll only ask the questions we need.</Text>
+            <Text style={styles.h2}>What can we quote for?</Text>
+            <Text style={styles.muted}>Pick everything you&apos;d like us to shop around for.</Text>
             <View style={styles.svcGrid}>
               {SERVICES.map((s) => {
                 const on = selected.has(s.key);
                 return (
-                  <Pressable key={s.key} testID={`service-${s.key}`} onPress={() => toggle(s.key)} style={[styles.svcCard, on && styles.svcCardOn]}>
+                  <Pressable key={s.key} testID={`quote-service-${s.key}`} onPress={() => toggleService(s.key)} style={[styles.svcCard, on && styles.svcCardOn]}>
                     <View style={[styles.svcIcon, { backgroundColor: `${s.color}22` }]}>
-                      <Icon name={s.icon} size={24} color={s.color} />
+                      <Icon name={s.icon} size={22} color={s.color} />
                     </View>
                     <Text style={styles.svcLabel}>{s.label}</Text>
-                    {on && <Text style={styles.svcSelected}>SELECTED</Text>}
+                    {on ? <Text style={styles.svcSelected}>SELECTED</Text> : null}
                   </Pressable>
                 );
               })}
@@ -274,96 +296,113 @@ export default function QuoteWizard() {
           </View>
         )}
 
-        {current === "global" && (
+        {current === "details" && (
           <View testID="step-global" style={{ gap: spacing.md }}>
             <Text style={styles.h2}>Your details</Text>
-            <Text style={styles.muted}>
-              {user
-                ? "Pre-filled from your account — edit if a colleague should receive the quote instead."
-                : "Tell us who should receive the quote and where the supply is."}
-            </Text>
-            <Labeled label="Your name" required error={fieldErrors.name} testID="quote-error-name">
-              <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => { setContact((c) => ({ ...c, name: t })); clearFieldError("name"); }} placeholder="Your name" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.name && styles.inputError]} />
+
+            <Labeled label="Name" required>
+              <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => setContact((c) => ({ ...c, name: t }))} placeholder="Your name" placeholderTextColor={colors.muted} style={styles.input} />
             </Labeled>
-            <Labeled label="Email" required error={fieldErrors.email} testID="quote-error-email">
-              <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => { setContact((c) => ({ ...c, email: t })); clearFieldError("email"); }} placeholder="you@company.co.uk" placeholderTextColor={colors.muted} keyboardType="email-address" autoCapitalize="none" style={[styles.input, fieldErrors.email && styles.inputError]} />
+            <Labeled label="Email" required>
+              <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => setContact((c) => ({ ...c, email: t }))} placeholder="you@business.co.uk" placeholderTextColor={colors.muted} autoCapitalize="none" keyboardType="email-address" style={styles.input} />
             </Labeled>
             <Labeled label="Phone (optional)">
-              <TextInput testID="quote-contact-phone" value={contact.phone} onChangeText={(t) => setContact((c) => ({ ...c, phone: t }))} placeholder="07123 456789" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} />
+              <TextInput testID="quote-contact-phone" value={contact.phone} onChangeText={(t) => setContact((c) => ({ ...c, phone: t }))} placeholder="07…" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} />
             </Labeled>
-            <Text style={[styles.h3, { marginTop: spacing.sm }]}>Site</Text>
-            {lockedSite && !changedSite ? (
-              <View style={styles.lockedSite} testID="quote-locked-site">
+
+            {entryA && !forceEditSite ? (
+              <View testID="quote-context-banner" style={styles.lockedSite}>
                 <View style={styles.lockedIcon}>
-                  <Icon name="building" size={20} color="#FFFFFF" />
+                  <Icon name={bannerMeta.icon} size={20} color="#FFFFFF" />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.lockedKicker}>QUOTE FOR THIS SITE</Text>
-                  <Text style={styles.lockedName} numberOfLines={1}>{lockedSite.property_name || lockedSite.address}</Text>
-                  <Text style={styles.lockedAddr} numberOfLines={1}>{[lockedSite.address, lockedSite.postcode].filter(Boolean).join(", ")}</Text>
+                  <Text style={styles.lockedKicker}>QUOTE FOR {bannerMeta.label.toUpperCase()}</Text>
+                  <Text style={styles.lockedName} numberOfLines={1}>{deepProperty?.property_name || deepProperty?.name || "This site"}</Text>
+                  <Text style={styles.lockedAddr} numberOfLines={2}>
+                    {addr.full_address || "—"}{addr.business_name ? ` · ${addr.business_name}` : ""}
+                  </Text>
                 </View>
-                {properties.length > 1 && (
-                  <Pressable testID="quote-change-site" onPress={() => setChangedSite(true)}>
-                    <Text style={styles.changeLink}>Change</Text>
-                  </Pressable>
-                )}
+                <Pressable testID="quote-change-site" onPress={() => { setForceEditSite(true); setSupplyKind(""); }} hitSlop={8}>
+                  <Text style={styles.changeLink}>Change site →</Text>
+                </Pressable>
               </View>
             ) : (
-              properties.length > 0 && (
-                <View testID="quote-property-select" style={{ gap: spacing.xs }}>
-                  <Text style={styles.label}>Use a saved site</Text>
-                  <View style={styles.chipWrap}>
-                    {properties.map((p) => {
-                      const pid = p.id || p._id;
-                      const on = addr.property_id === pid;
-                      return (
-                        <Pressable
-                          key={pid}
-                          testID={`quote-site-${pid}`}
-                          onPress={() => { fillFromProperty(p); clearFieldError("business_name"); clearFieldError("full_address"); clearFieldError("postcode"); }}
-                          style={[styles.chip, on && styles.chipOn]}
-                        >
-                          <Text style={[styles.chipText, on && styles.chipTextOn]}>{p.property_name || p.address}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              )
-            )}
-            <Labeled label="Business name" required error={fieldErrors.business_name} testID="quote-error-business">
-              <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => { setAddr((a) => ({ ...a, business_name: t })); clearFieldError("business_name"); }} placeholder="BIOS Ltd" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.business_name && styles.inputError]} />
-            </Labeled>
-            <Labeled label="Address" required error={fieldErrors.full_address} testID="quote-error-address">
-              <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => { setAddr((a) => ({ ...a, full_address: t })); clearFieldError("full_address"); }} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={[styles.input, fieldErrors.full_address && styles.inputError]} />
-            </Labeled>
-            <Labeled label="Postcode" required error={fieldErrors.postcode} testID="quote-error-postcode">
-              <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => { setAddr((a) => ({ ...a, postcode: t.toUpperCase() })); clearFieldError("postcode"); }} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={[styles.input, fieldErrors.postcode && styles.inputError]} />
-            </Labeled>
-            <Labeled label="Is this the supply address?">
-              <View style={styles.segRow}>
-                <Pressable testID="quote-supply-yes" onPress={() => setAddr((a) => ({ ...a, is_supply_address: true }))} style={[styles.seg, addr.is_supply_address && styles.segOn]}>
-                  <Text style={[styles.segText, addr.is_supply_address && styles.segTextOn]}>Yes</Text>
+              <View style={{ gap: spacing.md }}>
+                <Text style={styles.label}>Where is the supply?</Text>
+                <Pressable testID="quote-supply-existing" disabled={!hasSites} onPress={() => chooseSupply("existing")} style={[styles.radioRow, supplyKind === "existing" && styles.radioRowOn, !hasSites && { opacity: 0.5 }]}>
+                  <View style={[styles.radio, supplyKind === "existing" && styles.radioOn]}>{supplyKind === "existing" && <View style={styles.radioDot} />}</View>
+                  <Text style={styles.radioText}>One of my existing sites</Text>
                 </Pressable>
-                <Pressable testID="quote-supply-no" onPress={() => setAddr((a) => ({ ...a, is_supply_address: false }))} style={[styles.seg, !addr.is_supply_address && styles.segOn]}>
-                  <Text style={[styles.segText, !addr.is_supply_address && styles.segTextOn]}>No — different site</Text>
+                <Pressable testID="quote-supply-new" onPress={() => chooseSupply("new")} style={[styles.radioRow, supplyKind === "new" && styles.radioRowOn]}>
+                  <View style={[styles.radio, supplyKind === "new" && styles.radioOn]}>{supplyKind === "new" && <View style={styles.radioDot} />}</View>
+                  <Text style={styles.radioText}>A new supply — I&apos;ll enter details</Text>
                 </Pressable>
+
+                {supplyKind === "existing" && (
+                  <>
+                    {businesses.length > 1 && (
+                      <Labeled label="Business">
+                        <View testID="quote-business-select" style={styles.chipWrap}>
+                          {businesses.map((b) => {
+                            const on = wizardBizId === b.id;
+                            return (
+                              <Pressable key={b.id} testID={`quote-business-opt-${b.id}`} onPress={() => { setWizardBizId(b.id); setPropertyId(""); setAddr({ business_name: "", full_address: "", postcode: "" }); }} style={[styles.chip, on && styles.chipOn]}>
+                                <Text style={[styles.chipText, on && styles.chipTextOn]}>{b.company_name}</Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </Labeled>
+                    )}
+                    {(businesses.length <= 1 || wizardBizId) && (
+                      <Labeled label="Site">
+                        <View testID="quote-property-select" style={{ gap: spacing.xs }}>
+                          {sitesForBiz.length === 0 ? (
+                            <Text style={styles.muted}>No sites for this business.</Text>
+                          ) : (
+                            sitesForBiz.map((p) => {
+                              const on = propertyId === (p.id || p._id);
+                              return (
+                                <Pressable key={p.id || p._id} testID={`quote-property-opt-${p.id || p._id}`} onPress={() => selectProperty(p)} style={[styles.siteOpt, on && styles.siteOptOn]}>
+                                  <Text style={styles.siteOptName}>{p.property_name || p.name}</Text>
+                                  <Text style={styles.siteOptAddr} numberOfLines={1}>{`${p.address || ""}${p.postcode ? `, ${p.postcode}` : ""}`}</Text>
+                                </Pressable>
+                              );
+                            })
+                          )}
+                        </View>
+                      </Labeled>
+                    )}
+                    {!!propertyId && (
+                      <Text testID="quote-address-preview" style={styles.preview}>Address: {addr.full_address}</Text>
+                    )}
+                  </>
+                )}
+
+                {supplyKind === "new" && (
+                  <>
+                    <Labeled label="Business name" required>
+                      <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => setAddr((a) => ({ ...a, business_name: t }))} placeholder="Acme Bakery Ltd" placeholderTextColor={colors.muted} style={styles.input} />
+                    </Labeled>
+                    <Labeled label="Supply address" required>
+                      <TextInput testID="quote-supply-address" value={addr.full_address} onChangeText={(t) => setAddr((a) => ({ ...a, full_address: t }))} placeholder="Street, town" placeholderTextColor={colors.muted} style={styles.input} />
+                    </Labeled>
+                    <Labeled label="Postcode" required>
+                      <TextInput testID="quote-supply-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="EC2A 4BX" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
+                    </Labeled>
+                  </>
+                )}
               </View>
-            </Labeled>
-            {!addr.is_supply_address && (
-              <Labeled label="Supply postcode" required error={fieldErrors.supply_postcode} testID="quote-error-supply-postcode">
-                <TextInput testID="quote-supply-postcode" value={addr.supply_postcode} onChangeText={(t) => { setAddr((a) => ({ ...a, supply_postcode: t.toUpperCase() })); clearFieldError("supply_postcode"); }} placeholder="EC2A 4BX" placeholderTextColor={colors.muted} autoCapitalize="characters" style={[styles.input, fieldErrors.supply_postcode && styles.inputError]} />
-              </Labeled>
             )}
           </View>
         )}
 
         {current === "energy" && (
           <View testID="step-energy">
-            <Text style={styles.h2}>Energy details</Text>
+            <Text style={styles.h2}>Meter details</Text>
             <Text style={styles.muted}>Tell us about each meter at this site.</Text>
             {electricMeters.length > 0 && (
-              <MeterGroup title="Electric" color="#F59E0B" icon="bolt" list={electricMeters} onUpdate={updateMeter} onRemove={removeMeter} onAdd={() => setMeters((m) => [...m, newMeter("electric")])} />
+              <MeterGroup title="Electricity" color="#F59E0B" icon="bolt" list={electricMeters} onUpdate={updateMeter} onRemove={removeMeter} onAdd={() => setMeters((m) => [...m, newMeter("electric")])} />
             )}
             {gasMeters.length > 0 && (
               <MeterGroup title="Gas" color="#FB923C" icon="fire" list={gasMeters} onUpdate={updateMeter} onRemove={removeMeter} onAdd={() => setMeters((m) => [...m, newMeter("gas")])} />
@@ -383,11 +422,12 @@ export default function QuoteWizard() {
             <Text style={styles.h2}>Review</Text>
             <Text style={styles.muted}>Ready to submit? We&apos;ll handle the rest.</Text>
             <View style={styles.reviewCard}>
-              <ReviewRow label="Services" value={Array.from(selected).map((k) => SERVICES.find((s) => s.key === k)?.label).join(", ")} />
+              <ReviewRow label="Services" value={Array.from(selected).map((k) => SVC_ICON[k]?.label).join(", ")} />
               <ReviewRow label="Contact" value={`${contact.name} · ${contact.email}`} />
-              <ReviewRow label="Business" value={addr.business_name || addr.full_address} />
+              <ReviewRow label="Business" value={addr.business_name} />
+              <ReviewRow label="Address" value={addr.full_address} />
               {meters.map((m, i) => (
-                <ReviewRow key={m._id} label={`${m.utility === "gas" ? "Gas" : "Electric"} meter ${i + 1}`} value={`${m.supplier || "—"} · ${WINDOWS.find((w) => w.value === m.contract_end_window)?.label || "—"}`} />
+                <ReviewRow key={m._id} label={`${m.utility === "gas" ? "Gas" : "Electricity"} meter ${i + 1}`} value={`${m.supplier || "—"} · ${WINDOWS.find((w) => w.value === m.contract_end_window)?.label || "—"}`} />
               ))}
               {selected.has("water") && <ReviewRow label="Water" value={waterSupplier} />}
               {selected.has("telecoms") && <ReviewRow label="Telecoms" value={telecomsSupplier} />}
@@ -413,7 +453,7 @@ export default function QuoteWizard() {
               )}
             </Pressable>
           ) : (
-            <Pressable testID="wizard-next" onPress={next} style={[styles.navBtn, styles.navPrimary, { flex: 2 }, !validateStep() && styles.navPrimarySubtle]}>
+            <Pressable testID="wizard-next" onPress={next} disabled={!canContinue()} style={[styles.navBtn, styles.navPrimary, { flex: 2 }, !canContinue() && styles.navPrimarySubtle]}>
               <Text style={styles.navPrimaryText}>Continue</Text>
             </Pressable>
           )}
@@ -431,9 +471,7 @@ function Labeled({ label, required, error, testID, children }: { label: string; 
         {required ? <Text style={styles.req}> *</Text> : null}
       </Text>
       {children}
-      {!!error && (
-        <Text testID={testID} style={styles.fieldError}>{error}</Text>
-      )}
+      {!!error && <Text testID={testID} style={styles.fieldError}>{error}</Text>}
     </View>
   );
 }
@@ -451,6 +489,7 @@ function MeterGroup({ title, color, icon, list, onUpdate, onRemove, onAdd }: {
   title: string; color: string; icon: IconName; list: Meter[];
   onUpdate: (id: string, p: Partial<Meter>) => void; onRemove: (id: string) => void; onAdd: () => void;
 }) {
+  const kind = list[0]?.utility || "electric";
   return (
     <View style={{ marginTop: spacing.lg }}>
       <View style={styles.meterHead}>
@@ -484,7 +523,7 @@ function MeterGroup({ title, color, icon, list, onUpdate, onRemove, onAdd }: {
           </View>
         </View>
       ))}
-      <Pressable testID={`add-meter-${title.toLowerCase()}`} onPress={onAdd} style={styles.addMeter}>
+      <Pressable testID={`add-meter-${kind}`} onPress={onAdd} style={styles.addMeter}>
         <Icon name="plus" size={16} color={colors.brandPrimary} />
         <Text style={styles.addMeterText}>Add another {title.toLowerCase()} meter</Text>
       </Pressable>
@@ -514,7 +553,7 @@ const styles = StyleSheet.create({
   req: { color: "#DC2626", fontFamily: font.bold },
   fieldError: { fontFamily: font.medium, fontSize: type.sm, color: "#DC2626" },
   input: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, backgroundColor: colors.surface },
-  inputError: { borderWidth: 1.5, borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
+  preview: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
 
   svcGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   svcCard: { width: "47%", flexGrow: 1, alignItems: "center", padding: spacing.lg, borderRadius: radius.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
@@ -523,17 +562,24 @@ const styles = StyleSheet.create({
   svcLabel: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
   svcSelected: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.4, color: colors.heading, marginTop: 4 },
 
-  segRow: { flexDirection: "row", gap: spacing.sm },
+  radioRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, backgroundColor: colors.surface },
+  radioRowOn: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
+  radioOn: { borderColor: colors.brandPrimary },
+  radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.brandPrimary },
+  radioText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading, flex: 1 },
+
+  siteOpt: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, backgroundColor: colors.surface },
+  siteOptOn: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  siteOptName: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  siteOptAddr: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
+
   lockedSite: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: "#F5F3FF", borderWidth: 1, borderColor: "#DDD6FE", borderRadius: radius.md, padding: spacing.md },
   lockedIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.heading, alignItems: "center", justifyContent: "center" },
   lockedKicker: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.4, color: colors.heading, marginBottom: 2 },
   lockedName: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
   lockedAddr: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
   changeLink: { fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
-  seg: { flex: 1, height: 46, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
-  segOn: { borderWidth: 2, borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
-  segText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
-  segTextOn: { fontFamily: font.semibold, color: colors.brandPrimary },
 
   meterHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
   meterHeadIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },

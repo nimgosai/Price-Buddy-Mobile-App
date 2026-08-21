@@ -177,10 +177,10 @@ export default function SiteDetail() {
                                   router.push({
                                     pathname: "/quote/new",
                                     params: {
-                                      utility_type: u,
-                                      contract_id: c.id || c._id || "",
-                                      property_id: params.id,
-                                      supplier: c.supplier_name || "",
+                                      propertyId: String(params.id),
+                                      utility: u,
+                                      contractId: c.id || c._id || "",
+                                      incumbent: c.supplier_name || "",
                                     },
                                   })
                                 }

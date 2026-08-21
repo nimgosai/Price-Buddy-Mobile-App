@@ -298,3 +298,18 @@ No login/live-data writes used — everything reconstructed from the bundle.
   to dashboard. Sites & Reports now refetch on focus so the toggle reflects immediately.
 - Per-device only (localStorage) — does NOT touch the real backend/account. Verified: Reports charts
   and Sites list fully populate when ON.
+
+### QUOTE WIZARD REBUILT to spec (two entry contexts, 4 steps)
+- Params standardized: ?propertyId=&utility=&contractId= . Site Detail Get-Quote + Home Get-a-Quote wired.
+- Entry A (deep-link): skip Service; Step 2 read-only quote-context-banner + quote-change-site (sets
+  forceEditSite -> reveals Entry-B branching); Step 3 prefilled from GET /contracts/{id} (fallback safe).
+- Entry B: Service picker; radios quote-supply-existing/quote-supply-new UNCHECKED, Continue disabled;
+  2+ businesses -> quote-business-select above quote-property-select (sites filtered by business_id);
+  1 business skips picker; 0 sites -> existing disabled/new forced; new branch fields start EMPTY.
+- Rules: business_name from owning business via property.business_id->businesses (never site name);
+  back-fill effect once businesses load; no auto-select on Entry B; switching existing->new clears
+  property_id/address/postcode (keeps business_name only on deep-link).
+- Contact quote-contact-name/email prefilled from user. POST /quotes/multi -> /quote/success (ref).
+- Demo mode extended: /contracts, /contracts/{id}, business_name on demo sites.
+- testids match web for shared E2E. Files: app/quote/new.tsx (rewritten), app/quote/success.tsx (new),
+  app/sites/[id].tsx (params), src/demo/demo-data.ts.
