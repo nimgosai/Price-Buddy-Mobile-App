@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -143,7 +143,6 @@ export default function QuoteWizard() {
   }, [entryA, contractId]);
 
   const hasSites = properties.length > 0;
-  const showBranching = !entryA || forceEditSite;
 
   const sitesForBiz = useMemo(() => {
     if (businesses.length <= 1 || !wizardBizId) return properties;
@@ -299,6 +298,7 @@ export default function QuoteWizard() {
         {current === "details" && (
           <View testID="step-global" style={{ gap: spacing.md }}>
             <Text style={styles.h2}>Your details</Text>
+            <Text style={[styles.muted, { marginTop: -2, marginBottom: 2 }]}>Fill from your account — edit if a colleague should review the quote instead.</Text>
 
             <Labeled label="Name" required>
               <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => setContact((c) => ({ ...c, name: t }))} placeholder="Your name" placeholderTextColor={colors.muted} style={styles.input} />
@@ -328,14 +328,20 @@ export default function QuoteWizard() {
               </View>
             ) : (
               <View style={{ gap: spacing.md }}>
-                <Text style={styles.label}>Where is the supply?</Text>
+                <Text style={styles.label}>Where&apos;s the supply?</Text>
                 <Pressable testID="quote-supply-existing" disabled={!hasSites} onPress={() => chooseSupply("existing")} style={[styles.radioRow, supplyKind === "existing" && styles.radioRowOn, !hasSites && { opacity: 0.5 }]}>
                   <View style={[styles.radio, supplyKind === "existing" && styles.radioOn]}>{supplyKind === "existing" && <View style={styles.radioDot} />}</View>
-                  <Text style={styles.radioText}>One of my existing sites</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.radioText}>One of my existing sites</Text>
+                    <Text style={styles.radioDesc}>Pick from sites on your account.</Text>
+                  </View>
                 </Pressable>
                 <Pressable testID="quote-supply-new" onPress={() => chooseSupply("new")} style={[styles.radioRow, supplyKind === "new" && styles.radioRowOn]}>
                   <View style={[styles.radio, supplyKind === "new" && styles.radioOn]}>{supplyKind === "new" && <View style={styles.radioDot} />}</View>
-                  <Text style={styles.radioText}>A new supply — I&apos;ll enter details</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.radioText}>A new supply — I&apos;ll enter details</Text>
+                    <Text style={styles.radioDesc}>For a brand new site, or a business you haven&apos;t set up yet.</Text>
+                  </View>
                 </Pressable>
 
                 {supplyKind === "existing" && (
@@ -567,7 +573,8 @@ const styles = StyleSheet.create({
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border, alignItems: "center", justifyContent: "center" },
   radioOn: { borderColor: colors.brandPrimary },
   radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.brandPrimary },
-  radioText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading, flex: 1 },
+  radioText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  radioDesc: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
 
   siteOpt: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, backgroundColor: colors.surface },
   siteOptOn: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
