@@ -306,9 +306,6 @@ export default function QuoteWizard() {
             <Labeled label="Email" required>
               <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => setContact((c) => ({ ...c, email: t }))} placeholder="you@business.co.uk" placeholderTextColor={colors.muted} autoCapitalize="none" keyboardType="email-address" style={styles.input} />
             </Labeled>
-            <Labeled label="Phone (optional)">
-              <TextInput testID="quote-contact-phone" value={contact.phone} onChangeText={(t) => setContact((c) => ({ ...c, phone: t }))} placeholder="07…" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} />
-            </Labeled>
 
             {entryA && !forceEditSite ? (
               <View testID="quote-context-banner" style={styles.lockedSite}>
