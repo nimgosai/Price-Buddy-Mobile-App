@@ -145,9 +145,9 @@ export default function QuoteWizard() {
   const hasSites = properties.length > 0;
 
   const sitesForBiz = useMemo(() => {
-    if (businesses.length <= 1 || !wizardBizId) return properties;
-    return properties.filter((p) => p.business_id === wizardBizId);
-  }, [properties, businesses.length, wizardBizId]);
+    if (!wizardBizId) return [];
+    return properties.filter((p) => (p.business_id ? p.business_id === wizardBizId : true));
+  }, [properties, wizardBizId]);
 
   // Build the step flow.
   const flow = useMemo(() => {
@@ -200,7 +200,7 @@ export default function QuoteWizard() {
     if (entryA && !forceEditSite) return true; // context banner
     if (!supplyKind) return false;
     if (supplyKind === "existing") {
-      if (businesses.length > 1 && !wizardBizId) return false;
+      if (!wizardBizId) return false;
       return !!propertyId;
     }
     return !!(addr.business_name.trim() && addr.full_address.trim() && addr.postcode.trim());
@@ -346,21 +346,23 @@ export default function QuoteWizard() {
 
                 {supplyKind === "existing" && (
                   <>
-                    {businesses.length > 1 && (
-                      <Labeled label="Business">
-                        <View testID="quote-business-select" style={styles.chipWrap}>
-                          {businesses.map((b) => {
+                    <Labeled label="Business">
+                      <View testID="quote-business-select" style={styles.chipWrap}>
+                        {businesses.length === 0 ? (
+                          <Text style={styles.muted}>No businesses on your account yet.</Text>
+                        ) : (
+                          businesses.map((b) => {
                             const on = wizardBizId === b.id;
                             return (
                               <Pressable key={b.id} testID={`quote-business-opt-${b.id}`} onPress={() => { setWizardBizId(b.id); setPropertyId(""); setAddr({ business_name: "", full_address: "", postcode: "" }); }} style={[styles.chip, on && styles.chipOn]}>
                                 <Text style={[styles.chipText, on && styles.chipTextOn]}>{b.company_name}</Text>
                               </Pressable>
                             );
-                          })}
-                        </View>
-                      </Labeled>
-                    )}
-                    {(businesses.length <= 1 || wizardBizId) && (
+                          })
+                        )}
+                      </View>
+                    </Labeled>
+                    {!!wizardBizId && (
                       <Labeled label="Site">
                         <View testID="quote-property-select" style={{ gap: spacing.xs }}>
                           {sitesForBiz.length === 0 ? (

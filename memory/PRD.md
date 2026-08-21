@@ -313,3 +313,6 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Demo mode extended: /contracts, /contracts/{id}, business_name on demo sites.
 - testids match web for shared E2E. Files: app/quote/new.tsx (rewritten), app/quote/success.tsx (new),
   app/sites/[id].tsx (params), src/demo/demo-data.ts.
+
+### FIX — Quote existing-sites: business picker now ALWAYS shows (then site list)
+- Changed condition so choosing "One of my existing sites" always shows the Business selector first, then the Site list (filtered by business). Business selection now required before Continue. Matches original build. Also added Step-1 description + radio helper texts + "Where's the supply?". Verified via demo mode screenshots.
