@@ -18,6 +18,7 @@ import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
+import { useBusiness } from "@/src/business/business-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
 import { DEMO_MODE_KEY, isDemoEnabled, setDemoEnabled } from "@/src/demo/demo-data";
@@ -28,6 +29,7 @@ export default function Profile() {
   const router = useRouter();
   const toast = useToast();
   const { user, signOut, refreshUser } = useAuth();
+  const { refreshBusinesses } = useBusiness();
 
   const [showDelete, setShowDelete] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -71,6 +73,7 @@ export default function Profile() {
     setDemoOn(v);
     setDemoEnabled(v);
     await storage.setItem(DEMO_MODE_KEY, v);
+    await refreshBusinesses();
     toast(v ? "Demo data on — showing sample data." : "Demo data off.", "success");
     if (Platform.OS === "web" && typeof window !== "undefined") {
       window.location.reload();

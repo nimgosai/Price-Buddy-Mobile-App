@@ -316,3 +316,17 @@ No login/live-data writes used — everything reconstructed from the bundle.
 
 ### FIX — Quote existing-sites: business picker now ALWAYS shows (then site list)
 - Changed condition so choosing "One of my existing sites" always shows the Business selector first, then the Site list (filtered by business). Business selection now required before Continue. Matches original build. Also added Step-1 description + radio helper texts + "Where's the supply?". Verified via demo mode screenshots.
+
+
+### DEMO DATA — second business added (multi-business preview)
+- src/demo/demo-data.ts now has TWO businesses: b1 "Price Buddy Demo Ltd" (3 sites: Head Office,
+  Manchester Warehouse, Bristol Retail Unit) and b2 "Riverside Cafés Ltd" (2 sites: Bath, Oxford).
+  Each PROPERTY carries business_id; BUSINESSES derives site_count/contract_count from the data.
+- getDemoResponse now mocks GET /businesses (2 items) AND parses ?business_id=<id> so switching the
+  business chip actually filters /properties, /contracts, /reports/spend, /renewals/urgent,
+  /dashboard/overview. spendReport(list) accepts a filtered contract list.
+- Also removed the earlier "b1" contract id collision (broadband is now "b1c") so business id b1 is unique.
+- profile.tsx onToggleDemo now calls refreshBusinesses() so the switcher chip appears/updates
+  immediately after toggling demo on native (web already reloads).
+- Removed the incorrectly-added "Phone (optional)" field from the Quote Wizard details step earlier
+  in this session (only Name + Email now, matching original).
