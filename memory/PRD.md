@@ -404,3 +404,8 @@ No login/live-data writes used — everything reconstructed from the bundle.
 ### PROMO CARD MICRO-REFINEMENT (user-requested)
 - Promo card: borderRadius 16, padding 16, head gap 12, heading→sub gap 4px, sub→button gap 15px,
   button 42px full-width #1E6B47 forest green radius 10, 14px semibold white + chevron (shimmer kept).
+
+### EXPIRING CARD SUBTITLE FIX (user-requested)
+- Meta line under "N days remaining" now = "[supplier || business] · +N more" (13px regular
+  #64748B, marginTop 3, wraps — no numberOfLines). Fuel-type prefix removed (fuel pills below
+  already show it). Audit row title now wraps to 2 lines instead of 1-line ellipsis.

@@ -348,11 +348,10 @@ export default function Dashboard() {
                       {first.days_until_expiry < 0 ? `${Math.abs(first.days_until_expiry)} days overdue` : `${first.days_until_expiry} days remaining`}
                     </Text>
                   </View>
-                  <Text style={styles.expMeta} numberOfLines={1}>
-                    {utilityLabel(first.utility_type)}
-                    {first.supplier_name ? ` · ${first.supplier_name}` : ""}
-                    {first.business_name ? ` · ${first.business_name}` : ""}
-                    {items.length > 1 ? ` · +${items.length - 1} more` : ""}
+                  <Text style={styles.expMeta}>
+                    {[first.supplier_name || first.business_name, items.length > 1 ? `+${items.length - 1} more` : ""]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </Text>
                 </View>
                 {first.renewable_now ? (
@@ -398,7 +397,7 @@ export default function Dashboard() {
                 return (
                   <View key={a.id} testID={`audit-row-${a.id}`} style={styles.auditRow}>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={styles.auditRowTitle} numberOfLines={1}>
+                      <Text style={styles.auditRowTitle} numberOfLines={2}>
                         {a.supplier_name || "Bill upload"} · {a.supply_address || "Awaiting details"}
                       </Text>
                       <Text style={styles.auditRowSub}>
@@ -578,7 +577,7 @@ const styles = StyleSheet.create({
   expCount: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   expCountText: { fontFamily: font.bold, fontSize: 22 },
   expDays: { fontFamily: font.bold, fontSize: type.sm },
-  expMeta: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 2 },
+  expMeta: { fontFamily: font.regular, fontSize: type.sm, color: "#64748B", marginTop: 3, flexShrink: 1 },
   renewablePill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1 },
   renewablePillText: { fontFamily: font.bold, fontSize: type.kicker },
   expTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginBottom: 12 },
