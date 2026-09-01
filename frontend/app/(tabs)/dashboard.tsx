@@ -21,7 +21,6 @@ import { Icon } from "@/src/components/icon";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
 import { CtaShimmer } from "@/src/components/cta-shimmer";
 import { SpotlightTour, TourStep } from "@/src/components/spotlight-tour";
-import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { useBusiness } from "@/src/business/business-context";
@@ -306,9 +305,6 @@ export default function Dashboard() {
               <Icon name="bell" size={20} color={colors.heading} />
             </Pressable>
           </View>
-
-          {/* Active business (only when the owner has more than one) */}
-          <BusinessSwitcherChip variant="dashboard" testID="dashboard-business-chip" />
 
           {/* Alerts nudge */}
           {showNudge && (

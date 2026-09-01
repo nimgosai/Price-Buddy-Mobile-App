@@ -394,3 +394,9 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Killed fractional/one-off sizes (9, 9.5, 11.5, 12.5, 14.5 → tokens) in dashboard, quote/new,
   scan, scan review, news. Heading tracking: -0.3 at 18–24px, -0.5 at 30px+ (intentional).
 - All text uses the Geist family tokens (regular/medium/semibold/bold) — no raw font names.
+
+### BUSINESS SWITCHER REMOVED FROM HOME (parity fix, user-requested)
+- Verified in original bundle: dashboard always loads "__all__" overview and has NO business
+  dropdown; the switcher only exists on Sites and Reports. Removed BusinessSwitcherChip from
+  dashboard.tsx and deleted the now-dead "dashboard" variant/compact styles from
+  business-switcher-chip.tsx. Sites/Reports switchers unchanged and verified working.
