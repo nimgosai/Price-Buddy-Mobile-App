@@ -54,7 +54,7 @@ const windowFromEndDate = (endDate?: string): string => {
 export default function QuoteWizard() {
   const router = useRouter();
   const { user } = useAuth();
-  const { activeBizId, activeBusiness, bizQuery, businesses } = useBusiness();
+  const { activeBusiness, businesses } = useBusiness();
 
   const params = useLocalSearchParams<{ propertyId?: string; property?: string; utility?: string; contractId?: string; incumbent?: string }>();
   const paramUtility = (params.utility || "").toLowerCase();
@@ -106,9 +106,9 @@ export default function QuoteWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [y]);
 
-  // Load sites; prefill Business/Address/Postcode when deep-linked to a site.
+  // Load ALL sites (the wizard has its own business picker); prefill when deep-linked.
   useEffect(() => {
-    apiRequest<any[]>(`/properties${bizQuery()}`)
+    apiRequest<any[]>("/properties")
       .then((arr) => {
         const list = Array.isArray(arr) ? arr : [];
         setProperties(list);
@@ -127,7 +127,7 @@ export default function QuoteWizard() {
       .catch(() => setProperties([]))
       .finally(() => setLoadingProps(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBizId]);
+  }, []);
 
   // Sync meters with the selected services; prefill from the deep-linked contract.
   useEffect(() => {
@@ -413,6 +413,7 @@ export default function QuoteWizard() {
                           onChange={pickProperty}
                           placeholder="Select a site"
                           sheetTitle="Choose a site"
+                          emptyText="No sites for this business yet."
                           options={sitesForBiz.map((p) => ({
                             value: p.id,
                             label: p.property_name || p.address,

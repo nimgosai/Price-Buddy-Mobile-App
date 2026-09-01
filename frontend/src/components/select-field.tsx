@@ -14,6 +14,7 @@ export function SelectField({
   onChange,
   placeholder = "Select…",
   sheetTitle,
+  emptyText,
   testID,
 }: {
   value: string;
@@ -21,6 +22,7 @@ export function SelectField({
   onChange: (v: string) => void;
   placeholder?: string;
   sheetTitle?: string;
+  emptyText?: string;
   testID?: string;
 }) {
   const insets = useSafeAreaInsets();
@@ -42,6 +44,9 @@ export function SelectField({
             <View style={styles.grabber} />
             {sheetTitle ? <Text style={styles.sheetTitle}>{sheetTitle}</Text> : null}
             <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              {options.length === 0 && emptyText ? (
+                <Text style={styles.emptyText}>{emptyText}</Text>
+              ) : null}
               {options.map((o) => {
                 const on = o.value === value;
                 return (
@@ -107,4 +112,5 @@ const styles = StyleSheet.create({
   optOn: { backgroundColor: colors.brandTertiary, borderRadius: radius.sm },
   optLabel: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   optSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 1 },
+  emptyText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, paddingVertical: spacing.lg, textAlign: "center" },
 });

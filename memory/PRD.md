@@ -424,3 +424,11 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Payload/energy step/review/submit unchanged (original /quotes/multi shape kept).
 - BUG FIXED during this: `/properties${bizQuery}` interpolated the FUNCTION (bizQuery is
   () => string) → garbage URL → empty sites. Now `bizQuery()`.
+
+### BUG FIX: EMPTY "CHOOSE A SITE" SHEET (user video report)
+- Root cause: wizard fetched `/properties?business_id=<globally active biz>`; picking a DIFFERENT
+  business inside the wizard yielded zero matching sites → blank sheet.
+- Fix: wizard now fetches ALL properties (plain /properties) since it has its own business picker.
+- SelectField gained optional `emptyText` prop; site sheet shows "No sites for this business yet."
+  when a business genuinely has no sites.
+- Verified: active biz = Riverside globally, wizard business = Price Buddy → 3 sites listed.
