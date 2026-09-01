@@ -376,3 +376,14 @@ No login/live-data writes used — everything reconstructed from the bundle.
   CtaShimmer kept). Card padding 20, mint bg.
 - Support pill: padding bumped to 16px vertical, minHeight 52.
 - Verified via screenshot at 320px width: no clipped/truncated labels anywhere.
+
+### DASHBOARD SIZING REFINEMENT (user-requested)
+- Quick actions: 3 compact equal tiles in ONE row (flex:1), minHeight 100, padding 12 (10 on
+  <360px), 24px icon in 36px tile, 13px semibold titles (11px on <360px so "Meter Installation"
+  wraps whole-word). "View Contracts" permanently removed.
+- Support pill: 46px min height, 10/14 padding, 14px medium text.
+- Promo: padding 16, heading 16px bold, sub 13px muted (#065F46), full-width 42px "Get a quote"
+  button (shimmer kept).
+- Audit card: now shows only the FIRST audit row + "+N more bills being verified" caption
+  (removes the "duplicate Request a Call Now bars" the user complained about).
+- Verified via screenshots at 390px and 320px.

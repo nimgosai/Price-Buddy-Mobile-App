@@ -396,7 +396,7 @@ export default function Dashboard() {
                   </Text>
                 </View>
               </View>
-              {audits.slice(0, 3).map((a) => {
+              {audits.slice(0, 1).map((a) => {
                 const called = !!a.call_requested_at;
                 const intent = ({ track: "Tracking", quote: "Quote requested", both: "Tracking + Quote" } as Record<string, string>)[a.intent || "track"] || "Tracking";
                 return (
@@ -422,6 +422,9 @@ export default function Dashboard() {
                   </View>
                 );
               })}
+              {audits.length > 1 && (
+                <Text style={styles.auditMore} testID="audit-more">+{audits.length - 1} more {audits.length - 1 === 1 ? "bill" : "bills"} being verified</Text>
+              )}
               <Pressable testID="audit-call-direct" onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE.replace(/\s/g, "")}`)} hitSlop={6}>
                 <Text style={styles.auditCallDirect}>Or call us direct on {SUPPORT_PHONE}</Text>
               </Pressable>
@@ -500,6 +503,8 @@ function PulseDot({ color }: { color: string }) {
 function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: {
   icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View>;
 }) {
+  const { width } = useWindowDimensions();
+  const narrow = width < 360;
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (!badge) return;
@@ -515,7 +520,7 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: 
   }, [badge, scale]);
 
   return (
-    <Pressable ref={innerRef} collapsable={false} testID={testID} onPress={onPress} style={({ pressed }) => [styles.qa, pressed && { opacity: 0.9 }]}>
+    <Pressable ref={innerRef} collapsable={false} testID={testID} onPress={onPress} style={({ pressed }) => [styles.qa, narrow && { padding: 10 }, pressed && { opacity: 0.9 }]}>
       {badge ? (
         <Animated.View testID="quick-action-badge" style={[styles.qaBadge, { transform: [{ scale }] }]}>
           <Icon name="sparkle" size={10} color="#FFFFFF" />
@@ -523,9 +528,9 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: 
         </Animated.View>
       ) : null}
       <View style={[styles.qaIcon, { backgroundColor: bg }]}>
-        <Icon name={icon} size={22} color={fg} />
+        <Icon name={icon} size={24} color={fg} />
       </View>
-      <Text style={styles.qaTitle}>{title}</Text>
+      <Text style={[styles.qaTitle, narrow && { fontSize: 11, lineHeight: 15, letterSpacing: -0.1 }]}>{title}</Text>
     </Pressable>
   );
 }
@@ -593,6 +598,7 @@ const styles = StyleSheet.create({
   auditTitle: { fontFamily: font.bold, fontSize: type.base, color: "#92400E" },
   auditSub: { fontFamily: font.regular, fontSize: type.sm, color: "#78350F", lineHeight: 18, marginTop: 2 },
   auditRow: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFFFFF", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
+  auditMore: { fontFamily: font.medium, fontSize: type.kicker, color: "#92400E", marginBottom: 4, marginLeft: 2 },
   auditRowTitle: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurface },
   auditRowSub: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2 },
   auditCalled: { backgroundColor: "#10B981", paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill },
@@ -602,33 +608,32 @@ const styles = StyleSheet.create({
   auditCallDirect: { fontFamily: font.semibold, fontSize: 11.5, color: colors.brandPrimary, textAlign: "center", marginTop: 4 },
 
   quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.8, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  quickGrid: { flexDirection: "row", gap: 12 },
   qa: {
-    flexBasis: "45%",
-    flexGrow: 1,
-    minHeight: 128,
-    gap: spacing.md,
+    flex: 1,
+    minHeight: 100,
+    gap: spacing.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    padding: spacing.lg,
+    padding: 12,
     justifyContent: "flex-start",
     ...shadow.card,
   },
-  qaIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  qaTitle: { fontFamily: font.semibold, fontSize: type.lg, lineHeight: 21, color: colors.heading },
+  qaIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  qaTitle: { fontFamily: font.semibold, fontSize: type.sm, lineHeight: 17, color: colors.heading },
   qaBadge: {
     position: "absolute", top: 8, right: 8, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: colors.brandPrimary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
   },
   qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.3 },
 
-  promo: { backgroundColor: colors.pastel.mint, borderRadius: radius.md, padding: 20, marginTop: spacing.xs, gap: spacing.lg },
+  promo: { backgroundColor: colors.pastel.mint, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.xs, gap: spacing.md },
   promoHead: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
-  promoIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  promoTitle: { fontFamily: font.bold, fontSize: 19, lineHeight: 24, color: colors.heading, letterSpacing: -0.3 },
-  promoSub: { fontFamily: font.regular, fontSize: type.title, lineHeight: 20, color: "#065F46", marginTop: 4 },
-  promoBtn: { minHeight: 50, borderRadius: radius.md, backgroundColor: colors.pastel.mintIcon, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, overflow: "hidden" },
-  promoBtnText: { fontFamily: font.bold, fontSize: type.lg, color: "#FFFFFF" },
+  promoIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  promoTitle: { fontFamily: font.bold, fontSize: type.lg, lineHeight: 21, color: colors.heading, letterSpacing: -0.2 },
+  promoSub: { fontFamily: font.regular, fontSize: type.sm, lineHeight: 18, color: "#065F46", marginTop: 3 },
+  promoBtn: { minHeight: 42, borderRadius: radius.sm, backgroundColor: colors.pastel.mintIcon, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 5, overflow: "hidden" },
+  promoBtnText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
 });
