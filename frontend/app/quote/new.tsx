@@ -54,7 +54,7 @@ const windowFromEndDate = (endDate?: string): string => {
 export default function QuoteWizard() {
   const router = useRouter();
   const { user } = useAuth();
-  const { activeBizId, activeBusiness, bizQuery } = useBusiness();
+  const { activeBizId, activeBusiness, bizQuery, businesses } = useBusiness();
 
   const params = useLocalSearchParams<{ propertyId?: string; property?: string; utility?: string; contractId?: string; incumbent?: string }>();
   const paramUtility = (params.utility || "").toLowerCase();
@@ -67,6 +67,10 @@ export default function QuoteWizard() {
   const [properties, setProperties] = useState<any[]>([]);
   const [loadingProps, setLoadingProps] = useState(true);
   const [changeSite, setChangeSite] = useState(false);
+
+  // "Where's the supply?" branch: existing site vs a brand-new supply.
+  const [supplyKind, setSupplyKind] = useState<"" | "existing" | "new">(paramPropertyId ? "existing" : "");
+  const [wizardBizId, setWizardBizId] = useState("");
 
   const [selected, setSelected] = useState<Set<string>>(() => {
     if (paramUtility === "electricity") return new Set(["electric"]);
@@ -102,29 +106,21 @@ export default function QuoteWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [y]);
 
-  // Load sites; prefill Business/Address/Postcode like the original.
+  // Load sites; prefill Business/Address/Postcode when deep-linked to a site.
   useEffect(() => {
-    apiRequest<any[]>(`/properties${bizQuery}`)
+    apiRequest<any[]>(`/properties${bizQuery()}`)
       .then((arr) => {
         const list = Array.isArray(arr) ? arr : [];
         setProperties(list);
         if (!list.length) return;
         const match = paramPropertyId ? list.find((p) => p.id === paramPropertyId) : null;
-        if (paramPropertyId && match) {
+        if (match) {
+          if (match.business_id) setWizardBizId(match.business_id);
           setAddr((a) => ({
             ...a,
             business_name: a.business_name || activeBusiness?.company_name || match.property_name || "",
             full_address: a.full_address || match.address || "",
             postcode: a.postcode || match.postcode || "",
-          }));
-        } else {
-          const first = list[0];
-          setAddr((a) => ({
-            ...a,
-            property_id: first.id,
-            business_name: activeBusiness?.company_name || first.property_name || "",
-            full_address: first.address || "",
-            postcode: first.postcode || "",
           }));
         }
       })
@@ -132,18 +128,6 @@ export default function QuoteWizard() {
       .finally(() => setLoadingProps(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBizId]);
-
-  // Keep the business name in sync with the active business (original behaviour).
-  useEffect(() => {
-    if (!activeBusiness?.company_name) return;
-    setAddr((a) => {
-      if (a.business_name && a.business_name !== "") {
-        if (!properties.some((p) => p.property_name && p.property_name === a.business_name)) return a;
-      }
-      return { ...a, business_name: activeBusiness.company_name };
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBusiness?.company_name, properties]);
 
   // Sync meters with the selected services; prefill from the deep-linked contract.
   useEffect(() => {
@@ -229,13 +213,13 @@ export default function QuoteWizard() {
 
   const stepValid = (): boolean => {
     if (current === "service") return selected.size > 0;
-    if (current === "global")
-      return !!(
-        contact.name.trim() &&
-        contact.email.trim() &&
-        (addr.is_supply_address || addr.supply_postcode.trim()) &&
-        (addr.business_name.trim() || addr.full_address.trim())
-      );
+    if (current === "global") {
+      if (!contact.name.trim() || !contact.email.trim()) return false;
+      if (lockedProp) return true;
+      if (!supplyKind) return false;
+      if (supplyKind === "existing") return !!(wizardBizId && addr.property_id);
+      return !!(addr.business_name.trim() && addr.full_address.trim() && addr.postcode.trim());
+    }
     if (current === "energy") return meters.every((m) => m.supplier?.trim() && m.contract_end_window);
     if (current === "water") return waterSupplier.trim().length > 0;
     if (current === "telecoms") return telecomsSupplier.trim().length > 0;
@@ -280,16 +264,35 @@ export default function QuoteWizard() {
     });
   };
 
+  const pickBusiness = (id: string) => {
+    setWizardBizId(id);
+    setAddr((a) => ({ ...a, property_id: "", business_name: "", full_address: "", postcode: "" }));
+  };
+
   const pickProperty = (id: string) => {
     const p = properties.find((t) => t.id === id);
+    const owner = businesses.find((b) => b.id === wizardBizId);
     setAddr((a) => ({
       ...a,
       property_id: id,
-      business_name: activeBusiness?.company_name || p?.property_name || "",
+      business_name: owner?.company_name || activeBusiness?.company_name || p?.property_name || "",
       full_address: p?.address || "",
       postcode: p?.postcode || "",
     }));
   };
+
+  const chooseSupply = (kind: "existing" | "new") => {
+    setSupplyKind(kind);
+    if (kind === "new") {
+      setWizardBizId("");
+      setAddr((a) => ({ ...a, property_id: "", business_name: "", full_address: "", postcode: "" }));
+    }
+  };
+
+  const sitesForBiz = useMemo(() => {
+    if (!wizardBizId) return [];
+    return properties.filter((p) => (p.business_id ? p.business_id === wizardBizId : true));
+  }, [properties, wizardBizId]);
 
   const cameFromSite = Boolean(paramPropertyId);
   const lockedProp = cameFromSite && !changeSite ? properties.find((p) => p.id === addr.property_id) : null;
@@ -346,71 +349,104 @@ export default function QuoteWizard() {
               <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => setContact((c) => ({ ...c, email: t }))} autoCapitalize="none" keyboardType="email-address" placeholderTextColor={colors.muted} style={[styles.input, styles.inputPrefilled]} />
             </View>
 
-            <Text style={styles.h3}>Site</Text>
-
             {lockedProp ? (
-              <View testID="quote-locked-site" style={styles.lockedSite}>
-                <View style={styles.lockedIcon}>
-                  <Icon name="building" size={20} color="#FFFFFF" />
+              <>
+                <Text style={styles.h3}>Site</Text>
+                <View testID="quote-locked-site" style={styles.lockedSite}>
+                  <View style={styles.lockedIcon}>
+                    <Icon name="building" size={20} color="#FFFFFF" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.lockedKicker}>QUOTE FOR THIS SITE</Text>
+                    <Text style={styles.lockedName} numberOfLines={1}>{lockedProp.property_name || lockedProp.address}</Text>
+                    <Text style={styles.lockedAddr} numberOfLines={1}>{[lockedProp.address, lockedProp.postcode].filter(Boolean).join(", ")}</Text>
+                  </View>
+                  {properties.length > 1 && (
+                    <Pressable testID="quote-change-site" onPress={() => setChangeSite(true)} hitSlop={8}>
+                      <Text style={styles.changeLink}>Change</Text>
+                    </Pressable>
+                  )}
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.lockedKicker}>QUOTE FOR THIS SITE</Text>
-                  <Text style={styles.lockedName} numberOfLines={1}>{lockedProp.property_name || lockedProp.address}</Text>
-                  <Text style={styles.lockedAddr} numberOfLines={1}>{[lockedProp.address, lockedProp.postcode].filter(Boolean).join(", ")}</Text>
-                </View>
-                {properties.length > 1 && (
-                  <Pressable testID="quote-change-site" onPress={() => setChangeSite(true)} hitSlop={8}>
-                    <Text style={styles.changeLink}>Change</Text>
-                  </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={styles.h3}>Where&apos;s the supply?</Text>
+                <Pressable
+                  testID="quote-supply-existing"
+                  disabled={loadingProps || properties.length === 0}
+                  onPress={() => chooseSupply("existing")}
+                  style={[styles.radioRow, supplyKind === "existing" && styles.radioRowOn, !loadingProps && properties.length === 0 && { opacity: 0.5 }]}
+                >
+                  <View style={[styles.radio, supplyKind === "existing" && styles.radioOn]}>{supplyKind === "existing" && <View style={styles.radioDot} />}</View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.radioText}>One of my existing sites</Text>
+                    <Text style={styles.radioDesc}>Pick from sites on your account.</Text>
+                  </View>
+                </Pressable>
+                <Pressable testID="quote-supply-new" onPress={() => chooseSupply("new")} style={[styles.radioRow, supplyKind === "new" && styles.radioRowOn]}>
+                  <View style={[styles.radio, supplyKind === "new" && styles.radioOn]}>{supplyKind === "new" && <View style={styles.radioDot} />}</View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.radioText}>A new supply — I&apos;ll enter details</Text>
+                    <Text style={styles.radioDesc}>For a brand new site, or a business you haven&apos;t added yet.</Text>
+                  </View>
+                </Pressable>
+
+                {supplyKind === "existing" && (
+                  <View style={{ marginTop: spacing.md }}>
+                    <View style={styles.inputWrap}>
+                      <Text style={styles.label}>Business</Text>
+                      <SelectField
+                        testID="quote-business-select"
+                        value={wizardBizId}
+                        onChange={pickBusiness}
+                        placeholder="Select a business"
+                        sheetTitle="Choose a business"
+                        options={businesses.map((b) => ({ value: b.id, label: b.company_name }))}
+                      />
+                    </View>
+                    {!!wizardBizId && (
+                      <View style={styles.inputWrap}>
+                        <Text style={styles.label}>Site</Text>
+                        <SelectField
+                          testID="quote-property-select"
+                          value={addr.property_id}
+                          onChange={pickProperty}
+                          placeholder="Select a site"
+                          sheetTitle="Choose a site"
+                          options={sitesForBiz.map((p) => ({
+                            value: p.id,
+                            label: p.property_name || p.address,
+                            sublabel: [p.address, p.postcode].filter(Boolean).join(", "),
+                          }))}
+                        />
+                      </View>
+                    )}
+                    {!!addr.property_id && (
+                      <Text testID="quote-address-preview" style={styles.preview}>
+                        Address: {[addr.full_address, addr.postcode].filter(Boolean).join(", ")}
+                      </Text>
+                    )}
+                  </View>
                 )}
-              </View>
-            ) : !loadingProps && properties.length > 0 ? (
-              <View style={styles.inputWrap}>
-                <Text style={styles.label}>Site</Text>
-                <SelectField
-                  testID="quote-property-select"
-                  value={addr.property_id}
-                  onChange={pickProperty}
-                  sheetTitle="Choose a site"
-                  options={properties.map((p) => ({
-                    value: p.id,
-                    label: p.property_name || p.address,
-                    sublabel: [p.address, p.postcode].filter(Boolean).join(", "),
-                  }))}
-                />
-              </View>
-            ) : null}
 
-            <View style={styles.inputWrap}>
-              <Text style={styles.label}>Business name</Text>
-              <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => setAddr((a) => ({ ...a, business_name: t }))} placeholder="BIOS Ltd" placeholderTextColor={colors.muted} style={styles.input} />
-            </View>
-            <View style={styles.inputWrap}>
-              <Text style={styles.label}>Address</Text>
-              <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => setAddr((a) => ({ ...a, full_address: t }))} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={styles.input} />
-            </View>
-            <View style={styles.inputWrap}>
-              <Text style={styles.label}>Postcode</Text>
-              <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
-            </View>
-
-            <View style={styles.supplyCard}>
-              <Text style={styles.supplyTitle}>Is this the supply address?</Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable testID="quote-supply-yes" onPress={() => setAddr((a) => ({ ...a, is_supply_address: true }))} style={[styles.chip, addr.is_supply_address && styles.chipOn]}>
-                  <Text style={[styles.chipText, addr.is_supply_address && styles.chipTextOn]}>Yes</Text>
-                </Pressable>
-                <Pressable testID="quote-supply-no" onPress={() => setAddr((a) => ({ ...a, is_supply_address: false }))} style={[styles.chip, !addr.is_supply_address && styles.chipOn]}>
-                  <Text style={[styles.chipText, !addr.is_supply_address && styles.chipTextOn]}>No — different site</Text>
-                </Pressable>
-              </View>
-              {!addr.is_supply_address && (
-                <View style={[styles.inputWrap, { marginTop: 14, marginBottom: 0 }]}>
-                  <Text style={styles.label}>Supply postcode</Text>
-                  <TextInput testID="quote-supply-postcode" value={addr.supply_postcode} onChangeText={(t) => setAddr((a) => ({ ...a, supply_postcode: t.toUpperCase() }))} placeholder="EC2A 4BX" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
-                </View>
-              )}
-            </View>
+                {supplyKind === "new" && (
+                  <View style={{ marginTop: spacing.md }}>
+                    <View style={styles.inputWrap}>
+                      <Text style={styles.label}>Business name</Text>
+                      <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => setAddr((a) => ({ ...a, business_name: t }))} placeholder="Acme Bakery Ltd" placeholderTextColor={colors.muted} style={styles.input} />
+                    </View>
+                    <View style={styles.inputWrap}>
+                      <Text style={styles.label}>Supply address</Text>
+                      <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => setAddr((a) => ({ ...a, full_address: t }))} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={styles.input} />
+                    </View>
+                    <View style={styles.inputWrap}>
+                      <Text style={styles.label}>Postcode</Text>
+                      <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
           </View>
         )}
 
@@ -767,12 +803,14 @@ const styles = StyleSheet.create({
   lockedAddr: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
   changeLink: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
 
-  supplyCard: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginTop: 8 },
-  supplyTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading, marginBottom: 8 },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
-  chipOn: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
-  chipText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
-  chipTextOn: { fontFamily: font.semibold, color: colors.brandPrimary },
+  radioRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: 10 },
+  radioRowOn: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  radioOn: { borderColor: colors.brandPrimary },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.brandPrimary },
+  radioText: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  radioDesc: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
+  preview: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: -4, marginBottom: 4 },
 
   meterHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
   meterHeadIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },

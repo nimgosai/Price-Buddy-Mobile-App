@@ -409,3 +409,18 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Meta line under "N days remaining" now = "[supplier || business] · +N more" (13px regular
   #64748B, marginTop 3, wraps — no numberOfLines). Fuel-type prefix removed (fuel pills below
   already show it). Audit row title now wraps to 2 lines instead of 1-line ellipsis.
+
+### QUOTE WIZARD: "WHERE'S THE SUPPLY?" FLOW RESTORED (user chose deviation from web build)
+- User watched their published build video and chose to KEEP the radio flow over web-bundle parity.
+- "Your details" step now: Name/Email → "Where's the supply?" radios:
+  1. "One of my existing sites / Pick from sites on your account." → Business dropdown ("Select a
+     business", native bottom sheet) → Site dropdown ("Select a site", filtered by business) →
+     "Address: …" preview
+  2. "A new supply — I'll enter details / For a brand new site, or a business you haven't added
+     yet." → Business name / Supply address / Postcode inputs
+- Deep-link (propertyId) still shows locked "QUOTE FOR THIS SITE" card; "Change" reveals radios.
+- "Is this the supply address?" card REMOVED (is_supply_address always true in payload).
+- Validation: name+email + (locked || (existing: biz+site) || (new: name+address+postcode)).
+- Payload/energy step/review/submit unchanged (original /quotes/multi shape kept).
+- BUG FIXED during this: `/properties${bizQuery}` interpolated the FUNCTION (bizQuery is
+  () => string) → garbage URL → empty sites. Now `bizQuery()`.
