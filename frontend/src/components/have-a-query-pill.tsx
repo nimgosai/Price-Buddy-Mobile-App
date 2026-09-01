@@ -129,8 +129,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(109,40,217,0.18)",
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    minHeight: 52,
   },
   pillText: { flex: 1, fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
 

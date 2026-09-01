@@ -428,38 +428,39 @@ export default function Dashboard() {
             </View>
           )}
 
-          {/* Quick actions — 3 tiles, exactly like the original web app */}
+          {/* Quick actions — 2-column grid, four equal cards */}
           <Text style={styles.quickLabel}>Quick actions</Text>
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
-              title="Smart Bill Upload" desc="Upload electric or gas bills. We'll handle your renewal."
-              badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
+              title="Scan Bill" badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
             <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
-              title="Add another business" desc="Manage multiple companies under one account." onPress={() => setAddBiz(true)} />
+              title="Add Business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
-              title="Meter Installation" desc="Smart meter, new electric or gas supply." onPress={() => setMeter(true)} />
+              title="Meter Installation" onPress={() => setMeter(true)} />
+            <QuickAction testID="quick-action-contracts" icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
+              title="View Contracts" onPress={() => router.push("/contracts")} />
           </View>
 
           {/* Have a query pill */}
           <HaveAQueryPill />
 
-          {/* Lower-bills quote promo — mirrors the original web app */}
-          <Pressable ref={ctaRef} collapsable={false} testID="lower-bills-cta" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promo, pressed && { opacity: 0.95 }]}>
-            <View style={styles.promoIcon}>
-              <Icon name="pound" size={24} color={colors.pastel.mintIcon} />
+          {/* Quote promotional banner */}
+          <View ref={ctaRef} collapsable={false} testID="lower-bills-cta" style={styles.promo}>
+            <View style={styles.promoHead}>
+              <View style={styles.promoIcon}>
+                <Icon name="pound" size={24} color={colors.pastel.mintIcon} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.promoTitle}>Cut your business energy costs</Text>
+                <Text style={styles.promoSub}>Compare quotes from trusted UK suppliers.</Text>
+              </View>
             </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.promoTitle}>Need to lower your business utility bills in the UK?</Text>
-              <Text style={styles.promoSub}>
-                <Text style={styles.promoSubStrong}>Get a quote</Text> — we&apos;ll market-check your contract.
-              </Text>
-            </View>
-            <View testID="lower-bills-cta-pill" style={styles.promoPill}>
-              <Text style={styles.promoPillText}>Get Quote</Text>
-              <Icon name="chevronRight" size={14} color="#FFFFFF" />
-              <CtaShimmer width={100} />
-            </View>
-          </Pressable>
+            <Pressable testID="lower-bills-cta-pill" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promoBtn, pressed && { opacity: 0.9 }]}>
+              <Text style={styles.promoBtnText}>Get a quote</Text>
+              <Icon name="chevronRight" size={16} color="#FFFFFF" />
+              <CtaShimmer width={340} />
+            </Pressable>
+          </View>
         </ScrollView>
       )}
 
@@ -498,8 +499,8 @@ function PulseDot({ color }: { color: string }) {
   );
 }
 
-function QuickAction({ icon, bg, fg, title, desc, onPress, testID, badge, innerRef }: {
-  icon: any; bg: string; fg: string; title: string; desc: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View>;
+function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: {
+  icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View>;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -524,10 +525,9 @@ function QuickAction({ icon, bg, fg, title, desc, onPress, testID, badge, innerR
         </Animated.View>
       ) : null}
       <View style={[styles.qaIcon, { backgroundColor: bg }]}>
-        <Icon name={icon} size={20} color={fg} />
+        <Icon name={icon} size={22} color={fg} />
       </View>
-      <Text style={styles.qaTitle} numberOfLines={2}>{title}</Text>
-      <Text style={styles.qaDesc} numberOfLines={3}>{desc}</Text>
+      <Text style={styles.qaTitle}>{title}</Text>
     </Pressable>
   );
 }
@@ -604,22 +604,33 @@ const styles = StyleSheet.create({
   auditCallDirect: { fontFamily: font.semibold, fontSize: 11.5, color: colors.brandPrimary, textAlign: "center", marginTop: 4 },
 
   quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.8, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
-  quickGrid: { flexDirection: "row", gap: 10 },
-  qa: { flex: 1, gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 12, justifyContent: "flex-start" },
-  qaIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  qaTitle: { fontFamily: font.bold, fontSize: type.sm, lineHeight: 17, color: colors.heading },
-  qaDesc: { fontFamily: font.regular, fontSize: type.kicker, lineHeight: 15, color: colors.muted },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  qa: {
+    flexBasis: "45%",
+    flexGrow: 1,
+    minHeight: 128,
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    justifyContent: "flex-start",
+    ...shadow.card,
+  },
+  qaIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  qaTitle: { fontFamily: font.semibold, fontSize: type.lg, lineHeight: 21, color: colors.heading },
   qaBadge: {
     position: "absolute", top: 8, right: 8, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: colors.brandPrimary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
   },
   qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.3 },
 
-  promo: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.pastel.mint, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginTop: spacing.xs },
+  promo: { backgroundColor: colors.pastel.mint, borderRadius: radius.md, padding: 20, marginTop: spacing.xs, gap: spacing.lg },
+  promoHead: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   promoIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  promoTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, lineHeight: 19 },
-  promoSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4 },
-  promoSubStrong: { fontFamily: font.bold, color: colors.heading },
-  promoPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.pastel.mintIcon, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, overflow: "hidden" },
-  promoPillText: { fontFamily: font.bold, fontSize: type.sm, color: "#FFFFFF" },
+  promoTitle: { fontFamily: font.bold, fontSize: 19, lineHeight: 24, color: colors.heading, letterSpacing: -0.3 },
+  promoSub: { fontFamily: font.regular, fontSize: type.title, lineHeight: 20, color: "#065F46", marginTop: 4 },
+  promoBtn: { minHeight: 50, borderRadius: radius.md, backgroundColor: colors.pastel.mintIcon, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, overflow: "hidden" },
+  promoBtnText: { fontFamily: font.bold, fontSize: type.lg, color: "#FFFFFF" },
 });
