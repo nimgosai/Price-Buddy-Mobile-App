@@ -369,7 +369,7 @@ No login/live-data writes used — everything reconstructed from the bundle.
 
 ### HOME SCREEN REDESIGN (user-requested, supersedes 3-tile parity layout)
 - Quick actions: 2-column grid, FOUR equal cards (Scan Bill / Add Business / Meter Installation /
-  View Contracts [→ /contracts re-linked]) — icon tile + title only, NO descriptions, no truncation,
+  3 cards) — icon tile + title only. "View Contracts" tile REMOVED permanently per user (not in original build; do NOT re-add), NO descriptions, no truncation,
   minHeight 128, 16px padding, gap 12, 16px semibold labels wrap freely. "Try it" badge kept on Scan.
 - Quote promo card: vertical layout, copy EXACTLY: "Cut your business energy costs" (19px bold) /
   "Compare quotes from trusted UK suppliers." / full-width "Get a quote" button (50px, mintIcon bg,
