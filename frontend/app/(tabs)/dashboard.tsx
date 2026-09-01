@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Linking,
   Platform,
   Pressable,
   RefreshControl,
@@ -18,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Icon } from "@/src/components/icon";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
+import { CtaShimmer } from "@/src/components/cta-shimmer";
 import { SpotlightTour, TourStep } from "@/src/components/spotlight-tour";
 import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
 import { useToast } from "@/src/components/toast";
@@ -31,6 +33,7 @@ import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 export const TOUR_REPLAY_KEY = "uch_tour_replay";
 const SEEN_TRY_IT_KEY = "uch_seen_try_it";
+const SUPPORT_PHONE = "0800 368 9822";
 
 const UTILITY_LABEL: Record<string, string> = {
   electricity: "Electricity",
@@ -94,6 +97,7 @@ export default function Dashboard() {
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
   const [showTryIt, setShowTryIt] = useState(false);
+  const [callingId, setCallingId] = useState<string | null>(null);
 
   // Guided spotlight tour
   const scanRef = useRef<View>(null);
@@ -224,6 +228,32 @@ export default function Dashboard() {
   const first = items[0];
   const cfg = first ? URGENCY_CFG[urgencyFor(first.days_until_expiry, first.utility_type)] : null;
 
+  const utilChips = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    items.forEach((it) => {
+      const l = utilityLabel(it.utility_type);
+      if (!seen.has(l)) {
+        seen.add(l);
+        out.push(l);
+      }
+    });
+    return out;
+  }, [items]);
+
+  const requestCall = async (id: string) => {
+    setCallingId(id);
+    try {
+      await apiRequest(`/scans/${id}/request-call`, { method: "POST" });
+      const a = await apiRequest<any[]>("/my/audits-in-progress");
+      setAudits(Array.isArray(a) ? a : []);
+    } catch {
+      toast("Couldn't send the request. Please try again.", "error");
+    } finally {
+      setCallingId(null);
+    }
+  };
+
   const showNudge = !nudgeDismissed && !user?.push_notifications_enabled;
 
   const turnOnAlerts = async () => {
@@ -286,7 +316,7 @@ export default function Dashboard() {
               <View style={styles.nudgeIcon}>
                 <Icon name="bell" size={16} color={colors.brandPrimary} />
               </View>
-              <Text style={styles.nudgeText}>Turn on renewal alerts</Text>
+              <Text style={styles.nudgeText}>Turn on alerts so you never miss a renewal deadline.</Text>
               <Pressable testID="notif-nudge-turn-on" onPress={turnOnAlerts} disabled={turningOn} style={styles.nudgeBtn}>
                 {turningOn ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.nudgeBtnText}>Turn on</Text>}
               </Pressable>
@@ -297,73 +327,137 @@ export default function Dashboard() {
           )}
 
           {/* Compact status badge */}
+          {/* Trust banner / expiring contracts card — mirrors the original web app */}
           {items.length === 0 ? (
-            <View style={styles.statusBadge} testID="trust-banner">
-              <View style={styles.statusIconOk}>
-                <Icon name="shield" size={18} color="#FFFFFF" />
+            <View style={styles.trustBanner} testID="trust-banner">
+              <View style={styles.trustIcon}>
+                <Icon name="shield" size={26} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.statusTitle}>All contracts secured</Text>
-                <Text style={styles.statusSub}>Nothing due soon</Text>
+                <Text style={styles.trustKicker}>Fully secured</Text>
+                <Text style={styles.trustTitle}>You&apos;re completely covered</Text>
+                <Text style={styles.trustSub}>No utility contracts expiring soon — our systems are watching everything.</Text>
               </View>
             </View>
           ) : (
-            <Pressable testID="expiring-soon-card" onPress={() => router.push("/renewals")} style={({ pressed }) => [styles.statusBadge, pressed && { opacity: 0.9 }]}>
-              <View testID="expiring-count" style={[styles.statusCount, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
-                <Text style={[styles.statusCountText, { color: cfg?.accent }]}>{items.length}</Text>
+            <Pressable testID="expiring-soon-card" onPress={() => router.push("/renewals")} style={({ pressed }) => [styles.expCard, pressed && { opacity: 0.95 }]}>
+              <View style={styles.expTopRow}>
+                <View testID="expiring-count" style={[styles.expCount, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
+                  <Text style={[styles.expCountText, { color: cfg?.accent }]}>{items.length}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <PulseDot color={cfg?.accent || "#DC2626"} />
+                    <Text style={[styles.expDays, { color: cfg?.accent }]}>
+                      {first.days_until_expiry < 0 ? `${Math.abs(first.days_until_expiry)} days overdue` : `${first.days_until_expiry} days remaining`}
+                    </Text>
+                  </View>
+                  <Text style={styles.expMeta} numberOfLines={1}>
+                    {utilityLabel(first.utility_type)}
+                    {first.supplier_name ? ` · ${first.supplier_name}` : ""}
+                    {first.business_name ? ` · ${first.business_name}` : ""}
+                    {items.length > 1 ? ` · +${items.length - 1} more` : ""}
+                  </Text>
+                </View>
+                {first.renewable_now ? (
+                  <View testID="renewable-pill" style={[styles.renewablePill, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
+                    <Text style={[styles.renewablePillText, { color: cfg?.accent }]}>Renewable now</Text>
+                  </View>
+                ) : null}
               </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.statusTitle}>
-                  {items.length === 1 ? "1 contract needs attention" : `${items.length} contracts need attention`}
-                </Text>
-                <Text style={[styles.statusSub, { color: cfg?.accent }]} numberOfLines={1}>
-                  {first.days_until_expiry < 0 ? `${Math.abs(first.days_until_expiry)} days overdue` : `${first.days_until_expiry} days left`} · {utilityLabel(first.utility_type)}
-                </Text>
+              <Text testID="expiring-card-title" style={styles.expTitle}>{cfg?.title}</Text>
+              {utilChips.length > 0 && (
+                <View style={styles.expChips}>
+                  {utilChips.map((c) => (
+                    <View key={c} style={styles.expChip}>
+                      <Text style={styles.expChipText}>{c}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <View style={styles.expLink} testID="view-sites-link">
+                <Text style={styles.expLinkText}>{items.length > 1 ? `View these ${items.length} contracts` : "View this contract"}</Text>
+                <Icon name="chevronRight" size={16} color={colors.heading} />
               </View>
-              <Icon name="chevronRight" size={18} color={colors.muted} />
             </Pressable>
           )}
 
-          {/* Audit in progress */}
+          {/* Audit in progress — mirrors the original web app */}
           {audits.length > 0 && (
             <View style={styles.audit} testID="audit-in-progress-card">
-              <View style={styles.auditIcon}>
-                <Icon name="document" size={16} color="#B45309" />
+              <View style={styles.auditHead}>
+                <View style={styles.auditIcon}>
+                  <Icon name="scan" size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.auditTitle}>Audit in progress</Text>
+                  <Text style={styles.auditSub}>
+                    Our team is verifying {audits.length === 1 ? "your bill" : `${audits.length} bills`}. We&apos;ll be in touch once everything&apos;s confirmed.
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.auditText}>
-                Verifying {audits.length} {audits.length === 1 ? "bill" : "bills"}
-              </Text>
+              {audits.slice(0, 3).map((a) => {
+                const called = !!a.call_requested_at;
+                const intent = ({ track: "Tracking", quote: "Quote requested", both: "Tracking + Quote" } as Record<string, string>)[a.intent || "track"] || "Tracking";
+                return (
+                  <View key={a.id} testID={`audit-row-${a.id}`} style={styles.auditRow}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.auditRowTitle} numberOfLines={1}>
+                        {a.supplier_name || "Bill upload"} · {a.supply_address || "Awaiting details"}
+                      </Text>
+                      <Text style={styles.auditRowSub}>
+                        {intent}
+                        {a.pages_uploaded > 1 ? ` · ${a.pages_uploaded} pages` : ""}
+                      </Text>
+                    </View>
+                    {called ? (
+                      <View style={styles.auditCalled} testID={`audit-call-confirmed-${a.id}`}>
+                        <Text style={styles.auditCalledText}>☎ CALL REQUESTED</Text>
+                      </View>
+                    ) : (
+                      <Pressable testID={`audit-request-call-${a.id}`} disabled={callingId === a.id} onPress={() => requestCall(a.id)} style={styles.auditCallBtn}>
+                        <Text style={styles.auditCallBtnText}>{callingId === a.id ? "Sending…" : "Request a Call Now"}</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })}
+              <Pressable testID="audit-call-direct" onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE.replace(/\s/g, "")}`)} hitSlop={6}>
+                <Text style={styles.auditCallDirect}>Or call us direct on {SUPPORT_PHONE}</Text>
+              </Pressable>
             </View>
           )}
 
-          {/* Quick actions — compact 2-column grid */}
-          <Text style={styles.quickLabel}>QUICK ACTIONS</Text>
+          {/* Quick actions — 3 tiles, exactly like the original web app */}
+          <Text style={styles.quickLabel}>Quick actions</Text>
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
-              title="Scan Bill" badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
+              title="Smart Bill Upload" desc="Upload electric or gas bills. We'll handle your renewal."
+              badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
             <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
-              title="Add Business" onPress={() => setAddBiz(true)} />
-            <QuickAction testID="quick-action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
-              title="Meter Installation" onPress={() => setMeter(true)} />
-            <QuickAction testID="quick-action-contracts" icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
-              title="View Contracts" onPress={() => router.push("/contracts")} />
+              title="Add another business" desc="Manage multiple companies under one account." onPress={() => setAddBiz(true)} />
+            <QuickAction testID="action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
+              title="Meter Installation" desc="Smart meter, new electric or gas supply." onPress={() => setMeter(true)} />
           </View>
 
           {/* Have a query pill */}
           <HaveAQueryPill />
 
-          {/* Lower-bills quote promo — concise */}
+          {/* Lower-bills quote promo — mirrors the original web app */}
           <Pressable ref={ctaRef} collapsable={false} testID="lower-bills-cta" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promo, pressed && { opacity: 0.95 }]}>
             <View style={styles.promoIcon}>
-              <Icon name="pound" size={22} color={colors.pastel.mintIcon} />
+              <Icon name="pound" size={24} color={colors.pastel.mintIcon} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.promoTitle}>Lower your utility bills</Text>
-              <Text style={styles.promoSub}>Free market check on your contract</Text>
+              <Text style={styles.promoTitle}>Need to lower your business utility bills in the UK?</Text>
+              <Text style={styles.promoSub}>
+                <Text style={styles.promoSubStrong}>Get a quote</Text> — we&apos;ll market-check your contract.
+              </Text>
             </View>
-            <View style={styles.promoPill}>
+            <View testID="lower-bills-cta-pill" style={styles.promoPill}>
               <Text style={styles.promoPillText}>Get Quote</Text>
               <Icon name="chevronRight" size={14} color="#FFFFFF" />
+              <CtaShimmer width={100} />
             </View>
           </Pressable>
         </ScrollView>
@@ -377,11 +471,36 @@ export default function Dashboard() {
   );
 }
 
-function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: {
-  icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View>;
+function PulseDot({ color }: { color: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.55)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(scale, { toValue: 2, duration: 1100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 1, duration: 0, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 0, duration: 1100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(opacity, { toValue: 0.55, duration: 0, useNativeDriver: true }),
+        ]),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scale, opacity]);
+  return (
+    <View style={{ width: 8, height: 8, alignItems: "center", justifyContent: "center" }}>
+      <Animated.View style={{ position: "absolute", width: 8, height: 8, borderRadius: 4, backgroundColor: color, opacity, transform: [{ scale }] }} />
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+    </View>
+  );
+}
+
+function QuickAction({ icon, bg, fg, title, desc, onPress, testID, badge, innerRef }: {
+  icon: any; bg: string; fg: string; title: string; desc: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View>;
 }) {
-  const { width } = useWindowDimensions();
-  const fontSize = Math.max(12, Math.min(15, width * 0.037));
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (!badge) return;
@@ -405,11 +524,10 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: 
         </Animated.View>
       ) : null}
       <View style={[styles.qaIcon, { backgroundColor: bg }]}>
-        <Icon name={icon} size={22} color={fg} />
+        <Icon name={icon} size={20} color={fg} />
       </View>
-      <Text style={[styles.qaTitle, { fontSize, lineHeight: fontSize * 1.25 }]} numberOfLines={2}>
-        {title}
-      </Text>
+      <Text style={styles.qaTitle} numberOfLines={2}>{title}</Text>
+      <Text style={styles.qaDesc} numberOfLines={3}>{desc}</Text>
     </Pressable>
   );
 }
@@ -434,33 +552,63 @@ const styles = StyleSheet.create({
   nudgeBtnText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
   nudgeClose: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
 
-  statusBadge: {
+  trustBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    gap: 14,
+    backgroundColor: "#D1FAE5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  trustIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
+  trustKicker: { fontFamily: font.bold, fontSize: type.sm, color: "#065F46" },
+  trustTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: 2, marginBottom: 4 },
+  trustSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, lineHeight: 17 },
+
+  expCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    padding: spacing.md,
     ...shadow.card,
   },
-  statusIconOk: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#10B981", alignItems: "center", justifyContent: "center" },
-  statusCount: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  statusCountText: { fontFamily: font.bold, fontSize: type.lg },
-  statusTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
-  statusSub: { fontFamily: font.medium, fontSize: type.sm, color: colors.muted, marginTop: 2 },
+  expTopRow: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 10 },
+  expCount: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  expCountText: { fontFamily: font.bold, fontSize: 22 },
+  expDays: { fontFamily: font.bold, fontSize: type.sm },
+  expMeta: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 2 },
+  renewablePill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1 },
+  renewablePillText: { fontFamily: font.bold, fontSize: 11 },
+  expTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginBottom: 12 },
+  expChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
+  expChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
+  expChipText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
+  expLink: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4 },
+  expLinkText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
 
-  audit: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A", borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  auditIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  auditText: { flex: 1, fontFamily: font.semibold, fontSize: type.sm, color: "#92400E" },
+  audit: { backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A", borderRadius: radius.md, padding: spacing.md },
+  auditHead: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 12 },
+  auditIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" },
+  auditTitle: { fontFamily: font.bold, fontSize: type.base, color: "#92400E" },
+  auditSub: { fontFamily: font.regular, fontSize: type.sm, color: "#78350F", lineHeight: 18, marginTop: 2 },
+  auditRow: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFFFFF", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
+  auditRowTitle: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurface },
+  auditRowSub: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2 },
+  auditCalled: { backgroundColor: "#10B981", paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill },
+  auditCalledText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.3, color: "#FFFFFF" },
+  auditCallBtn: { borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
+  auditCallBtnText: { fontFamily: font.semibold, fontSize: type.kicker, color: colors.brandPrimary },
+  auditCallDirect: { fontFamily: font.semibold, fontSize: 11.5, color: colors.brandPrimary, textAlign: "center", marginTop: 4 },
 
-  quickLabel: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.5, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 2 },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  qa: { width: "47.5%", flexGrow: 1, gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 12, minHeight: 92, justifyContent: "flex-start" },
-  qaIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  qaTitle: { fontFamily: font.bold, color: colors.heading },
+  quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.8, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
+  quickGrid: { flexDirection: "row", gap: 10 },
+  qa: { flex: 1, gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 12, justifyContent: "flex-start" },
+  qaIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  qaTitle: { fontFamily: font.bold, fontSize: type.sm, lineHeight: 17, color: colors.heading },
+  qaDesc: { fontFamily: font.regular, fontSize: type.kicker, lineHeight: 15, color: colors.muted },
   qaBadge: {
     position: "absolute", top: 8, right: 8, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: colors.brandPrimary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
@@ -468,9 +616,10 @@ const styles = StyleSheet.create({
   qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.3 },
 
   promo: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.pastel.mint, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginTop: spacing.xs },
-  promoIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  promoTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
-  promoSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 2 },
-  promoPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.pastel.mintIcon, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill },
-  promoPillText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
+  promoIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  promoTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, lineHeight: 19 },
+  promoSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 4 },
+  promoSubStrong: { fontFamily: font.bold, color: colors.heading },
+  promoPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.pastel.mintIcon, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.pill, overflow: "hidden" },
+  promoPillText: { fontFamily: font.bold, fontSize: type.sm, color: "#FFFFFF" },
 });

@@ -332,3 +332,37 @@ No login/live-data writes used — everything reconstructed from the bundle.
   immediately after toggling demo on native (web already reloads).
 - Removed the incorrectly-added "Phone (optional)" field from the Quote Wizard details step earlier
   in this session (only Name + Email now, matching original).
+### STRICT PARITY PASS (user-demanded; matches original web bundle exactly)
+- Quote wizard app/quote/new.tsx FULLY REWRITTEN to mirror the original bundle 1:1:
+  - Steps: service → global ("Your details") → energy → water → telecoms → review.
+  - "Your details" = Name + Email (prefilled, tinted) + h3 "Site" + single Site DROPDOWN
+    (native bottom-sheet SelectField) + Business name ("BIOS Ltd") + Address ("123 Boulevard
+    Avenue") + Postcode ("SW1A 1AA") + "Is this the supply address?" Yes / "No — different site"
+    chips (+ Supply postcode when No). Radio "Where's the supply?" + business picker REMOVED.
+  - Locked-site card "QUOTE FOR THIS SITE" + "Change" when propertyId param present.
+  - Energy step: "Energy details"; supplier CHIPS (10 UK suppliers + "I don't know" + free text),
+    Contract end date dropdown incl. "Don't Know", MPAN/MPRN (optional) numeric, "From your
+    contract" prefill badge, "Add another Electric/Gas Meter".
+  - Deep-link rules: ?utility= skips service step (pips hide first, "Step max(1,s) of len-1");
+    ?contractId&utility∈{electricity,gas} skips energy step + shows "EXPIRING SOON" renewing pill
+    on Review. Accepts propertyId|property and incumbent params.
+  - Payload = original shape: {selected_services, contact{name,email}, address{property_id,
+    business_name, full_address, postcode, is_supply_address, supply_postcode}, energy_meters
+    [{_id,utility,supplier,contract_end_window,meter_point_number}], water_supplier,
+    telecoms_supplier} → POST /quotes/multi → /quote/success?id={quote_request_id}.
+  - Validation msg: "Please complete the highlighted fields." Submit btn "Submit request" with
+    CtaShimmer sweep.
+- quote/success.tsx rewritten: mint 110px document circle, "Request received", exact body copy,
+  "Reference: {id8}", "Back to dashboard" + "+ Request another quote".
+- Dashboard parity: Quick actions now 3 tiles w/ exact titles+descs (Smart Bill Upload / Add
+  another business / Meter Installation) — "View Contracts" tile REMOVED (route file kept but
+  unlinked). Trust banner "Fully secured / You're completely covered / No utility contracts…".
+  Expiring card full layout (count circle, pulsing dot days line, utility·supplier·biz·+N more,
+  urgency title, utility chips, "View these N contracts"). Audit card full layout ("Audit in
+  progress", per-row "Request a Call Now" → POST /scans/{id}/request-call, "☎ CALL REQUESTED",
+  "Or call us direct on 0800 368 9822"). Nudge text "Turn on alerts so you never miss a renewal
+  deadline." Promo exact copy + ANIMATED shimmer "Get Quote" pill (CtaShimmer).
+- Renewals: dynamic subtitle "N contracts across M sites · K businesses" / "Nothing urgent right
+  now"; empty msg "No contracts expiring within 90 days."
+- New components: src/components/select-field.tsx (native tap-to-open dropdown bottom sheet),
+  src/components/cta-shimmer.tsx (shimmer band). renewals.tsx entry params → propertyId/utility/contractId.

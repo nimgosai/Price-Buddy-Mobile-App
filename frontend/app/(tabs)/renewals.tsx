@@ -89,12 +89,20 @@ export default function Renewals() {
     setRefreshing(false);
   }, [load]);
 
+  // Mirrors the original: "N contracts across M sites · K businesses"
+  const subtitle = (() => {
+    if (items.length === 0) return "Nothing urgent right now";
+    const sites = new Set(items.map((c: any) => c.property_id || c.property_name || c.id)).size;
+    const bizzes = new Set(items.map((c: any) => c.business_name).filter(Boolean)).size;
+    return `${items.length} contract${items.length === 1 ? "" : "s"} across ${sites} site${sites === 1 ? "" : "s"}${bizzes > 1 ? ` · ${bizzes} businesses` : ""}`;
+  })();
+
   return (
     <View style={styles.root}>
       <ScreenHeader
         testID="renewals-header"
         title="Renewals coming up"
-        subtitle="Contracts in the 90-day action window"
+        subtitle={subtitle}
         onBack={() => router.push("/dashboard")}
       />
       {loading ? (
@@ -118,7 +126,7 @@ export default function Renewals() {
               testID="renewals-empty"
               icon="checkmark-done-circle-outline"
               title="You're all caught up"
-              message="No contracts expiring within 90 days. We'll flag them here the moment one gets close."
+              message="No contracts expiring within 90 days."
             >
               <Button
                 testID="renewals-scan-button"
@@ -176,10 +184,9 @@ export default function Renewals() {
                       router.push({
                         pathname: "/quote/new",
                         params: {
-                          utility_type: c.utility_type || "electricity",
-                          contract_id: c.id || c._id || "",
-                          property_id: c.property_id || "",
-                          supplier: c.supplier_name || c.supplier || "",
+                          utility: c.utility_type || "electricity",
+                          contractId: c.id || c._id || "",
+                          propertyId: c.property_id || "",
                         },
                       })
                     }
