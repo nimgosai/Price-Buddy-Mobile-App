@@ -72,9 +72,9 @@ const URGENCY_CFG: Record<string, Cfg> = {
 
 function greeting(): { salutation: string; subtitle: string } {
   const h = new Date().getHours();
-  if (h >= 5 && h < 12) return { salutation: "Good Morning", subtitle: "A fresh start — let's see what's ahead today." };
-  if (h >= 12 && h < 17) return { salutation: "Good Afternoon", subtitle: "Mid-day check-in — here's where things stand." };
-  return { salutation: "Good Evening", subtitle: "Winding down — quick scan before you log off?" };
+  if (h >= 5 && h < 12) return { salutation: "Good morning", subtitle: "A fresh start — let's see what's ahead today." };
+  if (h >= 12 && h < 17) return { salutation: "Good afternoon", subtitle: "Mid-day check-in — here's where things stand." };
+  return { salutation: "Good evening", subtitle: "Winding down — quick scan before you log off?" };
 }
 
 export default function Dashboard() {
@@ -208,9 +208,9 @@ export default function Dashboard() {
     });
   }, [loading, items.length]);
 
-  const firstName = useMemo(() => {
+  const displayName = useMemo(() => {
     const fn = user?.full_name?.trim();
-    if (fn) return fn.split(/\s+/)[0];
+    if (fn) return fn;
     if (user?.email) return user.email.split("@")[0];
     return "there";
   }, [user]);
@@ -264,9 +264,12 @@ export default function Dashboard() {
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text testID="dashboard-greeting" style={styles.greetTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                {g.salutation}, {firstName}
+            <View style={styles.greetTextBlock}>
+              <Text testID="dashboard-greeting" style={styles.greetSalutation} numberOfLines={1}>
+                {g.salutation},
+              </Text>
+              <Text testID="dashboard-greeting-name" style={styles.greetName} numberOfLines={2} ellipsizeMode="tail">
+                {displayName}
               </Text>
             </View>
             <Pressable testID="dashboard-bell" onPress={() => router.push("/profile")} hitSlop={8} style={styles.bell}>
@@ -416,10 +419,12 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: { padding: spacing.lg, gap: 12 },
 
-  greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: 4 },
+  greetRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: 4, paddingVertical: 4 },
+  greetTextBlock: { flex: 1, minWidth: 0, justifyContent: "center" },
+  greetSalutation: { fontFamily: font.medium, fontSize: type.base, color: colors.heading, letterSpacing: -0.1, marginBottom: 1 },
+  greetName: { fontFamily: font.semibold, fontSize: type.xl, color: colors.heading, letterSpacing: -0.3, lineHeight: 22 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.pastel.lavender, alignItems: "center", justifyContent: "center" },
   avatarText: { fontFamily: font.bold, fontSize: type.lg, color: colors.pastel.lavenderIcon },
-  greetTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, letterSpacing: -0.3 },
   bell: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", ...shadow.card },
 
   nudge: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.brandTertiary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },

@@ -104,7 +104,9 @@ No login/live-data writes used — everything reconstructed from the bundle.
   fallback https://utility-contract-hub.emergent.host. Fork-proof.
 
 ### DONE
-- Phase 1 — Dashboard: time-based greeting (Good Morning/Afternoon/Evening + subtitles), bell→/profile,
+- Phase 1 — Dashboard: time-based greeting (sentence case "Good morning/afternoon/evening," on line 1
+  ~14px medium + full display name on line 2 ~18px semibold, name wraps up to 2 lines then ellipsizes;
+  avatar left / bell right stay fixed and vertically centred), bell→/profile,
   alerts nudge, trust banner ("Fully secured / You're completely covered") vs "Action required" card
   (urgency config gl: expired/critical/high/medium/renewable/low/normal titles+pills+accents),
   Quick Actions (Smart Bill Upload→/scan, Add another business [modal→POST /businesses],
