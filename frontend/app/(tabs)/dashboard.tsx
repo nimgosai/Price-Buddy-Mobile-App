@@ -625,11 +625,11 @@ const styles = StyleSheet.create({
   },
   qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.5 },
 
-  promo: { backgroundColor: colors.pastel.mint, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.xs, gap: spacing.md },
-  promoHead: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  promo: { backgroundColor: colors.pastel.mint, borderRadius: 16, padding: spacing.lg, marginTop: spacing.xs, gap: 15 },
+  promoHead: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   promoIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   promoTitle: { fontFamily: font.bold, fontSize: type.lg, lineHeight: 21, color: colors.heading, letterSpacing: -0.2 },
-  promoSub: { fontFamily: font.regular, fontSize: type.sm, lineHeight: 18, color: "#065F46", marginTop: 3 },
-  promoBtn: { minHeight: 42, borderRadius: radius.sm, backgroundColor: colors.pastel.mintIcon, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 5, overflow: "hidden" },
+  promoSub: { fontFamily: font.regular, fontSize: type.sm, lineHeight: 18, color: "#065F46", marginTop: 4 },
+  promoBtn: { minHeight: 42, borderRadius: 10, backgroundColor: "#1E6B47", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, overflow: "hidden" },
   promoBtnText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
 });

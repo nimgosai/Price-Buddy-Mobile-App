@@ -400,3 +400,7 @@ No login/live-data writes used — everything reconstructed from the bundle.
   dropdown; the switcher only exists on Sites and Reports. Removed BusinessSwitcherChip from
   dashboard.tsx and deleted the now-dead "dashboard" variant/compact styles from
   business-switcher-chip.tsx. Sites/Reports switchers unchanged and verified working.
+
+### PROMO CARD MICRO-REFINEMENT (user-requested)
+- Promo card: borderRadius 16, padding 16, head gap 12, heading→sub gap 4px, sub→button gap 15px,
+  button 42px full-width #1E6B47 forest green radius 10, 14px semibold white + chevron (shimmer kept).
