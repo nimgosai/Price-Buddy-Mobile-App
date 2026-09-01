@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing["2xl"], alignItems: "flex-start" },
   logo: { width: 96, height: 72, marginBottom: spacing.md },
-  eyebrow: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.5, color: colors.brandPrimary, textTransform: "uppercase", marginBottom: spacing.sm },
+  eyebrow: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.brandPrimary, textTransform: "uppercase", marginBottom: spacing.sm },
   headline: { fontFamily: font.bold, fontSize: type["3xl"], color: colors.heading, letterSpacing: -0.6, lineHeight: 36 },
   accent: { fontFamily: font.semibold, fontSize: type.lg, color: colors.brandPrimary, marginTop: spacing.sm },
   sub: { fontFamily: font.regular, fontSize: type.base, color: colors.onSurfaceSecondary, marginTop: spacing.md, lineHeight: 22 },

@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   thumbRemove: { position: "absolute", top: 2, right: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: "#DC2626", alignItems: "center", justifyContent: "center" },
   thumbRemoveText: { color: "#fff", fontFamily: font.bold, fontSize: 14, lineHeight: 16 },
   thumbLabel: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.55)", paddingVertical: 2, alignItems: "center" },
-  thumbLabelText: { color: "#fff", fontFamily: font.semibold, fontSize: 9, letterSpacing: 0.3 },
+  thumbLabelText: { color: "#fff", fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5 },
 
   pdfChip: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.pill, marginBottom: spacing.md, ...shadow.card, maxWidth: "100%" },
   pdfName: { flexShrink: 1, fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },

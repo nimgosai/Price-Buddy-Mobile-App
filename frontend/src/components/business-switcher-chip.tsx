@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   compactText: { flexShrink: 1, fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
-  chipKicker: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.4, textTransform: "uppercase" },
+  chipKicker: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase" },
   chipName: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 1 },
   switch: { fontFamily: font.semibold, fontSize: type.sm },
 

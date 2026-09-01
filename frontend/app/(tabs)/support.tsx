@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   emailLink: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, textDecorationLine: "underline" },
 
   helpCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, gap: spacing.md, ...shadow.card },
-  helpKicker: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.5, color: colors.muted, textTransform: "uppercase" },
+  helpKicker: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, textTransform: "uppercase" },
   helpTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, marginBottom: spacing.xs, letterSpacing: -0.3 },
   helpItem: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
   helpIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },

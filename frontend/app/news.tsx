@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   errorCard: { alignItems: "center", gap: spacing.md },
   errorText: { fontFamily: font.medium, fontSize: type.base, color: colors.onSurfaceSecondary, textAlign: "center" },
   card: { gap: spacing.xs },
-  cat: { fontFamily: font.semibold, fontSize: 10, color: colors.brandPrimary, letterSpacing: 0.5 },
+  cat: { fontFamily: font.bold, fontSize: 10, color: colors.brandPrimary, letterSpacing: 0.5 },
   title: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, lineHeight: 22 },
   summary: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, marginTop: 2, lineHeight: 20 },
   metaRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },

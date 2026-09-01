@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  totalLabel: { fontFamily: font.bold, fontSize: type.sm, color: "rgba(255,255,255,0.95)", textTransform: "uppercase", letterSpacing: 0.8 },
+  totalLabel: { fontFamily: font.bold, fontSize: type.sm, color: "rgba(255,255,255,0.95)", textTransform: "uppercase", letterSpacing: 0.6 },
   totalValue: { fontFamily: font.bold, fontSize: 38, color: "#FFFFFF", letterSpacing: -0.5, marginTop: 4 },
   totalSub: { fontFamily: font.medium, fontSize: type.sm, color: "rgba(255,255,255,0.92)", marginTop: 6 },
   watermark: { position: "absolute", right: -8, bottom: -52, fontSize: 168, lineHeight: 168, fontFamily: font.bold, color: "#FFFFFF", opacity: 0.06, pointerEvents: "none" },

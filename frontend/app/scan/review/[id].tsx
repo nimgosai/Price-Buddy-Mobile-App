@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   scroll: { padding: spacing.lg, gap: spacing.md },
 
   pagesBadge: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", backgroundColor: "#F5F3FF", borderWidth: 1, borderColor: "#DDD6FE", paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill },
-  pagesText: { fontFamily: font.semibold, fontSize: 10, letterSpacing: 0.3, color: colors.heading },
+  pagesText: { fontFamily: font.semibold, fontSize: 10, letterSpacing: 0.5, color: colors.heading },
 
   matchCard: { flexDirection: "row", gap: 10, borderWidth: 1, borderRadius: radius.md, padding: spacing.md },
   matchTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   label: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
   prefillTag: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#ECFDF5", paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.pill },
-  prefillText: { fontFamily: font.semibold, fontSize: 9, color: colors.pastel.mintIcon },
+  prefillText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5, color: colors.pastel.mintIcon },
   input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.md, fontFamily: font.regular, fontSize: type.base, color: colors.onSurface, backgroundColor: colors.surface },
   inputPrefilled: { backgroundColor: "#F5F3FF", borderColor: "#DDD6FE" },
 

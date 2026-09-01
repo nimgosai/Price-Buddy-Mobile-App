@@ -387,3 +387,10 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Audit card: now shows only the FIRST audit row + "+N more bills being verified" caption
   (removes the "duplicate Request a Call Now bars" the user complained about).
 - Verified via screenshots at 390px and 320px.
+
+### TYPOGRAPHY UNIFORMITY PASS (user-requested)
+- Standardised micro-typography app-wide: all uppercase kickers/section labels = Geist-Bold 11
+  (type.kicker) / letterSpacing 0.6; all tiny badges = Geist-Bold 10 / letterSpacing 0.5.
+- Killed fractional/one-off sizes (9, 9.5, 11.5, 12.5, 14.5 → tokens) in dashboard, quote/new,
+  scan, scan review, news. Heading tracking: -0.3 at 18–24px, -0.5 at 30px+ (intentional).
+- All text uses the Geist family tokens (regular/medium/semibold/bold) — no raw font names.

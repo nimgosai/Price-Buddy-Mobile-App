@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   expDays: { fontFamily: font.bold, fontSize: type.sm },
   expMeta: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 2 },
   renewablePill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1 },
-  renewablePillText: { fontFamily: font.bold, fontSize: 11 },
+  renewablePillText: { fontFamily: font.bold, fontSize: type.kicker },
   expTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginBottom: 12 },
   expChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
   expChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
@@ -602,12 +602,12 @@ const styles = StyleSheet.create({
   auditRowTitle: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurface },
   auditRowSub: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2 },
   auditCalled: { backgroundColor: "#10B981", paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill },
-  auditCalledText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.3, color: "#FFFFFF" },
+  auditCalledText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5, color: "#FFFFFF" },
   auditCallBtn: { borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
   auditCallBtnText: { fontFamily: font.semibold, fontSize: type.kicker, color: colors.brandPrimary },
-  auditCallDirect: { fontFamily: font.semibold, fontSize: 11.5, color: colors.brandPrimary, textAlign: "center", marginTop: 4 },
+  auditCallDirect: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary, textAlign: "center", marginTop: 4 },
 
-  quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.8, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
+  quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
   quickGrid: { flexDirection: "row", gap: 12 },
   qa: {
     flex: 1,
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
     position: "absolute", top: 8, right: 8, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: colors.brandPrimary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
   },
-  qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.3 },
+  qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.5 },
 
   promo: { backgroundColor: colors.pastel.mint, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.xs, gap: spacing.md },
   promoHead: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },

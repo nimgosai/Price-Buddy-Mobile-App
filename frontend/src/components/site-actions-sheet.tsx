@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   grabber: { width: 40, height: 4, borderRadius: 4, backgroundColor: colors.border, alignSelf: "center", marginBottom: spacing.md },
-  eyebrow: { fontFamily: font.bold, fontSize: 11, letterSpacing: 0.6, color: colors.muted, marginBottom: 6 },
+  eyebrow: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, marginBottom: 6 },
   title: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginBottom: spacing.md },
   row: {
     flexDirection: "row",
