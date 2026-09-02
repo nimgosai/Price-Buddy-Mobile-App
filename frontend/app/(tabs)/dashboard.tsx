@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Linking,
   Platform,
   Pressable,
   RefreshControl,
@@ -33,7 +32,6 @@ import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 export const TOUR_REPLAY_KEY = "uch_tour_replay";
 const SEEN_TRY_IT_KEY = "uch_seen_try_it";
-const SUPPORT_PHONE = "0800 368 9822";
 
 const UTILITY_LABEL: Record<string, string> = {
   electricity: "Electricity",
@@ -380,35 +378,32 @@ export default function Dashboard() {
             </Pressable>
           )}
 
-          {/* Audit in progress — friendly, light card */}
+          {/* Bill verification — compact status card */}
           {audits.length > 0 && (
             <View style={styles.audit} testID="audit-in-progress-card">
               <View style={styles.auditHead}>
                 <View style={styles.auditIcon}>
-                  <Icon name="scan" size={18} color="#D97706" />
+                  <Icon name="document" size={20} color="#D97706" />
                 </View>
-                <Text style={styles.auditTitle}>⏳ We&apos;re verifying your bill</Text>
-              </View>
-              <Text style={styles.auditSub}>
-                Our team is checking your rates. We&apos;ll be in touch as soon as everything&apos;s confirmed!
-              </Text>
-              <View style={styles.auditBtnRow}>
-                <Pressable testID="audit-track-status" onPress={() => router.push("/support")} style={[styles.auditBtn, styles.auditBtnGhost]}>
-                  <Text style={styles.auditBtnGhostText}>Track status</Text>
-                </Pressable>
-                {audits[0]?.call_requested_at ? (
-                  <View style={[styles.auditBtn, styles.auditBtnDone]} testID="audit-call-confirmed">
-                    <Text style={styles.auditBtnDoneText}>☎ Call requested</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.auditTitle}>Bill verification in progress</Text>
+                  <View style={styles.auditPill}>
+                    <Text style={styles.auditPillText}>1 business day turnaround</Text>
                   </View>
-                ) : (
-                  <Pressable testID="audit-request-call" disabled={callingId === audits[0]?.id} onPress={() => requestCall(audits[0].id)} style={[styles.auditBtn, styles.auditBtnPrimary]}>
-                    <Text style={styles.auditBtnPrimaryText}>{callingId === audits[0]?.id ? "Sending…" : "Request a call"}</Text>
-                  </Pressable>
-                )}
+                </View>
               </View>
-              <Pressable testID="audit-call-direct" onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE.replace(/\s/g, "")}`)} hitSlop={6}>
-                <Text style={styles.auditCallDirect}>📞 Or call free on {SUPPORT_PHONE}</Text>
-              </Pressable>
+              <Text style={styles.auditSub} numberOfLines={2}>
+                Our team is analysing your contract rates to find the best savings. We&apos;ll notify you as soon as your comparison is ready.
+              </Text>
+              {audits[0]?.call_requested_at ? (
+                <View style={styles.auditDone} testID="audit-call-confirmed">
+                  <Text style={styles.auditDoneText}>☎ Callback requested</Text>
+                </View>
+              ) : (
+                <Pressable testID="audit-request-call" disabled={callingId === audits[0]?.id} onPress={() => requestCall(audits[0].id)} style={({ pressed }) => [styles.auditCta, pressed && { opacity: 0.7 }]}>
+                  <Text style={styles.auditCtaText}>{callingId === audits[0]?.id ? "Sending…" : "Request a callback"}</Text>
+                </Pressable>
+              )}
             </View>
           )}
 
@@ -573,20 +568,17 @@ const styles = StyleSheet.create({
   expLink: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4 },
   expLinkText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
 
-  audit: { backgroundColor: colors.surface, borderWidth: 1, borderColor: "#F1F5F9", borderRadius: 18, padding: spacing.lg, gap: 10, ...shadow.card },
-  auditHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  audit: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderLeftWidth: 3, borderLeftColor: "#F59E0B", borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, gap: 10, ...shadow.card },
+  auditHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   auditIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center" },
-  auditTitle: { flex: 1, fontFamily: font.semibold, fontSize: 15, color: colors.heading },
+  auditTitle: { fontFamily: font.semibold, fontSize: 15, color: colors.heading },
+  auditPill: { alignSelf: "flex-start", marginTop: 4, backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill },
+  auditPillText: { fontFamily: font.medium, fontSize: 12, color: "#B45309" },
   auditSub: { fontFamily: font.regular, fontSize: 13, color: colors.onSurfaceSecondary, lineHeight: 18 },
-  auditBtnRow: { flexDirection: "row", gap: 10 },
-  auditBtn: { flex: 1, height: 38, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  auditBtnGhost: { backgroundColor: "#F1F5F9", borderWidth: 1, borderColor: "#E2E8F0" },
-  auditBtnGhostText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurfaceSecondary },
-  auditBtnPrimary: { backgroundColor: colors.brandPrimary },
-  auditBtnPrimaryText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
-  auditBtnDone: { backgroundColor: "#10B981" },
-  auditBtnDoneText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
-  auditCallDirect: { fontFamily: font.medium, fontSize: 12, color: colors.muted, textAlign: "center", marginTop: 2 },
+  auditCta: { alignSelf: "flex-start", height: 36, borderRadius: radius.pill, borderWidth: 1, borderColor: "#CBD5E1", paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
+  auditCtaText: { fontFamily: font.semibold, fontSize: 13, color: colors.heading },
+  auditDone: { alignSelf: "flex-start", height: 36, borderRadius: radius.pill, backgroundColor: "#ECFDF5", borderWidth: 1, borderColor: "#A7F3D0", paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
+  auditDoneText: { fontFamily: font.semibold, fontSize: 13, color: "#047857" },
 
   quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
   quickGrid: { flexDirection: "row", gap: 12 },
