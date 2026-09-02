@@ -5,7 +5,7 @@ export const colors = {
   surface: "#FFFFFF", // cards
   onSurface: "#1E293B", // main / card text
   heading: "#1A1D1E", // page titles & greetings (dark slate)
-  surfaceSecondary: "#F8F9FC", // app background
+  surfaceSecondary: "#FAF8F5", // app background (warm off-white)
   onSurfaceSecondary: "#475569", // secondary text (readable medium-slate)
   surfaceTertiary: "#EEF0F6",
   surfaceInverse: "#1A1D1E",
@@ -25,9 +25,9 @@ export const colors = {
   error: "#EF4444",
   info: "#4A5169",
 
-  border: "#E6E8F0",
+  border: "#F1F5F9",
   borderStrong: "#C3C8D8",
-  divider: "#EEF0F6",
+  divider: "#F1F5F9",
   muted: "#64748B",
 
   urgency: {

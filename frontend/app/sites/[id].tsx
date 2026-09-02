@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
 
   btnRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
   actBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 44, borderRadius: radius.sm },
-  actPrimary: { backgroundColor: "#1E6B47" },
+  actPrimary: { backgroundColor: "#065F46" },
   actPrimaryText: { fontFamily: font.bold, fontSize: type.base, color: "#FFFFFF" },
   actGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   actGhostText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
