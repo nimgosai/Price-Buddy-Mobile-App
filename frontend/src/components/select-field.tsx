@@ -15,6 +15,7 @@ export function SelectField({
   placeholder = "Select…",
   sheetTitle,
   emptyText,
+  error,
   testID,
 }: {
   value: string;
@@ -23,6 +24,7 @@ export function SelectField({
   placeholder?: string;
   sheetTitle?: string;
   emptyText?: string;
+  error?: boolean;
   testID?: string;
 }) {
   const insets = useSafeAreaInsets();
@@ -31,7 +33,7 @@ export function SelectField({
 
   return (
     <>
-      <Pressable testID={testID} onPress={() => setOpen(true)} style={({ pressed }) => [styles.field, pressed && { opacity: 0.85 }]}>
+      <Pressable testID={testID} onPress={() => setOpen(true)} style={({ pressed }) => [styles.field, error && styles.fieldError, pressed && { opacity: 0.85 }]}>
         <Text style={[styles.fieldText, !current && styles.fieldPlaceholder]} numberOfLines={1}>
           {current ? current.label : placeholder}
         </Text>
@@ -88,6 +90,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   fieldText: { flex: 1, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface },
+  fieldError: { borderColor: colors.error, borderWidth: 1.5 },
   fieldPlaceholder: { color: colors.muted },
 
   backdrop: { flex: 1, backgroundColor: "rgba(20,15,40,0.55)", justifyContent: "flex-end" },

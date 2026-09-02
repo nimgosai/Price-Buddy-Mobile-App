@@ -474,3 +474,11 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Site name + address on Your Sites list now wrap to 2 lines (no ellipses); business-switcher
   sheet option labels wrap to 2 lines. Verified full names ("Manchester Warehouse",
   "Riverside Café — Bath/Oxford") and business filtering (Price Buddy → 3 sites only).
+
+### WIZARD FIELD HIGHLIGHTING FIX (user video complaint)
+- "Please complete the highlighted fields." previously showed with NOTHING highlighted.
+- Added showErrors state (set on failed Continue, cleared on success/Back). Invalid fields now get
+  red 1.5px borders: Name, Email, both supply radios (when none picked), Business/Site dropdowns
+  (SelectField gained `error` prop), Business name/Supply address/Postcode inputs, meter supplier
+  free-text input, contract-end dropdown, water/telecoms supplier inputs.
+- Verified via screenshot: blank Name + new-supply fields all outlined red with the message.

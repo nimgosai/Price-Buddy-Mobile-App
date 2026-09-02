@@ -98,6 +98,7 @@ export default function QuoteWizard() {
   const [waterSupplier, setWaterSupplier] = useState("");
   const [telecomsSupplier, setTelecomsSupplier] = useState("");
   const [error, setError] = useState("");
+  const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Deep-linked with a utility: start on "Your details".
@@ -207,6 +208,7 @@ export default function QuoteWizard() {
 
   const back = () => {
     setError("");
+    setShowErrors(false);
     if (step === 0 || (y && step === 1)) router.back();
     else setStep((s) => Math.max(0, s - 1));
   };
@@ -229,9 +231,11 @@ export default function QuoteWizard() {
   const next = () => {
     setError("");
     if (!stepValid()) {
+      setShowErrors(true);
       setError("Please complete the highlighted fields.");
       return;
     }
+    setShowErrors(false);
     setStep((s) => Math.min(flow.length - 1, s + 1));
   };
 
@@ -349,11 +353,11 @@ export default function QuoteWizard() {
 
             <View style={styles.inputWrap}>
               <Text style={styles.label}>Name</Text>
-              <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => setContact((c) => ({ ...c, name: t }))} placeholderTextColor={colors.muted} style={[styles.input, styles.inputPrefilled]} />
+              <TextInput testID="quote-contact-name" value={contact.name} onChangeText={(t) => setContact((c) => ({ ...c, name: t }))} placeholderTextColor={colors.muted} style={[styles.input, styles.inputPrefilled, showErrors && !contact.name.trim() && styles.inputError]} />
             </View>
             <View style={styles.inputWrap}>
               <Text style={styles.label}>Email</Text>
-              <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => setContact((c) => ({ ...c, email: t }))} autoCapitalize="none" keyboardType="email-address" placeholderTextColor={colors.muted} style={[styles.input, styles.inputPrefilled]} />
+              <TextInput testID="quote-contact-email" value={contact.email} onChangeText={(t) => setContact((c) => ({ ...c, email: t }))} autoCapitalize="none" keyboardType="email-address" placeholderTextColor={colors.muted} style={[styles.input, styles.inputPrefilled, showErrors && !contact.email.trim() && styles.inputError]} />
             </View>
 
             {lockedProp ? (
@@ -381,7 +385,7 @@ export default function QuoteWizard() {
                   testID="quote-supply-existing"
                   disabled={loadingProps || properties.length === 0}
                   onPress={() => chooseSupply("existing")}
-                  style={[styles.radioRow, supplyKind === "existing" && styles.radioRowOn, !loadingProps && properties.length === 0 && { opacity: 0.5 }]}
+                  style={[styles.radioRow, supplyKind === "existing" && styles.radioRowOn, showErrors && !supplyKind && styles.radioRowError, !loadingProps && properties.length === 0 && { opacity: 0.5 }]}
                 >
                   <View style={[styles.radio, supplyKind === "existing" && styles.radioOn]}>{supplyKind === "existing" && <View style={styles.radioDot} />}</View>
                   <View style={{ flex: 1 }}>
@@ -389,7 +393,7 @@ export default function QuoteWizard() {
                     <Text style={styles.radioDesc}>Pick from sites on your account.</Text>
                   </View>
                 </Pressable>
-                <Pressable testID="quote-supply-new" onPress={() => chooseSupply("new")} style={[styles.radioRow, supplyKind === "new" && styles.radioRowOn]}>
+                <Pressable testID="quote-supply-new" onPress={() => chooseSupply("new")} style={[styles.radioRow, supplyKind === "new" && styles.radioRowOn, showErrors && !supplyKind && styles.radioRowError]}>
                   <View style={[styles.radio, supplyKind === "new" && styles.radioOn]}>{supplyKind === "new" && <View style={styles.radioDot} />}</View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.radioText}>A new supply — I&apos;ll enter details</Text>
@@ -407,6 +411,7 @@ export default function QuoteWizard() {
                         onChange={pickBusiness}
                         placeholder="Select a business"
                         sheetTitle="Choose a business"
+                        error={showErrors && !wizardBizId}
                         options={businesses.map((b) => ({ value: b.id, label: b.company_name }))}
                       />
                     </View>
@@ -420,6 +425,7 @@ export default function QuoteWizard() {
                           placeholder="Select a site"
                           sheetTitle="Choose a site"
                           emptyText="No sites for this business yet."
+                          error={showErrors && !addr.property_id}
                           options={sitesForBiz.map((p) => ({
                             value: p.id,
                             label: p.property_name || p.address,
@@ -440,15 +446,15 @@ export default function QuoteWizard() {
                   <View style={{ marginTop: spacing.md }}>
                     <View style={styles.inputWrap}>
                       <Text style={styles.label}>Business name</Text>
-                      <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => setAddr((a) => ({ ...a, business_name: t }))} placeholder="Acme Bakery Ltd" placeholderTextColor={colors.muted} style={styles.input} />
+                      <TextInput testID="quote-business-name" value={addr.business_name} onChangeText={(t) => setAddr((a) => ({ ...a, business_name: t }))} placeholder="Acme Bakery Ltd" placeholderTextColor={colors.muted} style={[styles.input, showErrors && !addr.business_name.trim() && styles.inputError]} />
                     </View>
                     <View style={styles.inputWrap}>
                       <Text style={styles.label}>Supply address</Text>
-                      <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => setAddr((a) => ({ ...a, full_address: t }))} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={styles.input} />
+                      <TextInput testID="quote-address" value={addr.full_address} onChangeText={(t) => setAddr((a) => ({ ...a, full_address: t }))} placeholder="123 Boulevard Avenue" placeholderTextColor={colors.muted} style={[styles.input, showErrors && !addr.full_address.trim() && styles.inputError]} />
                     </View>
                     <View style={styles.inputWrap}>
                       <Text style={styles.label}>Postcode</Text>
-                      <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={styles.input} />
+                      <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={[styles.input, showErrors && !addr.postcode.trim() && styles.inputError]} />
                     </View>
                   </View>
                 )}
@@ -464,13 +470,13 @@ export default function QuoteWizard() {
               {anyPrefilled ? "We've pre-filled this from your existing contract — change anything if it's wrong." : "Tell us about each meter at this site."}
             </Text>
             {electricMeters.length > 0 && (
-              <MeterGroup title="Electric" utility="electric" color="#F59E0B" icon="bolt" meters={meters} group={electricMeters} prefilledIds={prefilledIds}
+              <MeterGroup title="Electric" utility="electric" color="#F59E0B" icon="bolt" meters={meters} group={electricMeters} prefilledIds={prefilledIds} showErrors={showErrors}
                 onUpdate={(id, p) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...p } : m)))}
                 onRemove={(id) => setMeters((ms) => ms.filter((m) => m._id !== id))}
                 onAdd={() => setMeters((ms) => [...ms, newMeter("electric", ms.find((m) => m.utility === "electric")?.supplier || "")])} />
             )}
             {gasMeters.length > 0 && (
-              <MeterGroup title="Gas" utility="gas" color="#FB923C" icon="fire" meters={meters} group={gasMeters} prefilledIds={prefilledIds}
+              <MeterGroup title="Gas" utility="gas" color="#FB923C" icon="fire" meters={meters} group={gasMeters} prefilledIds={prefilledIds} showErrors={showErrors}
                 onUpdate={(id, p) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...p } : m)))}
                 onRemove={(id) => setMeters((ms) => ms.filter((m) => m._id !== id))}
                 onAdd={() => setMeters((ms) => [...ms, newMeter("gas", ms.find((m) => m.utility === "gas")?.supplier || "")])} />
@@ -479,10 +485,10 @@ export default function QuoteWizard() {
         )}
 
         {current === "water" && (
-          <SupplierStep testID="water" title="Who's your current Water supplier?" placeholder="e.g. Anglian Water, Thames Water" value={waterSupplier} onChange={setWaterSupplier} />
+          <SupplierStep testID="water" title="Who's your current Water supplier?" placeholder="e.g. Anglian Water, Thames Water" value={waterSupplier} onChange={setWaterSupplier} error={showErrors && !waterSupplier.trim()} />
         )}
         {current === "telecoms" && (
-          <SupplierStep testID="telecoms" title="Who's your current Telecoms supplier?" placeholder="e.g. BT, Virgin, Sky Business" value={telecomsSupplier} onChange={setTelecomsSupplier} />
+          <SupplierStep testID="telecoms" title="Who's your current Telecoms supplier?" placeholder="e.g. BT, Virgin, Sky Business" value={telecomsSupplier} onChange={setTelecomsSupplier} error={showErrors && !telecomsSupplier.trim()} />
         )}
 
         {current === "review" && (
@@ -521,7 +527,7 @@ export default function QuoteWizard() {
 }
 
 // ——— Supplier picker: chips of common suppliers + "I don't know" + free text ———
-function SupplierPicker({ value, onChange, testidPrefix }: { value: string; onChange: (v: string) => void; testidPrefix: string }) {
+function SupplierPicker({ value, onChange, testidPrefix, error }: { value: string; onChange: (v: string) => void; testidPrefix: string; error?: boolean }) {
   const trimmed = (value || "").trim();
   const known = SUPPLIERS.find((s) => s.toLowerCase() === trimmed.toLowerCase());
   const custom = trimmed && !known && trimmed !== "__idk__";
@@ -548,16 +554,16 @@ function SupplierPicker({ value, onChange, testidPrefix }: { value: string; onCh
           onChangeText={onChange}
           placeholder={known ? "" : "Or type a different supplier"}
           placeholderTextColor={colors.muted}
-          style={[styles.input, { marginTop: 8 }]}
+          style={[styles.input, { marginTop: 8 }, error && styles.inputError]}
         />
       )}
     </View>
   );
 }
 
-function MeterGroup({ title, utility, color, icon, group, prefilledIds, onUpdate, onRemove, onAdd }: {
+function MeterGroup({ title, utility, color, icon, group, prefilledIds, showErrors, onUpdate, onRemove, onAdd }: {
   title: string; utility: "electric" | "gas"; color: string; icon: IconName; meters: Meter[]; group: Meter[];
-  prefilledIds: Set<string>; onUpdate: (id: string, p: Partial<Meter>) => void; onRemove: (id: string) => void; onAdd: () => void;
+  prefilledIds: Set<string>; showErrors: boolean; onUpdate: (id: string, p: Partial<Meter>) => void; onRemove: (id: string) => void; onAdd: () => void;
 }) {
   const mpxLabel = utility === "gas" ? "MPRN" : "MPAN";
   return (
@@ -589,7 +595,7 @@ function MeterGroup({ title, utility, color, icon, group, prefilledIds, onUpdate
             </View>
             <View style={styles.inputWrap}>
               <Text style={styles.label}>Supplier</Text>
-              <SupplierPicker value={m.supplier} onChange={(v) => onUpdate(m._id, { supplier: v })} testidPrefix={`meter-${utility}-${i}`} />
+              <SupplierPicker value={m.supplier} onChange={(v) => onUpdate(m._id, { supplier: v })} testidPrefix={`meter-${utility}-${i}`} error={showErrors && !m.supplier?.trim()} />
             </View>
             <View style={[styles.inputWrap, { marginBottom: 0 }]}>
               <Text style={styles.label}>Contract end date</Text>
@@ -599,6 +605,7 @@ function MeterGroup({ title, utility, color, icon, group, prefilledIds, onUpdate
                 onChange={(v) => onUpdate(m._id, { contract_end_window: v })}
                 placeholder="Select…"
                 sheetTitle="Contract end date"
+                error={showErrors && !m.contract_end_window}
                 options={WINDOWS}
               />
             </View>
@@ -627,14 +634,14 @@ function MeterGroup({ title, utility, color, icon, group, prefilledIds, onUpdate
   );
 }
 
-function SupplierStep({ title, placeholder, value, onChange, testID }: { title: string; placeholder: string; value: string; onChange: (t: string) => void; testID: string }) {
+function SupplierStep({ title, placeholder, value, onChange, testID, error }: { title: string; placeholder: string; value: string; onChange: (t: string) => void; testID: string; error?: boolean }) {
   return (
     <View testID={`step-${testID}`}>
       <Text style={styles.h2}>{title}</Text>
       <Text style={styles.muted}>That&apos;s all we need — we already have your business details.</Text>
       <View style={styles.inputWrap}>
         <Text style={styles.label}>Supplier</Text>
-        <TextInput testID={`${testID}-supplier`} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} style={styles.input} />
+        <TextInput testID={`${testID}-supplier`} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} style={[styles.input, error && styles.inputError]} />
       </View>
     </View>
   );
@@ -779,6 +786,7 @@ const styles = StyleSheet.create({
   labelOptional: { fontFamily: font.regular, color: colors.muted },
   input: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, backgroundColor: colors.surface },
   inputPrefilled: { backgroundColor: colors.brandTertiary, borderColor: "#FFD5C9" },
+  inputError: { borderColor: colors.error, borderWidth: 1.5 },
   inputMono: { fontFamily: undefined, letterSpacing: 0.3 },
 
   svcGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
@@ -797,6 +805,7 @@ const styles = StyleSheet.create({
 
   radioRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: 10 },
   radioRowOn: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  radioRowError: { borderColor: colors.error },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border, alignItems: "center", justifyContent: "center", marginTop: 1 },
   radioOn: { borderColor: colors.brandPrimary },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.brandPrimary },
