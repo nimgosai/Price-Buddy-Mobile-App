@@ -38,7 +38,6 @@ export function HaveAQueryPill() {
       await apiRequest("/concierge/messages", { method: "POST", body: { message: body.slice(0, 2000) } });
       setText("");
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 5000);
     } catch {
       // ignore
     } finally {
@@ -70,9 +69,16 @@ export function HaveAQueryPill() {
               <View style={styles.grabber} />
               {success ? (
                 <View style={styles.doneWrap}>
-                  <Icon name="check" size={40} color={colors.pastel.mintIcon} />
-                  <Text style={styles.doneTitle}>Message sent</Text>
-                  <Text style={styles.doneSub}>Our team usually replies within one business day.</Text>
+                  <View style={styles.doneIcon}>
+                    <Icon name="check" size={26} color={colors.pastel.mintIcon} />
+                  </View>
+                  <Text style={styles.doneTitle}>Message sent!</Text>
+                  <Text style={styles.doneSub}>
+                    Thanks! A member of our team will review your query and reply within 1 business day.
+                  </Text>
+                  <Pressable testID="concierge-done" onPress={close} style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.9 }]}>
+                    <Text style={styles.doneBtnText}>Done</Text>
+                  </Pressable>
                 </View>
               ) : (
                 <>
@@ -160,6 +166,9 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: colors.brandPrimary },
   btnPrimaryText: { fontFamily: font.semibold, fontSize: type.lg, color: colors.onBrandPrimary },
   doneWrap: { alignItems: "center", paddingVertical: spacing.xl, gap: 6 },
-  doneTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginTop: spacing.sm },
-  doneSub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
+  doneIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#DCFCE7", alignItems: "center", justifyContent: "center", marginBottom: spacing.xs },
+  doneTitle: { fontFamily: font.bold, fontSize: 18, color: colors.heading, marginTop: spacing.xs },
+  doneSub: { fontFamily: font.regular, fontSize: 13, color: colors.onSurfaceSecondary, textAlign: "center", lineHeight: 18, paddingHorizontal: spacing.md },
+  doneBtn: { alignSelf: "stretch", height: 44, borderRadius: radius.sm, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", marginTop: spacing.lg },
+  doneBtnText: { fontFamily: font.semibold, fontSize: type.lg, color: colors.onBrandPrimary },
 });
