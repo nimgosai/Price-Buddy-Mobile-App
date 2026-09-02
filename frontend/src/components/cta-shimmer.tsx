@@ -8,8 +8,8 @@ export function CtaShimmer({ width = 240 }: { width?: number }) {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(x, { toValue: width + 60, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.delay(1600),
+        Animated.timing(x, { toValue: width + 60, duration: 2200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.delay(2400),
         Animated.timing(x, { toValue: -60, duration: 0, useNativeDriver: true }),
       ]),
     );

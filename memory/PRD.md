@@ -492,3 +492,9 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - quote/success.tsx rewritten: "Request received" (22 bold) + "Thanks {firstName}, we've received
   your quote request." + "What happens next:" white card with 🔍/📞/✉️ points (NO "broker" wording)
   + grey "REFERENCE: XXXXXXXX" badge + 48px "Back to dashboard" + "Request another quote" link.
+
+### SHIMMER SPEED + ENERGY STEP POLISH (user videos, testing_agent iteration_15 PASS)
+- CtaShimmer slowed: 2200ms sweep + 2400ms pause (full loop ≈ 4.6s) — verified by measurement.
+- Energy details step: chips gap 8 / padding 14x9 (no truncation for all 10 suppliers), meter cards
+  16px padding, Gas group separated from Electric by divider + 22px top padding, verified at
+  320px & 390px. Full quote flow regression + live submission passed (ref 0803B392).

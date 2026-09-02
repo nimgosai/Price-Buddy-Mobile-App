@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only regression for two UX fixes on Price Buddy (live external backend). BUG 1 (shimmer speed) — VERIFIED: the CTA shimmer band sweeps slowly (~2.2s sweep + ~2.4s pause, ~4.6s full cycle) matching cta-shimmer.tsx; translateX sampled at 250ms intervals shows the band resting at end position (~400px) for ~2.0s, then jumping to -60 and sweeping back to 400 over ~2.3s — no console errors. BUG 2 (Energy details layout) — VERIFIED: with Electric+Gas both selected, both groups render with 10 supplier chips + 'I don't know', all visible with no truncation at 390px AND 320px viewports; helper text 'Providing your MPAN / MPRN speeds up your quote...' appears once per group (2 occurrences); Electric group above Gas with the groupDivider (borderTop + 22px paddingTop) providing clear separation; both 'Add another Electric Meter' and 'Add another Gas Meter' dashed buttons present. Regression: postcode 'EWTEW' shows the exact error 'Please enter a valid UK postcode (e.g. SW1A 1AA)' and Continue is aria-disabled and non-functional until fixed; full flow submitted live POST /api/quotes/multi -> 200 and Request received screen rendered with REFERENCE badge '0803B392' and 'What happens next:' card.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "CtaShimmer/dashboard promo CTA", "issue": "Animated.timing uses useNativeDriver: true but Expo web logs 'Animated: useNativeDriver is not supported because the native animated module is missing. Falling back to JS-based animation.' — cosmetic on web (JS fallback works and the sweep timing is correct), but consider gating useNativeDriver by Platform.OS !== 'web' to silence the warning. Reference: /app/frontend/src/components/cta-shimmer.tsx:11-14"},
+    {"component": "Global styles", "issue": "Deprecation warnings: 'shadow*' style props are deprecated, use 'boxShadow'; and 'props.pointerEvents is deprecated, use style.pointerEvents'. Non-blocking but should be migrated in a follow-up."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional (non-blocking): gate CtaShimmer useNativeDriver behind Platform.OS !== 'web' to remove the Expo web warning.",
+    "Optional (non-blocking): migrate deprecated 'shadow*' style props to 'boxShadow' and 'pointerEvents' prop to style.pointerEvents to clear console warnings."
+  ],
+  "critical_code_review_comments": [
+    "cta-shimmer.tsx timing values match the PR intent (2200ms sweep + 2400ms delay + 0ms reset). No issues.",
+    "quote/new.tsx MeterGroup applies styles.groupDivider only when !first, which correctly gives Gas group a borderTop + 22px paddingTop when it follows Electric.",
+    "SupplierPicker chip padding (14/9) + chipWrap gap match the described spacing increase; chip widths sampled 56–154px with no text truncation.",
+    "Postcode validation error text and Continue disabled state behave exactly as specified."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (external live backend not tested)", "frontend": "100%"},
+  "seed_data_creation": "None — used the pre-registered account e2e_test_1786703401@example.com. A live quote was submitted (ref 0803B392) against the external backend at https://utility-contract-hub.emergent.host.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Live external backend at EXPO_PUBLIC_UCH_BACKEND_URL. Login uses testIDs signin-email-input / signin-password-input / signin-submit-button. On the quote wizard, contract-end SelectField options render with testIDs meter-{utility}-0-end-opt-{value} where value ∈ {dont_know,out_of_contract,under_6m,6_12m,over_12m} — do NOT rely on visible text like 'In the next 3 months' (those labels do not exist). The signin-submit click can occasionally need a retry (~1 in N runs) — add a re-click if still on /signin after 6s.",
+  "rca_of_issue": "N/A — both reported UX fixes verified working end-to-end."
+}

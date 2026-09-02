@@ -478,7 +478,7 @@ export default function QuoteWizard() {
               {anyPrefilled ? "We've pre-filled this from your existing contract — change anything if it's wrong." : "Tell us about each meter at this site."}
             </Text>
             {electricMeters.length > 0 && (
-              <MeterGroup title="Electric" utility="electric" color="#F59E0B" icon="bolt" meters={meters} group={electricMeters} prefilledIds={prefilledIds} showErrors={showErrors}
+              <MeterGroup title="Electric" utility="electric" color="#F59E0B" icon="bolt" meters={meters} group={electricMeters} prefilledIds={prefilledIds} showErrors={showErrors} first
                 onUpdate={(id, p) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...p } : m)))}
                 onRemove={(id) => setMeters((ms) => ms.filter((m) => m._id !== id))}
                 onAdd={() => setMeters((ms) => [...ms, newMeter("electric", ms.find((m) => m.utility === "electric")?.supplier || "")])} />
@@ -569,13 +569,13 @@ function SupplierPicker({ value, onChange, testidPrefix, error }: { value: strin
   );
 }
 
-function MeterGroup({ title, utility, color, icon, group, prefilledIds, showErrors, onUpdate, onRemove, onAdd }: {
+function MeterGroup({ title, utility, color, icon, group, prefilledIds, showErrors, onUpdate, onRemove, onAdd, first }: {
   title: string; utility: "electric" | "gas"; color: string; icon: IconName; meters: Meter[]; group: Meter[];
-  prefilledIds: Set<string>; showErrors: boolean; onUpdate: (id: string, p: Partial<Meter>) => void; onRemove: (id: string) => void; onAdd: () => void;
+  prefilledIds: Set<string>; showErrors: boolean; onUpdate: (id: string, p: Partial<Meter>) => void; onRemove: (id: string) => void; onAdd: () => void; first?: boolean;
 }) {
   const mpxLabel = utility === "gas" ? "MPRN" : "MPAN";
   return (
-    <View style={{ marginBottom: spacing.lg }}>
+    <View style={[{ marginBottom: 28 }, !first && styles.groupDivider]}>
       <View style={styles.meterHead}>
         <View style={[styles.meterHeadIcon, { backgroundColor: `${color}22` }]}>
           <Icon name={icon} size={18} color={color} />
@@ -826,21 +826,22 @@ const styles = StyleSheet.create({
   radioDesc: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
   preview: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: -4, marginBottom: 4 },
 
-  meterHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
+  meterHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  groupDivider: { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: 22 },
   meterHeadIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  meterCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: 10 },
+  meterCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: 12 },
   meterTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 },
   meterTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
   prefilledBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, borderWidth: 1, borderColor: "#FFD5C9" },
   prefilledBadgeText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5, color: colors.brandPrimary },
   removeText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.error },
 
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  supChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  supChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
   supChipOn: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   supChipText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurface },
   supChipTextOn: { color: "#FFFFFF" },
-  idkChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.border, backgroundColor: "transparent" },
+  idkChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.border, backgroundColor: "transparent" },
   idkChipOn: { backgroundColor: colors.heading, borderColor: colors.heading },
   idkChipText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurfaceSecondary },
 
