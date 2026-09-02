@@ -445,3 +445,11 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Wizard locked card: kicker now "QUOTE FOR {UTILITY}" with utility icon/colour when deep-linked
   (else "QUOTE FOR THIS SITE"), link text "Change site", address wraps 2 lines, no "Site" h3
   above it (matches original image).
+
+### RENEWALS PAGE PARITY (user video)
+- Rebuilt list to original layout: grouped BUSINESS kicker headers (only when >1 biz) → tappable
+  site cards (4px urgency left-accent by worst contract, building icon, site name, business chip,
+  postcode, chevron → /sites/{id}) → contract rows ("{Utility} · {Supplier}" wraps 2 lines,
+  "ends {D MMM YYYY}", tiered days pill: ≤30 red overdue/left, ≤60 orange, else amber).
+- Removed per-contract "Get a better deal" button (not in original; quotes live on site detail).
+- Demo /renewals/urgent now enriched with business_id/business_name/postcode/contract_id.

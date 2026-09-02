@@ -174,9 +174,19 @@ export function getDemoResponse(path: string): any | undefined {
   if (one) return CONTRACTS.find((x) => x.id === one[1]) || CONTRACTS[0];
   if (clean === "/reports/spend") return spendReport(contracts);
   if (clean === "/renewals/urgent") {
-    const items = contracts.filter((x) => x.days_until_expiry <= 90).sort(
-      (a, b) => a.days_until_expiry - b.days_until_expiry,
-    );
+    const items = contracts
+      .filter((x) => x.days_until_expiry <= 90)
+      .sort((a, b) => a.days_until_expiry - b.days_until_expiry)
+      .map((x) => {
+        const p = PROPERTIES.find((pp) => pp.id === x.property_id);
+        return {
+          ...x,
+          contract_id: x.id,
+          business_id: p?.business_id || "",
+          business_name: p?.business_name || "",
+          postcode: p?.postcode || "",
+        };
+      });
     return { items };
   }
   if (clean === "/dashboard/overview") {

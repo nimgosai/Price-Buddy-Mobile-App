@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -13,35 +13,39 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 
-import { Button, Card, StatusPill } from "@/src/components/ui";
+import { Button, Card } from "@/src/components/ui";
 import { ScreenHeader, EmptyState } from "@/src/components/screen";
+import { Icon, IconName } from "@/src/components/icon";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
-const URGENCY_LABEL: Record<string, string> = {
-  critical: "Critical",
-  high: "High",
-  medium: "Medium",
-  renewable: "Renewable",
-  low: "Low",
-  normal: "Normal",
+const UTIL_META: Record<string, { label: string; icon: IconName; color: string }> = {
+  electricity: { label: "Electricity", icon: "bolt", color: "#F59E0B" },
+  gas: { label: "Gas", icon: "fire", color: "#FB923C" },
+  water: { label: "Water", icon: "droplet", color: "#3B82F6" },
+  broadband: { label: "Broadband", icon: "wifi", color: "#0EA5E9" },
+  telecoms: { label: "Telecoms", icon: "phone", color: "#0EA5E9" },
 };
+
+// Tiered days pill — mirrors the original web app.
+function daysTier(n: number) {
+  if (n <= 30)
+    return { color: "#DC2626", bg: "#FEF2F2", border: "#FECACA", label: n < 0 ? `${Math.abs(n)} days overdue` : `${n} days left` };
+  if (n <= 60) return { color: "#C2410C", bg: "#FFF7ED", border: "#FED7AA", label: `${n} days left` };
+  return { color: "#92400E", bg: "#FFFBEB", border: "#FDE68A", label: `${n} days left` };
+}
+
+function siteAccent(days: number) {
+  if (days <= 30) return "#DC2626";
+  if (days <= 60) return "#EA580C";
+  return "#D97706";
+}
 
 function daysUntil(dateStr?: string): number | null {
   if (!dateStr) return null;
   const d = dayjs(dateStr);
   if (!d.isValid()) return null;
   return d.startOf("day").diff(dayjs().startOf("day"), "day");
-}
-
-function urgencyForDays(days: number | null): string {
-  if (days === null) return "normal";
-  if (days < 0) return "critical";
-  if (days <= 14) return "critical";
-  if (days <= 30) return "high";
-  if (days <= 60) return "medium";
-  if (days <= 90) return "renewable";
-  return "low";
 }
 
 export default function Renewals() {
@@ -89,12 +93,27 @@ export default function Renewals() {
     setRefreshing(false);
   }, [load]);
 
+  // Group by business → site (mirrors the original web app).
+  const groups = useMemo(() => {
+    const map = new Map<string, { business_name: string; sites: Map<string, any> }>();
+    items.forEach((c: any) => {
+      const bId = c.business_id || "__none__";
+      if (!map.has(bId)) map.set(bId, { business_name: c.business_name || "", sites: new Map() });
+      const g = map.get(bId)!;
+      const pId = c.property_id || c.id;
+      if (!g.sites.has(pId))
+        g.sites.set(pId, { property_id: c.property_id, property_name: c.property_name, postcode: c.postcode, contracts: [] });
+      g.sites.get(pId).contracts.push(c);
+    });
+    return Array.from(map.values()).map((g) => ({ ...g, sites: Array.from(g.sites.values()) }));
+  }, [items]);
+  const bizCount = groups.length;
+
   // Mirrors the original: "N contracts across M sites · K businesses"
   const subtitle = (() => {
     if (items.length === 0) return "Nothing urgent right now";
-    const sites = new Set(items.map((c: any) => c.property_id || c.property_name || c.id)).size;
-    const bizzes = new Set(items.map((c: any) => c.business_name).filter(Boolean)).size;
-    return `${items.length} contract${items.length === 1 ? "" : "s"} across ${sites} site${sites === 1 ? "" : "s"}${bizzes > 1 ? ` · ${bizzes} businesses` : ""}`;
+    const sites = groups.reduce((n, g) => n + g.sites.length, 0);
+    return `${items.length} contract${items.length === 1 ? "" : "s"} across ${sites} site${sites === 1 ? "" : "s"}${bizCount > 1 ? ` · ${bizCount} businesses` : ""}`;
   })();
 
   return (
@@ -136,68 +155,69 @@ export default function Renewals() {
               />
             </EmptyState>
           ) : (
-            items.map((c: any, i: number) => {
-              const end = c.end_date || c.contract_end_date || c.renewal_date;
-              const days = daysUntil(end);
-              const urg = c.urgency || urgencyForDays(days);
-              const color = colors.urgency[urg] || colors.urgency.normal;
-              return (
-                <Card key={c.id || c._id || i} testID={`renewals-card-${i}`} style={styles.card}>
-                  <View style={styles.top}>
-                    <View style={[styles.utilIcon, { backgroundColor: `${color}1A` }]}>
-                      <Ionicons name="flash" size={18} color={color} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.supplier} numberOfLines={1}>
-                        {c.supplier_name || c.supplier || "Contract"}
-                      </Text>
-                      <Text style={styles.meta} numberOfLines={1}>
-                        {(c.utility_type || "utility").toString().replace(/_/g, " ")}
-                        {c.property_name ? ` • ${c.property_name}` : ""}
-                      </Text>
-                    </View>
-                    <StatusPill
-                      label={
-                        days === null
-                          ? URGENCY_LABEL[urg] || "Normal"
-                          : days < 0
-                            ? "Expired"
-                            : `${days}d left`
-                      }
-                      color={color}
-                    />
+            groups.map((g, gi) => (
+              <View key={`${g.business_name}${gi}`} testID={`renewal-biz-${gi}`} style={{ gap: spacing.md }}>
+                {bizCount > 1 && !!g.business_name && (
+                  <View style={styles.bizHead}>
+                    <Icon name="building" size={13} color={colors.muted} />
+                    <Text style={styles.bizHeadText} numberOfLines={1}>{g.business_name}</Text>
                   </View>
-                  <View style={styles.divider} />
-                  <View style={styles.bottom}>
-                    <Text style={styles.date}>
-                      {end ? `Ends ${dayjs(end).format("D MMM YYYY")}` : "End date pending"}
-                    </Text>
-                    {c.annual_cost ? (
-                      <Text style={styles.cost}>
-                        £{Number(c.annual_cost).toLocaleString("en-GB")}/yr
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Pressable
-                    testID={`renewals-quote-${i}`}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/quote/new",
-                        params: {
-                          utility: c.utility_type || "electricity",
-                          contractId: c.id || c._id || "",
-                          propertyId: c.property_id || "",
-                        },
-                      })
-                    }
-                    style={({ pressed }) => [styles.quoteBtn, pressed && { opacity: 0.9 }]}
-                  >
-                    <Ionicons name="pricetag-outline" size={16} color={colors.onBrandPrimary} />
-                    <Text style={styles.quoteText}>Get a better deal</Text>
-                  </Pressable>
-                </Card>
-              );
-            })
+                )}
+                {g.sites.map((s: any) => {
+                  const worst = Math.min(...s.contracts.map((c: any) => c.days_until_expiry ?? daysUntil(c.end_date) ?? 999));
+                  return (
+                    <Pressable
+                      key={s.property_id}
+                      testID={`renewal-site-${s.property_id}`}
+                      onPress={() => s.property_id && router.push(`/sites/${s.property_id}`)}
+                      style={({ pressed }) => [styles.siteCard, { borderLeftColor: siteAccent(worst) }, pressed && { opacity: 0.92 }]}
+                    >
+                      <View style={styles.siteHead}>
+                        <View style={styles.siteIcon}>
+                          <Icon name="building" size={15} color={colors.brandPrimary} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={styles.siteName} numberOfLines={1}>{s.property_name || "Site"}</Text>
+                          {bizCount > 1 && !!g.business_name && (
+                            <View style={styles.siteBizChip}>
+                              <Text style={styles.siteBizChipText} numberOfLines={1}>{g.business_name}</Text>
+                            </View>
+                          )}
+                        </View>
+                        {!!s.postcode && <Text style={styles.sitePostcode}>{s.postcode}</Text>}
+                        <Icon name="chevronRight" size={16} color={colors.muted} />
+                      </View>
+                      <View style={{ gap: 10 }}>
+                        {s.contracts.map((c: any, ci: number) => {
+                          const days = c.days_until_expiry ?? daysUntil(c.end_date) ?? 0;
+                          const tier = daysTier(days);
+                          const meta = UTIL_META[c.utility_type] || { label: c.utility_type, icon: "bolt" as IconName, color: "#888" };
+                          const end = c.end_date || c.contract_end_date;
+                          return (
+                            <View key={c.contract_id || c.id || ci} testID={`renewal-contract-${c.contract_id || c.id || ci}`} style={styles.contractRow}>
+                              <View style={[styles.utilIcon, { backgroundColor: `${meta.color}1F` }]}>
+                                <Icon name={meta.icon} size={18} color={meta.color} />
+                              </View>
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <Text style={styles.contractTitle} numberOfLines={2}>
+                                  {meta.label}{c.supplier_name ? ` · ${c.supplier_name}` : ""}
+                                </Text>
+                                <Text style={styles.contractEnds}>
+                                  ends {end ? dayjs(end).format("D MMM YYYY") : "—"}
+                                </Text>
+                              </View>
+                              <View style={[styles.daysPill, { backgroundColor: tier.bg, borderColor: tier.border }]}>
+                                <Text style={[styles.daysPillText, { color: tier.color }]}>{tier.label}</Text>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))
           )}
         </ScrollView>
       )}
@@ -217,34 +237,29 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: { gap: spacing.md },
-  top: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  utilIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
+
+  bizHead: { flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 4, marginTop: 4 },
+  bizHeadText: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, textTransform: "uppercase" },
+  siteCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderLeftWidth: 4,
+    borderRadius: radius.md,
+    padding: 14,
+    paddingLeft: 16,
+    gap: 10,
   },
-  supplier: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
-  meta: {
-    fontFamily: font.regular,
-    fontSize: type.sm,
-    color: colors.muted,
-    marginTop: 2,
-    textTransform: "capitalize",
-  },
-  divider: { height: 1, backgroundColor: colors.divider },
-  bottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  date: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
-  cost: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
-  quoteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    height: 44,
-    borderRadius: radius.sm,
-    backgroundColor: colors.brandPrimary,
-  },
-  quoteText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onBrandPrimary },
+  siteHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  siteIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.brandTertiary, alignItems: "center", justifyContent: "center" },
+  siteName: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  siteBizChip: { alignSelf: "flex-start", marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.divider },
+  siteBizChipText: { fontFamily: font.bold, fontSize: 10, color: colors.onSurfaceSecondary },
+  sitePostcode: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 7 },
+  contractRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.divider, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 },
+  utilIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  contractTitle: { fontFamily: font.bold, fontSize: type.sm, color: colors.heading },
+  contractEnds: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2 },
+  daysPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1 },
+  daysPillText: { fontFamily: font.bold, fontSize: type.kicker },
 });
