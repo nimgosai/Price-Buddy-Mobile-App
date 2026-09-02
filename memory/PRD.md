@@ -482,3 +482,13 @@ No login/live-data writes used — everything reconstructed from the bundle.
   (SelectField gained `error` prop), Business name/Supply address/Postcode inputs, meter supplier
   free-text input, contract-end dropdown, water/telecoms supplier inputs.
 - Verified via screenshot: blank Name + new-supply fields all outlined red with the message.
+
+### POSTCODE VALIDATION + SUCCESS COPY (user task, video)
+- UK postcode regex /^([A-Z]{1,2}\d{1,2}[A-Z]?)\s*(\d[A-Z]{2})$/i on wizard "new supply" Postcode:
+  auto-uppercase, inline error "Please enter a valid UK postcode (e.g. SW1A 1AA)" + red border,
+  Continue DISABLED (opacity .45) until business name + address + valid postcode present.
+- MPAN/MPRN helper (12px muted) added under the field: "Providing your MPAN / MPRN speeds up your
+  quote. If left blank, our team will look this up from your address."
+- quote/success.tsx rewritten: "Request received" (22 bold) + "Thanks {firstName}, we've received
+  your quote request." + "What happens next:" white card with 🔍/📞/✉️ points (NO "broker" wording)
+  + grey "REFERENCE: XXXXXXXX" badge + 48px "Back to dashboard" + "Request another quote" link.

@@ -43,6 +43,8 @@ type Meter = { _id: string; utility: "electric" | "gas"; supplier: string; contr
 let mid = 0;
 const newMeter = (u: "electric" | "gas", supplier = ""): Meter => ({ _id: `m${mid++}`, utility: u, supplier, contract_end_window: "", meter_point_number: "" });
 
+const UK_POSTCODE = /^([A-Z]{1,2}\d{1,2}[A-Z]?)\s*(\d[A-Z]{2})$/i;
+
 const windowFromEndDate = (endDate?: string): string => {
   if (!endDate) return "";
   const t = new Date(endDate);
@@ -220,7 +222,7 @@ export default function QuoteWizard() {
       if (lockedProp) return true;
       if (!supplyKind) return false;
       if (supplyKind === "existing") return !!(wizardBizId && addr.property_id);
-      return !!(addr.business_name.trim() && addr.full_address.trim() && addr.postcode.trim());
+      return !!(addr.business_name.trim() && addr.full_address.trim() && UK_POSTCODE.test(addr.postcode.trim()));
     }
     if (current === "energy") return meters.every((m) => m.supplier?.trim() && m.contract_end_window);
     if (current === "water") return waterSupplier.trim().length > 0;
@@ -311,6 +313,9 @@ export default function QuoteWizard() {
   const electricMeters = meters.filter((m) => m.utility === "electric");
   const gasMeters = meters.filter((m) => m.utility === "gas");
   const anyPrefilled = meters.some((m) => prefilledIds.has(m._id));
+
+  const postcodeInvalid = current === "global" && !lockedProp && supplyKind === "new" && addr.postcode.trim().length > 0 && !UK_POSTCODE.test(addr.postcode.trim());
+  const continueDisabled = current === "global" && !lockedProp && supplyKind === "new" && !(addr.business_name.trim() && addr.full_address.trim() && UK_POSTCODE.test(addr.postcode.trim()));
 
   const subtitle = y ? `Step ${Math.max(1, step)} of ${flow.length - 1}` : `Step ${step + 1} of ${flow.length}`;
 
@@ -454,7 +459,10 @@ export default function QuoteWizard() {
                     </View>
                     <View style={styles.inputWrap}>
                       <Text style={styles.label}>Postcode</Text>
-                      <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={[styles.input, showErrors && !addr.postcode.trim() && styles.inputError]} />
+                      <TextInput testID="quote-postcode" value={addr.postcode} onChangeText={(t) => setAddr((a) => ({ ...a, postcode: t.toUpperCase() }))} placeholder="SW1A 1AA" placeholderTextColor={colors.muted} autoCapitalize="characters" style={[styles.input, ((showErrors && !addr.postcode.trim()) || postcodeInvalid) && styles.inputError]} />
+                      {postcodeInvalid && (
+                        <Text testID="postcode-error" style={styles.fieldErrorText}>Please enter a valid UK postcode (e.g. SW1A 1AA)</Text>
+                      )}
                     </View>
                   </View>
                 )}
@@ -516,7 +524,7 @@ export default function QuoteWizard() {
               )}
             </Pressable>
           ) : (
-            <Pressable testID="wizard-next" onPress={next} style={[styles.navBtn, styles.navPrimary, { flex: 2 }]}>
+            <Pressable testID="wizard-next" onPress={next} disabled={continueDisabled} style={[styles.navBtn, styles.navPrimary, { flex: 2 }, continueDisabled && { opacity: 0.45 }]}>
               <Text style={styles.navPrimaryText}>Continue</Text>
             </Pressable>
           )}
@@ -622,6 +630,9 @@ function MeterGroup({ title, utility, color, icon, group, prefilledIds, showErro
                 inputMode="numeric"
                 style={[styles.input, styles.inputMono]}
               />
+              <Text style={styles.helperText}>
+                Providing your MPAN / MPRN speeds up your quote. If left blank, our team will look this up from your address.
+              </Text>
             </View>
           </View>
         );
@@ -787,6 +798,8 @@ const styles = StyleSheet.create({
   input: { minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, backgroundColor: colors.surface },
   inputPrefilled: { backgroundColor: colors.brandTertiary, borderColor: "#FFD5C9" },
   inputError: { borderColor: colors.error, borderWidth: 1.5 },
+  fieldErrorText: { fontFamily: font.medium, fontSize: type.sm, color: colors.error, marginTop: 6 },
+  helperText: { fontFamily: font.regular, fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 6 },
   inputMono: { fontFamily: undefined, letterSpacing: 0.3 },
 
   svcGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
