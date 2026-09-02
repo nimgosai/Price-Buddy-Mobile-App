@@ -392,8 +392,8 @@ export default function Dashboard() {
                   </View>
                 </View>
               </View>
-              <Text style={styles.auditSub} numberOfLines={2}>
-                Our team is analysing your contract rates to find the best savings. We&apos;ll notify you as soon as your comparison is ready.
+              <Text style={styles.auditSub}>
+                We&apos;re checking your rates against current market tariffs to find your best savings.
               </Text>
               {audits[0]?.call_requested_at ? (
                 <View style={styles.auditDone} testID="audit-call-confirmed">
