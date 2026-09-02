@@ -432,3 +432,16 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - SelectField gained optional `emptyText` prop; site sheet shows "No sites for this business yet."
   when a business genuinely has no sites.
 - Verified: active biz = Riverside globally, wizard business = Price Buddy → 3 sites listed.
+
+### SITE DETAIL PARITY + WIZARD LOCKED CARD (user images/video)
+- Site detail utility cards now match original: business-name pill next to utility label,
+  SUPPLIER / ENDS (or EXPIRED) uppercase row, 12-segment expiry gauge with urgent pill
+  ("OUT OF CONTRACT / RENEW NOW · N DAYS OVERDUE|LEFT" when ≤30 days), "Your tariff & rates"
+  panel (FIXED/VARIABLE badge, tariff name, DAY/UNIT RATE, STANDING CHARGE, NIGHT/EVE-WKND/KVA/
+  CAPACITY when present, ANNUAL USAGE, EST. ANNUAL COST computed like the original), then
+  MPAN/METER SERIAL/START/END + Get Quote + Request change.
+- Demo contracts now carry tariff fields (tariff_type Fixed, unit_rate_day, standing_charge,
+  annual_usage, usage_unit) so the panel shows in demo mode.
+- Wizard locked card: kicker now "QUOTE FOR {UTILITY}" with utility icon/colour when deep-linked
+  (else "QUOTE FOR THIS SITE"), link text "Change site", address wraps 2 lines, no "Site" h3
+  above it (matches original image).

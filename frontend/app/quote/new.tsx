@@ -296,6 +296,13 @@ export default function QuoteWizard() {
 
   const cameFromSite = Boolean(paramPropertyId);
   const lockedProp = cameFromSite && !changeSite ? properties.find((p) => p.id === addr.property_id) : null;
+  const lockedMeta = ({
+    electricity: { icon: "bolt" as IconName, label: "ELECTRICITY", color: "#F59E0B" },
+    gas: { icon: "fire" as IconName, label: "GAS", color: "#FB923C" },
+    water: { icon: "droplet" as IconName, label: "WATER", color: "#3B82F6" },
+    telecoms: { icon: "phone" as IconName, label: "TELECOMS", color: "#0EA5E9" },
+    broadband: { icon: "wifi" as IconName, label: "BROADBAND", color: "#0EA5E9" },
+  } as Record<string, { icon: IconName; label: string; color: string }>)[paramUtility] || null;
 
   const electricMeters = meters.filter((m) => m.utility === "electric");
   const gasMeters = meters.filter((m) => m.utility === "gas");
@@ -351,19 +358,18 @@ export default function QuoteWizard() {
 
             {lockedProp ? (
               <>
-                <Text style={styles.h3}>Site</Text>
                 <View testID="quote-locked-site" style={styles.lockedSite}>
-                  <View style={styles.lockedIcon}>
-                    <Icon name="building" size={20} color="#FFFFFF" />
+                  <View style={[styles.lockedIcon, lockedMeta && { backgroundColor: lockedMeta.color }]}>
+                    <Icon name={lockedMeta ? lockedMeta.icon : "building"} size={20} color="#FFFFFF" />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.lockedKicker}>QUOTE FOR THIS SITE</Text>
+                    <Text style={styles.lockedKicker}>{lockedMeta ? `QUOTE FOR ${lockedMeta.label}` : "QUOTE FOR THIS SITE"}</Text>
                     <Text style={styles.lockedName} numberOfLines={1}>{lockedProp.property_name || lockedProp.address}</Text>
-                    <Text style={styles.lockedAddr} numberOfLines={1}>{[lockedProp.address, lockedProp.postcode].filter(Boolean).join(", ")}</Text>
+                    <Text style={styles.lockedAddr} numberOfLines={2}>{[lockedProp.address, lockedProp.postcode].filter(Boolean).join(", ")}</Text>
                   </View>
                   {properties.length > 1 && (
                     <Pressable testID="quote-change-site" onPress={() => setChangeSite(true)} hitSlop={8}>
-                      <Text style={styles.changeLink}>Change</Text>
+                      <Text style={styles.changeLink}>Change site</Text>
                     </Pressable>
                   )}
                 </View>

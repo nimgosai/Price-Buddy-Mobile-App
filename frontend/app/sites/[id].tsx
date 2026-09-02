@@ -119,7 +119,14 @@ export default function SiteDetail() {
                       <View style={[styles.uIcon, { backgroundColor: `${meta.color}22` }]}>
                         <Icon name={meta.icon} size={18} color={meta.color} />
                       </View>
-                      <Text style={styles.uLabel}>{meta.label}</Text>
+                      <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Text style={styles.uLabel}>{meta.label}</Text>
+                        {property?.business_name ? (
+                          <View style={[styles.bizPill, { backgroundColor: `${meta.color}1A` }]}>
+                            <Text style={[styles.bizPillText, { color: meta.color }]} numberOfLines={1}>{property.business_name}</Text>
+                          </View>
+                        ) : null}
+                      </View>
                       <Icon
                         name={open ? "chevronDown" : "chevronRight"}
                         size={18}
@@ -133,11 +140,11 @@ export default function SiteDetail() {
                           <>
                             <View style={styles.supRow}>
                               <View>
-                                <Text style={styles.mini}>Supplier</Text>
+                                <Text style={styles.mini}>SUPPLIER</Text>
                                 <Text style={styles.supVal}>{c.supplier_name || "—"}</Text>
                               </View>
                               <View style={{ alignItems: "flex-end" }}>
-                                <Text style={styles.mini}>{days < 0 ? "Expired" : "Ends"}</Text>
+                                <Text style={styles.mini}>{days < 0 ? "EXPIRED" : "ENDS"}</Text>
                                 <Text
                                   style={[
                                     styles.supVal,
@@ -148,6 +155,10 @@ export default function SiteDetail() {
                                 </Text>
                               </View>
                             </View>
+
+                            <ExpiryGauge days={days ?? 0} />
+
+                            <TariffPanel contract={c} utility={u} meta={meta} />
 
                             {c.renewable_now && days > 90 && (
                               <View style={styles.renewBanner} testID={`renewable-banner-${u}`}>
@@ -252,6 +263,104 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
+// ——— 12-segment expiry gauge with urgent pill (mirrors the original web app) ———
+const GAUGE_SEGMENTS = 12;
+function gaugeTier(days: number) {
+  if (days <= 0) return { color: "#991B1B", label: "Out of contract" };
+  if (days <= 30) return { color: "#DC2626", label: "Renew now" };
+  if (days <= 60) return { color: "#EA580C", label: "Action soon" };
+  if (days <= 90) return { color: "#D97706", label: "Plan ahead" };
+  if (days <= 180) return { color: "#7C3AED", label: "Tracking" };
+  return { color: "#059669", label: "Locked in" };
+}
+
+function ExpiryGauge({ days }: { days: number }) {
+  const tier = gaugeTier(days);
+  const filled = days <= 0 ? 0 : Math.max(1, Math.min(GAUGE_SEGMENTS, Math.floor((days / 365) * GAUGE_SEGMENTS) + 1));
+  const urgent = days <= 30;
+  return (
+    <View>
+      {urgent && (
+        <View style={styles.urgentPill} testID="expiry-urgent-pill">
+          <View style={styles.urgentDot} />
+          <Text style={styles.urgentPillText}>
+            {tier.label.toUpperCase()} · {days < 0 ? `${Math.abs(days)} DAYS OVERDUE` : `${days} DAYS LEFT`}
+          </Text>
+        </View>
+      )}
+      <View style={styles.gauge} testID="expiry-gauge">
+        {Array.from({ length: GAUGE_SEGMENTS }).map((_, i) => (
+          <View key={i} style={[styles.gaugeSeg, { backgroundColor: i < filled ? tier.color : colors.border }]} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ——— "Your tariff & rates" panel (mirrors the original web app) ———
+function TariffPanel({ contract: c, utility, meta }: { contract: any; utility: string; meta: UMeta }) {
+  const dayRate = c.unit_rate_day;
+  const night = c.unit_rate_night;
+  const eveWknd = c.unit_rate_eve_weekend;
+  const standing = c.standing_charge;
+  const kva = c.kva_charge;
+  const capacity = c.availability_capacity;
+  const usage = c.annual_usage;
+  const unit = c.usage_unit || "kWh";
+  const tariffName = c.tariff_name;
+  const tariffType = c.tariff_type;
+  const isElec = utility === "electricity";
+  const hasRates = dayRate != null || standing != null || usage != null || night != null || eveWknd != null || kva != null || capacity != null;
+  if (!hasRates && !tariffName) return null;
+
+  let est: number | null = null;
+  if (dayRate != null && usage != null) {
+    est = (Number(dayRate) * Number(usage)) / 100 + (standing != null ? (365 * Number(standing)) / 100 : 0) + (kva != null ? (365 * Number(kva)) / 100 : 0);
+  }
+  const fixed = (tariffType || "").toLowerCase() === "fixed";
+
+  return (
+    <View style={styles.tariff} testID={`tariff-panel-${utility}`}>
+      <View style={styles.tariffHead}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+          <View style={[styles.tariffIcon, { backgroundColor: `${meta.color}1F` }]}>
+            <Icon name="document" size={15} color={meta.color} />
+          </View>
+          <Text style={styles.tariffTitle}>Your tariff &amp; rates</Text>
+        </View>
+        {tariffType ? (
+          <View style={[styles.tariffBadge, { backgroundColor: fixed ? "#D1FAE5" : "#FEF3C7" }]}>
+            <Text style={[styles.tariffBadgeText, { color: fixed ? "#059669" : "#B45309" }]}>{String(tariffType).toUpperCase()}</Text>
+          </View>
+        ) : null}
+      </View>
+      {tariffName ? <Text style={styles.tariffName}>{tariffName}</Text> : null}
+      <View style={styles.tariffGrid}>
+        <TariffCell label={isElec ? "DAY RATE" : "UNIT RATE"} value={dayRate != null ? `${Number(dayRate).toFixed(2)}p / ${unit}` : "—"} />
+        <TariffCell label="STANDING CHARGE" value={standing != null ? `${Number(standing).toFixed(2)}p / day` : "—"} />
+        {isElec && night != null ? <TariffCell label="NIGHT RATE" value={`${Number(night).toFixed(2)}p / ${unit}`} /> : null}
+        {isElec && eveWknd != null ? <TariffCell label="EVE / WKND RATE" value={`${Number(eveWknd).toFixed(2)}p / ${unit}`} /> : null}
+        {isElec && kva != null ? <TariffCell label="KVA CHARGE" value={`${Number(kva).toFixed(2)}p / day`} /> : null}
+        {isElec && capacity != null ? <TariffCell label="AVAILABILITY CAPACITY" value={`${Number(capacity).toLocaleString()} kVA`} /> : null}
+        <TariffCell label="ANNUAL USAGE" value={usage != null ? `${Number(usage).toLocaleString()} ${unit}` : "—"} />
+        <TariffCell label="EST. ANNUAL COST" value={est != null ? `£${est.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"} highlight />
+      </View>
+      {!hasRates && (
+        <Text style={styles.tariffEmpty}>Your rates haven&apos;t been logged yet — they&apos;ll appear here once confirmed.</Text>
+      )}
+    </View>
+  );
+}
+
+function TariffCell({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <View style={styles.detail}>
+      <Text style={styles.mini}>{label}</Text>
+      <Text style={[styles.detailVal, highlight && { color: colors.brandPrimary }]}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
@@ -268,8 +377,39 @@ const styles = StyleSheet.create({
   },
   cardHead: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   uIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  uLabel: { flex: 1, fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
+  uLabel: { fontFamily: font.semibold, fontSize: type.lg, color: colors.heading },
+  bizPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, flexShrink: 1 },
+  bizPillText: { fontFamily: font.bold, fontSize: type.kicker },
   cardBody: { marginTop: spacing.lg, gap: spacing.md },
+
+  urgentPill: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+    paddingVertical: 5,
+    paddingLeft: 8,
+    paddingRight: 12,
+    backgroundColor: "#FECACA",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    borderRadius: radius.pill,
+  },
+  urgentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#DC2626" },
+  urgentPillText: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.5, color: "#991B1B" },
+  gauge: { flexDirection: "row", gap: 4 },
+  gaugeSeg: { flex: 1, height: 6, borderRadius: 3 },
+
+  tariff: { backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.divider, borderRadius: 18, padding: spacing.lg, gap: 10 },
+  tariffHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  tariffIcon: { width: 30, height: 30, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  tariffTitle: { fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  tariffBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
+  tariffBadgeText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5 },
+  tariffName: { fontFamily: font.semibold, fontSize: type.sm, color: colors.heading },
+  tariffGrid: { flexDirection: "row", flexWrap: "wrap", rowGap: spacing.md },
+  tariffEmpty: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
 
   supRow: { flexDirection: "row", justifyContent: "space-between" },
   mini: { fontFamily: font.semibold, fontSize: type.sm, color: colors.muted },

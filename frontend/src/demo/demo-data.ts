@@ -35,6 +35,11 @@ type DemoContract = {
   meter_serial_number: string;
   account_number: string;
   renewable_now: boolean;
+  tariff_type: string;
+  unit_rate_day: number | null;
+  standing_charge: number | null;
+  annual_usage: number | null;
+  usage_unit: string;
 };
 
 const c = (
@@ -53,7 +58,7 @@ const c = (
   utility_type,
   supplier_name,
   supplier: supplier_name,
-  tariff_name: "Fixed 24",
+  tariff_name: `${supplier_name} – Standard`,
   annual_cost,
   start_date: iso(days - 730),
   end_date: iso(days),
@@ -62,6 +67,12 @@ const c = (
   meter_serial_number: `S${id.toUpperCase()}${Math.abs(days)}`,
   account_number: `AC-${id.toUpperCase()}-0042`,
   renewable_now: days > 90,
+  // Tariff & rates (shown on the site detail "Your tariff & rates" panel).
+  tariff_type: "Fixed",
+  unit_rate_day: utility_type === "electricity" ? 27.14 : utility_type === "gas" ? 7.42 : null,
+  standing_charge: utility_type === "electricity" ? 69.9 : utility_type === "gas" ? 32.5 : null,
+  annual_usage: utility_type === "electricity" ? Math.round(annual_cost * 3.1) : utility_type === "gas" ? Math.round(annual_cost * 9.5) : null,
+  usage_unit: "kWh",
 });
 
 const CONTRACTS: DemoContract[] = [
