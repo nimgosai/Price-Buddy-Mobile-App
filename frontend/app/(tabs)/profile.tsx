@@ -21,6 +21,7 @@ import { useAuth } from "@/src/auth/auth-context";
 import { useBusiness } from "@/src/business/business-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
+import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { DEMO_MODE_KEY, isDemoEnabled, setDemoEnabled } from "@/src/demo/demo-data";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
@@ -30,6 +31,7 @@ export default function Profile() {
   const toast = useToast();
   const { user, signOut, refreshUser } = useAuth();
   const { refreshBusinesses } = useBusiness();
+  const scrollRef = useTabScrollToTop();
 
   const [showDelete, setShowDelete] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -106,6 +108,7 @@ export default function Profile() {
     <View style={styles.root}>
       <ScreenHeader testID="profile-header" title="Profile" onBack={() => router.push("/dashboard")} />
       <ScrollView
+        ref={scrollRef}
         testID="profile-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}

@@ -28,6 +28,7 @@ import { AddBusinessModal } from "@/src/components/add-business-modal";
 import { MeterInstallModal } from "@/src/components/meter-install-modal";
 import { apiRequest } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
+import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 export const TOUR_REPLAY_KEY = "uch_tour_replay";
@@ -86,6 +87,7 @@ export default function Dashboard() {
   const { user, refreshUser } = useAuth();
   const { refreshBusinesses } = useBusiness();
   const { width, height } = useWindowDimensions();
+  const scrollRef = useTabScrollToTop();
 
   const [items, setItems] = useState<any[]>([]);
   const [audits, setAudits] = useState<any[]>([]);
@@ -284,6 +286,7 @@ export default function Dashboard() {
       ) : (
         <ScrollView
           testID="dashboard-scroll"
+          ref={scrollRef}
           contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 28 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

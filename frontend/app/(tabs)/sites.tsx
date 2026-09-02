@@ -19,6 +19,7 @@ import { ScreenHeader } from "@/src/components/screen";
 import { SiteActionsSheet } from "@/src/components/site-actions-sheet";
 import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
 import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
+import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -26,6 +27,7 @@ export default function Sites() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeBizId, bizQuery, businesses } = useBusiness();
+  const scrollRef = useTabScrollToTop();
 
   const [sites, setSites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +130,7 @@ export default function Sites() {
         </View>
       ) : (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
