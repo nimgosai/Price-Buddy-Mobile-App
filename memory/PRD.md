@@ -453,3 +453,19 @@ No login/live-data writes used — everything reconstructed from the bundle.
   "ends {D MMM YYYY}", tiered days pill: ≤30 red overdue/left, ≤60 orange, else amber).
 - Removed per-contract "Get a better deal" button (not in original; quotes live on site detail).
 - Demo /renewals/urgent now enriched with business_id/business_name/postcode/contract_id.
+
+### COMPREHENSIVE POLISH PASS (user 5-part task)
+1. Dashboard audit card unified: header (scan icon + "Audit in progress" 16 semibold), body copy,
+   two 36px pills [Track status → /support] [Request a call → POST /scans/{id}/request-call,
+   becomes green "☎ Call requested"], 12px "Or call us direct on 0800 368 9822" tel link.
+   Per-bill rows and "+N more" caption removed.
+2. Renewals rows: utility name (14 semibold) + supplier (13 regular) stacked, right tiered pill
+   (12 medium) + chevron, whole row taps to site. Narrow (<360px) shrinks icon/fonts so
+   "Electricity" never breaks mid-word. Site names wrap 2 lines.
+3. Site detail: supplier banner "British Gas · Electricity" + compact Ends badge (12px/6px pad,
+   red<60d else green); "Rates & estimated cost" card; "Meter details" card (MPAN full-width,
+   METER SERIAL, START DATE, CONTRACT END DATE); Get Quote solid green #1E6B47 44px bold +
+   "Request Callback" outline (lock icon removed).
+4. Review screen: renewing strip simplified (icon + "Electricity · British Gas" 14 bold wrap +
+   "Ends in N days" compact pill; EXPIRING SOON badge/MPAN removed); KV rows 14px w/ 12px rhythm;
+   wizard buttons 48px.

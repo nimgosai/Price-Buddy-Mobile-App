@@ -666,32 +666,17 @@ function ReviewStep({ selected, contact, addr, meters, waterSupplier, telecomsSu
         daysText = days < 0 ? `Ended ${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"} ago` : days === 0 ? "Ends today" : `Ends in ${days} ${days === 1 ? "day" : "days"}`;
       }
     }
-    const label = u === "electricity" ? "Electric" : u ? u[0].toUpperCase() + u.slice(1) : "Contract";
-    const mpxKey = u === "gas" ? "MPRN" : u === "electricity" ? "MPAN" : "";
-    const mpx = (renewingContract.meter_point_number || "").trim();
+    const label = u === "electricity" ? "Electricity" : u ? u[0].toUpperCase() + u.slice(1) : "Contract";
     const t = RENEWING_TINTS[u] || RENEWING_TINTS.default;
     pill = (
       <View testID="review-renewing-pill" style={[styles.renewPill, { backgroundColor: t.bg, borderColor: t.border }]}>
-        <View style={[styles.renewAccent, { backgroundColor: t.accent }]} />
         <View style={[styles.renewIcon, { backgroundColor: t.iconBg }]}>
-          <Icon name={t.icon} size={22} color={t.accent} />
+          <Icon name={t.icon} size={20} color={t.accent} />
         </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <View style={[styles.renewBadge, { backgroundColor: t.iconBg }]}>
-            <View style={[styles.renewDot, { backgroundColor: t.accent }]} />
-            <Text style={[styles.renewBadgeText, { color: t.accent }]}>EXPIRING SOON</Text>
-          </View>
-          <Text style={[styles.renewTitle, { color: t.fg }]} numberOfLines={1}>
-            {label}
-            {supplier ? ` · ${supplier}` : ""}
-          </Text>
-          {mpxKey && mpx ? (
-            <Text style={[styles.renewMpx, { color: t.fg }]} numberOfLines={1}>
-              <Text style={{ fontFamily: font.bold }}>{mpxKey} </Text>
-              {mpx}
-            </Text>
-          ) : null}
-        </View>
+        <Text style={[styles.renewTitle, { color: t.fg }]}>
+          {label}
+          {supplier ? ` · ${supplier}` : ""}
+        </Text>
         {daysText ? (
           <View style={[styles.renewDays, { borderColor: t.border }]}>
             <Text style={[styles.renewDaysText, { color: t.accent }]}>{daysText}</Text>
@@ -840,24 +825,19 @@ const styles = StyleSheet.create({
   addMeter: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.brandPrimary, borderRadius: radius.md, paddingVertical: spacing.md, backgroundColor: colors.brandTertiary },
   addMeterText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
 
-  renewPill: { position: "relative", borderRadius: 18, borderWidth: 1, paddingVertical: 14, paddingLeft: 18, paddingRight: 16, marginBottom: 18, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 14 },
-  renewAccent: { position: "absolute", top: 0, bottom: 0, left: 0, width: 4, borderTopRightRadius: 6, borderBottomRightRadius: 6 },
-  renewIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  renewBadge: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, marginBottom: 6 },
-  renewDot: { width: 6, height: 6, borderRadius: 3 },
-  renewBadgeText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5 },
-  renewTitle: { fontFamily: font.bold, fontSize: type.title },
-  renewMpx: { marginTop: 4, fontFamily: font.medium, fontSize: type.kicker, opacity: 0.78, letterSpacing: 0.3 },
-  renewDays: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, borderWidth: 1, backgroundColor: "rgba(255,255,255,0.5)", maxWidth: 100 },
-  renewDaysText: { fontFamily: font.bold, fontSize: type.sm, textAlign: "right", lineHeight: 16 },
+  renewPill: { borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 12 },
+  renewIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  renewTitle: { flex: 1, fontFamily: font.bold, fontSize: type.base, lineHeight: 19 },
+  renewDays: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1, backgroundColor: "rgba(255,255,255,0.6)", flexShrink: 0 },
+  renewDaysText: { fontFamily: font.semibold, fontSize: 12 },
 
   reviewCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: 10 },
   reviewCardTitle: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, marginBottom: 8 },
   reviewPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   reviewPillText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurfaceSecondary },
-  kvRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, gap: spacing.md },
+  kvRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, gap: spacing.md },
   kvKey: { fontFamily: font.regular, fontSize: type.base, color: colors.onSurfaceSecondary },
-  kvVal: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading, flex: 1, textAlign: "right" },
+  kvVal: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurface, flex: 1, textAlign: "right" },
   miniCard: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.sm, padding: spacing.sm, marginBottom: 8 },
   miniCardTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading, marginBottom: 2 },
   miniCardMpx: { fontSize: type.sm, color: colors.onSurfaceSecondary, marginBottom: 2, letterSpacing: 0.2 },
@@ -865,7 +845,7 @@ const styles = StyleSheet.create({
 
   error: { fontFamily: font.medium, fontSize: type.sm, color: colors.error, marginTop: 12 },
   navRow: { flexDirection: "row", gap: 10, marginTop: 20, marginBottom: 24 },
-  navBtn: { height: 52, borderRadius: radius.md, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
+  navBtn: { height: 48, borderRadius: radius.md, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
   navBack: { flex: 1, backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border },
   navBackText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
   navPrimary: { backgroundColor: colors.brandPrimary },

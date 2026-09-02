@@ -377,49 +377,32 @@ export default function Dashboard() {
             </Pressable>
           )}
 
-          {/* Audit in progress — mirrors the original web app */}
+          {/* Audit in progress — unified card */}
           {audits.length > 0 && (
             <View style={styles.audit} testID="audit-in-progress-card">
               <View style={styles.auditHead}>
                 <View style={styles.auditIcon}>
-                  <Icon name="scan" size={22} color="#FFFFFF" />
+                  <Icon name="scan" size={20} color="#FFFFFF" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.auditTitle}>Audit in progress</Text>
-                  <Text style={styles.auditSub}>
-                    Our team is verifying {audits.length === 1 ? "your bill" : `${audits.length} bills`}. We&apos;ll be in touch once everything&apos;s confirmed.
-                  </Text>
-                </View>
+                <Text style={styles.auditTitle}>Audit in progress</Text>
               </View>
-              {audits.slice(0, 1).map((a) => {
-                const called = !!a.call_requested_at;
-                const intent = ({ track: "Tracking", quote: "Quote requested", both: "Tracking + Quote" } as Record<string, string>)[a.intent || "track"] || "Tracking";
-                return (
-                  <View key={a.id} testID={`audit-row-${a.id}`} style={styles.auditRow}>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={styles.auditRowTitle} numberOfLines={2}>
-                        {a.supplier_name || "Bill upload"} · {a.supply_address || "Awaiting details"}
-                      </Text>
-                      <Text style={styles.auditRowSub}>
-                        {intent}
-                        {a.pages_uploaded > 1 ? ` · ${a.pages_uploaded} pages` : ""}
-                      </Text>
-                    </View>
-                    {called ? (
-                      <View style={styles.auditCalled} testID={`audit-call-confirmed-${a.id}`}>
-                        <Text style={styles.auditCalledText}>☎ CALL REQUESTED</Text>
-                      </View>
-                    ) : (
-                      <Pressable testID={`audit-request-call-${a.id}`} disabled={callingId === a.id} onPress={() => requestCall(a.id)} style={styles.auditCallBtn}>
-                        <Text style={styles.auditCallBtnText}>{callingId === a.id ? "Sending…" : "Request a Call Now"}</Text>
-                      </Pressable>
-                    )}
+              <Text style={styles.auditSub}>
+                Our team is verifying {audits.length === 1 ? "your bill" : `${audits.length} bills`}. We&apos;ll be in touch once everything&apos;s confirmed.
+              </Text>
+              <View style={styles.auditBtnRow}>
+                <Pressable testID="audit-track-status" onPress={() => router.push("/support")} style={[styles.auditBtn, styles.auditBtnGhost]}>
+                  <Text style={styles.auditBtnGhostText}>Track status</Text>
+                </Pressable>
+                {audits[0]?.call_requested_at ? (
+                  <View style={[styles.auditBtn, styles.auditBtnDone]} testID="audit-call-confirmed">
+                    <Text style={styles.auditBtnDoneText}>☎ Call requested</Text>
                   </View>
-                );
-              })}
-              {audits.length > 1 && (
-                <Text style={styles.auditMore} testID="audit-more">+{audits.length - 1} more {audits.length - 1 === 1 ? "bill" : "bills"} being verified</Text>
-              )}
+                ) : (
+                  <Pressable testID="audit-request-call" disabled={callingId === audits[0]?.id} onPress={() => requestCall(audits[0].id)} style={[styles.auditBtn, styles.auditBtnPrimary]}>
+                    <Text style={styles.auditBtnPrimaryText}>{callingId === audits[0]?.id ? "Sending…" : "Request a call"}</Text>
+                  </Pressable>
+                )}
+              </View>
               <Pressable testID="audit-call-direct" onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE.replace(/\s/g, "")}`)} hitSlop={6}>
                 <Text style={styles.auditCallDirect}>Or call us direct on {SUPPORT_PHONE}</Text>
               </Pressable>
@@ -587,20 +570,20 @@ const styles = StyleSheet.create({
   expLink: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4 },
   expLinkText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
 
-  audit: { backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A", borderRadius: radius.md, padding: spacing.md },
-  auditHead: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 12 },
-  auditIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" },
-  auditTitle: { fontFamily: font.bold, fontSize: type.base, color: "#92400E" },
-  auditSub: { fontFamily: font.regular, fontSize: type.sm, color: "#78350F", lineHeight: 18, marginTop: 2 },
-  auditRow: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFFFFF", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8 },
-  auditMore: { fontFamily: font.medium, fontSize: type.kicker, color: "#92400E", marginBottom: 4, marginLeft: 2 },
-  auditRowTitle: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurface },
-  auditRowSub: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2 },
-  auditCalled: { backgroundColor: "#10B981", paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill },
-  auditCalledText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5, color: "#FFFFFF" },
-  auditCallBtn: { borderWidth: 1, borderColor: colors.brandPrimary, backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
-  auditCallBtnText: { fontFamily: font.semibold, fontSize: type.kicker, color: colors.brandPrimary },
-  auditCallDirect: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary, textAlign: "center", marginTop: 4 },
+  audit: { backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A", borderRadius: radius.md, padding: spacing.lg, gap: 10 },
+  auditHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  auditIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" },
+  auditTitle: { fontFamily: font.semibold, fontSize: type.lg, color: "#92400E" },
+  auditSub: { fontFamily: font.regular, fontSize: type.sm, color: "#78350F", lineHeight: 18 },
+  auditBtnRow: { flexDirection: "row", gap: 10 },
+  auditBtn: { flex: 1, height: 36, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  auditBtnGhost: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#FCD34D" },
+  auditBtnGhostText: { fontFamily: font.semibold, fontSize: type.sm, color: "#92400E" },
+  auditBtnPrimary: { backgroundColor: colors.brandPrimary },
+  auditBtnPrimaryText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
+  auditBtnDone: { backgroundColor: "#10B981" },
+  auditBtnDoneText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
+  auditCallDirect: { fontFamily: font.medium, fontSize: 12, color: "#92400E", textAlign: "center" },
 
   quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
   quickGrid: { flexDirection: "row", gap: 12 },

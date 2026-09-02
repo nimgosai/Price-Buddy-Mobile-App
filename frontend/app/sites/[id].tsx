@@ -138,20 +138,13 @@ export default function SiteDetail() {
                       <View style={styles.cardBody}>
                         {c ? (
                           <>
-                            <View style={styles.supRow}>
-                              <View>
-                                <Text style={styles.mini}>SUPPLIER</Text>
-                                <Text style={styles.supVal}>{c.supplier_name || "—"}</Text>
-                              </View>
-                              <View style={{ alignItems: "flex-end" }}>
-                                <Text style={styles.mini}>{days < 0 ? "EXPIRED" : "ENDS"}</Text>
-                                <Text
-                                  style={[
-                                    styles.supVal,
-                                    { color: days < 60 ? colors.error : colors.heading },
-                                  ]}
-                                >
-                                  {days < 0 ? `${Math.abs(days)} days ago` : `in ${days} days`}
+                            <View style={styles.supBanner}>
+                              <Text style={styles.supBannerText}>
+                                {c.supplier_name || "Supplier TBC"} · {meta.label}
+                              </Text>
+                              <View style={[styles.endsBadge, days < 60 ? styles.endsBadgeUrgent : styles.endsBadgeOk]}>
+                                <Text style={[styles.endsBadgeText, { color: days < 60 ? "#991B1B" : "#065F46" }]}>
+                                  {days < 0 ? `Ended ${Math.abs(days)} days ago` : `Ends in ${days} days`}
                                 </Text>
                               </View>
                             </View>
@@ -171,14 +164,17 @@ export default function SiteDetail() {
                               </View>
                             )}
 
-                            <View style={styles.grid}>
-                              <Detail
-                                label={u === "gas" ? "MPRN" : u === "electricity" ? "MPAN" : "Account"}
-                                value={c.meter_point_number || c.account_number || "—"}
-                              />
-                              <Detail label="Meter serial" value={c.meter_serial_number || "—"} />
-                              <Detail label="Start date" value={fmt(c.start_date)} />
-                              <Detail label="End date" value={fmt(c.end_date)} />
+                            <View style={styles.tariff} testID={`meter-details-${u}`}>
+                              <Text style={styles.tariffTitle}>Meter details</Text>
+                              <View style={styles.grid}>
+                                <View style={[styles.detail, { width: "100%" }]}>
+                                  <Text style={styles.mini}>{u === "gas" ? "MPRN" : u === "electricity" ? "MPAN" : "ACCOUNT"}</Text>
+                                  <Text style={styles.detailVal}>{c.meter_point_number || c.account_number || "—"}</Text>
+                                </View>
+                                <Detail label="METER SERIAL" value={c.meter_serial_number || "—"} />
+                                <Detail label="START DATE" value={fmt(c.start_date)} />
+                                <Detail label="CONTRACT END DATE" value={fmt(c.end_date)} />
+                              </View>
                             </View>
 
                             <View style={styles.btnRow}>
@@ -206,8 +202,7 @@ export default function SiteDetail() {
                                 onPress={() => setRcContract({ ...c, property_id: c.property_id || params.id })}
                                 style={[styles.actBtn, styles.actGhost]}
                               >
-                                <Icon name="lock" size={15} color={colors.heading} />
-                                <Text style={styles.actGhostText}>Request change</Text>
+                                <Text style={styles.actGhostText}>Request Callback</Text>
                               </Pressable>
                             </View>
                           </>
@@ -326,7 +321,7 @@ function TariffPanel({ contract: c, utility, meta }: { contract: any; utility: s
           <View style={[styles.tariffIcon, { backgroundColor: `${meta.color}1F` }]}>
             <Icon name="document" size={15} color={meta.color} />
           </View>
-          <Text style={styles.tariffTitle}>Your tariff &amp; rates</Text>
+          <Text style={styles.tariffTitle}>Rates &amp; estimated cost</Text>
         </View>
         {tariffType ? (
           <View style={[styles.tariffBadge, { backgroundColor: fixed ? "#D1FAE5" : "#FEF3C7" }]}>
@@ -411,9 +406,13 @@ const styles = StyleSheet.create({
   tariffGrid: { flexDirection: "row", flexWrap: "wrap", rowGap: spacing.md },
   tariffEmpty: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
 
-  supRow: { flexDirection: "row", justifyContent: "space-between" },
+  supBanner: { flexDirection: "row", alignItems: "center", gap: 10, justifyContent: "space-between" },
+  supBannerText: { flex: 1, fontFamily: font.bold, fontSize: type.base, color: colors.heading },
+  endsBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1, flexShrink: 0 },
+  endsBadgeUrgent: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
+  endsBadgeOk: { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" },
+  endsBadgeText: { fontFamily: font.semibold, fontSize: 12 },
   mini: { fontFamily: font.semibold, fontSize: type.sm, color: colors.muted },
-  supVal: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 2 },
 
   renewBanner: {
     flexDirection: "row",
@@ -432,9 +431,9 @@ const styles = StyleSheet.create({
   detailVal: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 2 },
 
   btnRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
-  actBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 46, borderRadius: radius.sm },
-  actPrimary: { backgroundColor: colors.brandPrimary },
-  actPrimaryText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onBrandPrimary },
+  actBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 44, borderRadius: radius.sm },
+  actPrimary: { backgroundColor: "#1E6B47" },
+  actPrimaryText: { fontFamily: font.bold, fontSize: type.base, color: "#FFFFFF" },
   actGhost: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   actGhostText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
 

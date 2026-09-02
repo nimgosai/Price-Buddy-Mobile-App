@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -51,6 +52,8 @@ function daysUntil(dateStr?: string): number | null {
 export default function Renewals() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const narrow = width < 360;
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,7 +180,7 @@ export default function Renewals() {
                           <Icon name="building" size={15} color={colors.brandPrimary} />
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={styles.siteName} numberOfLines={1}>{s.property_name || "Site"}</Text>
+                          <Text style={styles.siteName} numberOfLines={2}>{s.property_name || "Site"}</Text>
                           {bizCount > 1 && !!g.business_name && (
                             <View style={styles.siteBizChip}>
                               <Text style={styles.siteBizChipText} numberOfLines={1}>{g.business_name}</Text>
@@ -192,24 +195,25 @@ export default function Renewals() {
                           const days = c.days_until_expiry ?? daysUntil(c.end_date) ?? 0;
                           const tier = daysTier(days);
                           const meta = UTIL_META[c.utility_type] || { label: c.utility_type, icon: "bolt" as IconName, color: "#888" };
-                          const end = c.end_date || c.contract_end_date;
                           return (
-                            <View key={c.contract_id || c.id || ci} testID={`renewal-contract-${c.contract_id || c.id || ci}`} style={styles.contractRow}>
-                              <View style={[styles.utilIcon, { backgroundColor: `${meta.color}1F` }]}>
-                                <Icon name={meta.icon} size={18} color={meta.color} />
+                            <Pressable
+                              key={c.contract_id || c.id || ci}
+                              testID={`renewal-contract-${c.contract_id || c.id || ci}`}
+                              onPress={() => s.property_id && router.push(`/sites/${s.property_id}`)}
+                              style={({ pressed }) => [styles.contractRow, narrow && { paddingHorizontal: 10, gap: 8 }, pressed && { opacity: 0.9 }]}
+                            >
+                              <View style={[styles.utilIcon, { backgroundColor: `${meta.color}1F` }, narrow && { width: 32, height: 32 }]}>
+                                <Icon name={meta.icon} size={narrow ? 15 : 18} color={meta.color} />
                               </View>
                               <View style={{ flex: 1, minWidth: 0 }}>
-                                <Text style={styles.contractTitle} numberOfLines={2}>
-                                  {meta.label}{c.supplier_name ? ` · ${c.supplier_name}` : ""}
-                                </Text>
-                                <Text style={styles.contractEnds}>
-                                  ends {end ? dayjs(end).format("D MMM YYYY") : "—"}
-                                </Text>
+                                <Text style={[styles.contractTitle, narrow && { fontSize: 13 }]}>{meta.label}</Text>
+                                <Text style={[styles.contractSupplier, narrow && { fontSize: 12 }]}>{c.supplier_name || "Supplier TBC"}</Text>
                               </View>
-                              <View style={[styles.daysPill, { backgroundColor: tier.bg, borderColor: tier.border }]}>
-                                <Text style={[styles.daysPillText, { color: tier.color }]}>{tier.label}</Text>
+                              <View style={[styles.daysPill, { backgroundColor: tier.bg, borderColor: tier.border }, narrow && { paddingHorizontal: 7 }]}>
+                                <Text style={[styles.daysPillText, { color: tier.color }, narrow && { fontSize: 11 }]}>{tier.label}</Text>
                               </View>
-                            </View>
+                              <Icon name="chevronRight" size={14} color={colors.muted} />
+                            </Pressable>
                           );
                         })}
                       </View>
@@ -258,8 +262,8 @@ const styles = StyleSheet.create({
   sitePostcode: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 7 },
   contractRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.divider, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 },
   utilIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  contractTitle: { fontFamily: font.bold, fontSize: type.sm, color: colors.heading },
-  contractEnds: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2 },
-  daysPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1 },
-  daysPillText: { fontFamily: font.bold, fontSize: type.kicker },
+  contractTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  contractSupplier: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 2 },
+  daysPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1, flexShrink: 0 },
+  daysPillText: { fontFamily: font.medium, fontSize: 12 },
 });
