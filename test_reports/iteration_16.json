@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only regression for the supplier chip -> native dropdown fix on the Energy details step (live external backend at EXPO_PUBLIC_UCH_BACKEND_URL). VERIFIED end-to-end at 390px AND 320px mobile viewports: (a) NO wall of chips — each meter renders a SelectField 'Select a supplier' (testIDs meter-electric-0-supplier-select and meter-gas-0-supplier-select present, both show placeholder text 'Select a supplier'); (b) Tapping opens a bottom-sheet titled 'Choose a supplier' containing exactly the 12 expected options (British Gas, E.On Next, EDF Energy, Octopus Energy, Scottish Power, Opus Energy, Total Energies, SSE, Crown Gas & Power, Yu Energy, I don't know, Other — type it in) — every option testID meter-electric-0-supplier-select-opt-<value> resolved OK; (c) Picking 'British Gas' shows 'British Gas' in the field; (d) Picking 'Other — type it in' reveals the 'Type your supplier' TextInput (testID meter-electric-0-supplier) and typing 'My Local Energy' persists (input.value == 'My Local Energy'); (e) Picking 'I don't know' shows 'I don't know' in the field; (f) Contract end date SelectField (testID meter-electric-0-end) still works — selecting 'under_6m' displays 'Under 6 months'; (g) Layout is clean at both 390px and 320px, with Electric group above Gas separated by the groupDivider borderTop + 22px paddingTop. VALIDATION: leaving Gas supplier empty while both contract-end windows are set and tapping Continue produces exact error text 'Please complete the highlighted fields.' AND the Gas supplier dropdown border computes to rgb(239, 68, 68) (colors.error, borderWidth 1px). FULL REGRESSION: Electric=I don't know / Under 6 months + Gas=Octopus Energy / 6-12 months → Review renders 'Electric — I don't know' and 'Gas — Octopus Energy' (NOT '__idk__') → Submit request → live POST /api/quotes/multi 200 → redirected to /quote/success with 'Request received' heading, 'What happens next:' card, and REFERENCE badge 'F7C82FD8'.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "CtaShimmer (dashboard/wizard CTA)", "issue": "Non-blocking web warning still present: 'Animated: useNativeDriver is not supported ... falling back to JS-based animation.' Consider gating useNativeDriver by Platform.OS !== 'web'. Reference: /app/frontend/src/components/cta-shimmer.tsx"},
+      {"component": "Global styles", "issue": "Deprecation warnings on Expo web: 'shadow*' style props are deprecated (use boxShadow) and 'props.pointerEvents is deprecated' (use style.pointerEvents). Non-blocking."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "None required — the supplier chip-wall was fully replaced by a native SelectField dropdown per meter, validation still highlights the empty gas supplier with a red border, review renders 'I don't know' as text (not __idk__), and a live quote was submitted end-to-end (ref F7C82FD8). All acceptance criteria met.",
+    "Optional (non-blocking, unchanged from iteration 15): gate CtaShimmer's useNativeDriver behind Platform.OS !== 'web' and migrate deprecated shadow*/pointerEvents props to silence console warnings."
+  ],
+  "critical_code_review_comments": [
+    "quote/new.tsx SupplierPicker correctly maps free-text 'custom' state to __other__ selectValue and reveals the meter-<utility>-<i>-supplier TextInput; when a known supplier is chosen the free-text input is hidden.",
+    "SelectField renders option testIDs as `${testID}-opt-${value}` — matches the wizard's contract for meter-electric-0-supplier-select-opt-<value> and enables reliable automated selection.",
+    "Validation `stepValid` for energy step correctly treats __idk__ as a truthy supplier (m.supplier?.trim()), so 'I don't know' passes without a red border while an empty gas supplier is flagged.",
+    "Review step maps m.supplier === '__idk__' to the human string \"I don't know\" — verified in the rendered review-meter-0 innerText."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (external live backend not tested)", "frontend": "100%"},
+  "seed_data_creation": "None — used the pre-registered account e2e_test_1786703401@example.com. A live quote was submitted (ref F7C82FD8, quote_request_id f7c82fd8-028f-4d9b-a91c-4b8d2632a4fd) against the external backend at https://utility-contract-hub.emergent.host.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Supplier dropdown testIDs: meter-<utility>-<i>-supplier-select opens a bottom-sheet with options testID'd meter-<utility>-<i>-supplier-select-opt-<value>. Special values are 'British Gas', 'E.On Next', 'EDF Energy', 'Octopus Energy', 'Scottish Power', 'Opus Energy', 'Total Energies', 'SSE', 'Crown Gas & Power', 'Yu Energy', '__idk__' (renders as 'I don't know'), '__other__' (reveals the meter-<utility>-<i>-supplier TextInput). When picking Other, ALWAYS click the option BEFORE typing — otherwise the input won't be mounted. Live external backend at EXPO_PUBLIC_UCH_BACKEND_URL. Signin submit may need a retry if URL still shows /signin after 6s.",
+  "rca_of_issue": "N/A — chip-to-dropdown replacement verified working end-to-end with no regressions."
+}

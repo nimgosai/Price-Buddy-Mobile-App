@@ -498,3 +498,10 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Energy details step: chips gap 8 / padding 14x9 (no truncation for all 10 suppliers), meter cards
   16px padding, Gas group separated from Electric by divider + 22px top padding, verified at
   320px & 390px. Full quote flow regression + live submission passed (ref 0803B392).
+
+### SUPPLIER CHIPS → NATIVE DROPDOWN (user re-reported; testing_agent iteration_16 PASS)
+- Energy step supplier picker replaced: SelectField dropdown "Select a supplier" → sheet "Choose a
+  supplier" (10 UK suppliers + "I don't know" + "Other — type it in" revealing free-text input).
+- Review shows "I don't know" instead of "__idk__". Red-border validation intact. Verified full
+  live submission (ref F7C82FD8) at 320px & 390px.
+- NOTE FOR USER: the published/live app only updates after Re-publish — preview is ahead.

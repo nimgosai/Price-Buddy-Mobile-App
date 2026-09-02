@@ -534,33 +534,43 @@ export default function QuoteWizard() {
   );
 }
 
-// ——— Supplier picker: chips of common suppliers + "I don't know" + free text ———
+// ——— Supplier picker: clean native dropdown (+ "Other" free-text) ———
 function SupplierPicker({ value, onChange, testidPrefix, error }: { value: string; onChange: (v: string) => void; testidPrefix: string; error?: boolean }) {
   const trimmed = (value || "").trim();
   const known = SUPPLIERS.find((s) => s.toLowerCase() === trimmed.toLowerCase());
-  const custom = trimmed && !known && trimmed !== "__idk__";
   const idk = trimmed === "__idk__";
+  const custom = !!trimmed && !known && !idk;
+  const [otherMode, setOtherMode] = useState(custom);
+  const selectValue = known ? known : idk ? "__idk__" : otherMode || custom ? "__other__" : "";
   return (
     <View>
-      <View style={styles.chipWrap}>
-        {SUPPLIERS.map((s) => {
-          const on = known === s;
-          return (
-            <Pressable key={s} testID={`${testidPrefix}-supplier-chip-${s.toLowerCase().replace(/[^a-z]/g, "")}`} onPress={() => onChange(on ? "" : s)} style={[styles.supChip, on && styles.supChipOn]}>
-              <Text style={[styles.supChipText, on && styles.supChipTextOn]}>{s}</Text>
-            </Pressable>
-          );
-        })}
-        <Pressable testID={`${testidPrefix}-supplier-chip-idk`} onPress={() => onChange(idk ? "" : "__idk__")} style={[styles.idkChip, idk && styles.idkChipOn]}>
-          <Text style={[styles.idkChipText, idk && { color: "#FFFFFF" }]}>I don&apos;t know</Text>
-        </Pressable>
-      </View>
-      {!idk && (
+      <SelectField
+        testID={`${testidPrefix}-supplier-select`}
+        value={selectValue}
+        placeholder="Select a supplier"
+        sheetTitle="Choose a supplier"
+        error={error && !otherMode}
+        options={[
+          ...SUPPLIERS.map((s) => ({ value: s, label: s })),
+          { value: "__idk__", label: "I don't know" },
+          { value: "__other__", label: "Other — type it in" },
+        ]}
+        onChange={(v) => {
+          if (v === "__other__") {
+            setOtherMode(true);
+            onChange("");
+          } else {
+            setOtherMode(false);
+            onChange(v);
+          }
+        }}
+      />
+      {(otherMode || custom) && (
         <TextInput
           testID={`${testidPrefix}-supplier`}
           value={custom ? trimmed : ""}
           onChangeText={onChange}
-          placeholder={known ? "" : "Or type a different supplier"}
+          placeholder="Type your supplier"
           placeholderTextColor={colors.muted}
           style={[styles.input, { marginTop: 8 }, error && styles.inputError]}
         />
@@ -736,7 +746,7 @@ function ReviewStep({ selected, contact, addr, meters, waterSupplier, telecomsSu
           {meters.map((m, i) => (
             <View key={m._id} testID={`review-meter-${i}`} style={styles.miniCard}>
               <Text style={styles.miniCardTitle}>
-                {m.utility === "electric" ? "Electric" : "Gas"} — {m.supplier || "—"}
+                {m.utility === "electric" ? "Electric" : "Gas"} — {m.supplier === "__idk__" ? "I don't know" : m.supplier || "—"}
               </Text>
               {m.meter_point_number ? (
                 <Text testID={`review-meter-${i}-mpx`} style={styles.miniCardMpx}>
@@ -835,15 +845,6 @@ const styles = StyleSheet.create({
   prefilledBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, borderWidth: 1, borderColor: "#FFD5C9" },
   prefilledBadgeText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.5, color: colors.brandPrimary },
   removeText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.error },
-
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  supChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
-  supChipOn: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
-  supChipText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurface },
-  supChipTextOn: { color: "#FFFFFF" },
-  idkChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.border, backgroundColor: "transparent" },
-  idkChipOn: { backgroundColor: colors.heading, borderColor: colors.heading },
-  idkChipText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurfaceSecondary },
 
   addMeter: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.brandPrimary, borderRadius: radius.md, paddingVertical: spacing.md, backgroundColor: colors.brandTertiary },
   addMeterText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
