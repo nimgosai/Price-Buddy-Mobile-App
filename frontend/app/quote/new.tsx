@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -208,6 +208,12 @@ export default function QuoteWizard() {
   const current = flow[Math.min(step, flow.length - 1)];
   const isLast = step >= flow.length - 1;
 
+  // Reset scroll to the top whenever the step changes so each step starts at the top.
+  const scrollRef = useRef<any>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo?.({ y: 0, animated: false });
+  }, [step]);
+
   const back = () => {
     setError("");
     setShowErrors(false);
@@ -329,7 +335,7 @@ export default function QuoteWizard() {
           ),
         )}
       </View>
-      <KeyboardAwareScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {current === "service" && (
           <View testID="step-service">
             <Text style={styles.h2}>Which services do you need a quote for?</Text>
