@@ -18,14 +18,14 @@ import { Icon } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { SiteActionsSheet } from "@/src/components/site-actions-sheet";
 import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
-import { useBusiness } from "@/src/business/business-context";
+import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 export default function Sites() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { activeBizId, bizQuery } = useBusiness();
+  const { activeBizId, bizQuery, businesses } = useBusiness();
 
   const [sites, setSites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +78,41 @@ export default function Sites() {
       `${s.property_name || ""} ${s.address || ""} ${s.postcode || ""}`.toLowerCase().includes(q),
     );
   }, [sites, query]);
+
+  const isAll = activeBizId === ALL_BUSINESSES;
+
+  // Group sites by parent business (only in "All businesses" mode), preserving business order.
+  const groups = useMemo(() => {
+    if (!isAll) return [];
+    const map = new Map<string, { id: string; name: string; sites: any[] }>();
+    const order: string[] = [];
+    businesses.forEach((b) => {
+      map.set(b.id, { id: b.id, name: b.company_name, sites: [] });
+      order.push(b.id);
+    });
+    filtered.forEach((s) => {
+      const bid = s.business_id || "__ungrouped__";
+      if (!map.has(bid)) {
+        map.set(bid, { id: bid, name: s.business_name || "Other sites", sites: [] });
+        order.push(bid);
+      }
+      map.get(bid)!.sites.push(s);
+    });
+    return order.map((id) => map.get(id)!).filter((g) => g.sites.length > 0);
+  }, [isAll, businesses, filtered]);
+
+  const openSite = useCallback(
+    (s: any) =>
+      router.push({
+        pathname: "/sites/[id]",
+        params: {
+          id: s.id || s._id,
+          name: s.property_name || s.name || s.site_name || "Site",
+          address: [s.address, s.postcode].filter(Boolean).join(", "),
+        },
+      }),
+    [router],
+  );
 
   return (
     <View style={styles.root}>
@@ -143,21 +178,51 @@ export default function Sites() {
                 <Card testID="sites-no-match" style={styles.noMatch}>
                   <Text style={styles.noMatchText}>No sites match “{query}”.</Text>
                 </Card>
+              ) : isAll ? (
+                groups.map((g) => (
+                  <View key={g.id} testID={`site-group-${g.id}`} style={styles.group}>
+                    <View style={styles.groupHead}>
+                      <View style={styles.groupIcon}>
+                        <Icon name="building" size={15} color={colors.brandPrimary} />
+                      </View>
+                      <Text style={styles.groupName} numberOfLines={1}>{g.name}</Text>
+                      <View style={styles.countBadge}>
+                        <Text style={styles.countBadgeText}>
+                          {g.sites.length} {g.sites.length === 1 ? "site" : "sites"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.groupCard}>
+                      {g.sites.map((s: any, i: number) => (
+                        <Pressable
+                          key={s.id || s._id}
+                          testID={`site-card-${s.id || s._id}`}
+                          onPress={() => openSite(s)}
+                          style={({ pressed }) => [styles.groupRow, i > 0 && styles.groupRowDivider, pressed && { opacity: 0.6 }]}
+                        >
+                          <View style={styles.pinIcon}>
+                            <Icon name="mapPin" size={16} color={colors.brandPrimary} />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={styles.rowName} numberOfLines={1}>
+                              {s.property_name || s.address || "Site"}
+                            </Text>
+                            <Text style={styles.rowAddr} numberOfLines={1}>
+                              {[s.address, s.postcode].filter(Boolean).join(", ") || "Address on file"}
+                            </Text>
+                          </View>
+                          <Icon name="chevronRight" size={18} color={colors.muted} />
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ))
               ) : (
                 filtered.map((s: any) => (
                   <Pressable
                     key={s.id || s._id}
                     testID={`site-card-${s.id || s._id}`}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/sites/[id]",
-                        params: {
-                          id: s.id || s._id,
-                          name: s.property_name || s.name || s.site_name || "Site",
-                          address: [s.address, s.postcode].filter(Boolean).join(", "),
-                        },
-                      })
-                    }
+                    onPress={() => openSite(s)}
                     style={({ pressed }) => [pressed && { opacity: 0.9 }]}
                   >
                     <Card style={styles.card}>
@@ -262,6 +327,39 @@ const styles = StyleSheet.create({
   },
   name: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   addr: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
+
+  group: { marginBottom: 18 },
+  groupHead: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8, paddingHorizontal: 2 },
+  groupIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  groupName: { flex: 1, fontFamily: font.bold, fontSize: 15, color: colors.heading, letterSpacing: -0.2 },
+  countBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
+  countBadgeText: { fontFamily: font.medium, fontSize: 12, color: colors.muted },
+  groupCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  groupRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: spacing.md, paddingVertical: 14 },
+  groupRowDivider: { borderTopWidth: 1, borderTopColor: "#F1F5F9" },
+  pinIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowName: { fontFamily: font.semibold, fontSize: 14, color: colors.heading },
+  rowAddr: { fontFamily: font.regular, fontSize: 12, color: colors.muted, marginTop: 2 },
 
   addNew: {
     flexDirection: "row",

@@ -43,6 +43,7 @@ export const ICONS: Record<string, Def> = {
     ],
   },
   building: { mode: "fill", els: [{ t: "path", d: "M4 21V4h7v17H4zm9 0V9h7v12h-7zM6 7h3v2H6V7zm0 4h3v2H6v-2zm0 4h3v2H6v-2zm9-2h3v2h-3v-2zm0 4h3v2h-3v-2z" }] },
+  mapPin: { mode: "stroke", sw: 2, els: [{ t: "path", d: "M12 21s7-5.2 7-11a7 7 0 10-14 0c0 5.8 7 11 7 11z" }, { t: "circle", cx: 12, cy: 10, r: 2.6 }] },
   user: { mode: "stroke", sw: 2, els: [{ t: "circle", cx: 12, cy: 8, r: 4 }, { t: "path", d: "M4 20c0-4 4-7 8-7s8 3 8 7" }] },
   chevronRight: { mode: "stroke", sw: 2, els: [{ t: "path", d: "M9 6l6 6-6 6" }] },
   chevronDown: { mode: "stroke", sw: 2, els: [{ t: "path", d: "M6 9l6 6 6-6" }] },
