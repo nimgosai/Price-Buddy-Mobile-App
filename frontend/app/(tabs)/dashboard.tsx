@@ -284,7 +284,7 @@ export default function Dashboard() {
       ) : (
         <ScrollView
           testID="dashboard-scroll"
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing["2xl"] }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 28 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
@@ -377,17 +377,17 @@ export default function Dashboard() {
             </Pressable>
           )}
 
-          {/* Audit in progress — unified card */}
+          {/* Audit in progress — friendly, light card */}
           {audits.length > 0 && (
             <View style={styles.audit} testID="audit-in-progress-card">
               <View style={styles.auditHead}>
                 <View style={styles.auditIcon}>
-                  <Icon name="scan" size={20} color="#FFFFFF" />
+                  <Icon name="scan" size={18} color="#D97706" />
                 </View>
-                <Text style={styles.auditTitle}>Audit in progress</Text>
+                <Text style={styles.auditTitle}>⏳ We&apos;re verifying your bill</Text>
               </View>
               <Text style={styles.auditSub}>
-                Our team is verifying {audits.length === 1 ? "your bill" : `${audits.length} bills`}. We&apos;ll be in touch once everything&apos;s confirmed.
+                Our team is checking your rates. We&apos;ll be in touch as soon as everything&apos;s confirmed!
               </Text>
               <View style={styles.auditBtnRow}>
                 <Pressable testID="audit-track-status" onPress={() => router.push("/support")} style={[styles.auditBtn, styles.auditBtnGhost]}>
@@ -404,7 +404,7 @@ export default function Dashboard() {
                 )}
               </View>
               <Pressable testID="audit-call-direct" onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE.replace(/\s/g, "")}`)} hitSlop={6}>
-                <Text style={styles.auditCallDirect}>Or call us direct on {SUPPORT_PHONE}</Text>
+                <Text style={styles.auditCallDirect}>📞 Or call free on {SUPPORT_PHONE}</Text>
               </Pressable>
             </View>
           )}
@@ -514,7 +514,7 @@ function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surfaceSecondary },
+  root: { flex: 1, backgroundColor: "#FAF8F5" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: { padding: spacing.lg, gap: 12 },
 
@@ -551,8 +551,8 @@ const styles = StyleSheet.create({
   expCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    borderColor: "#F1F5F9",
+    borderRadius: 18,
     padding: spacing.md,
     ...shadow.card,
   },
@@ -570,20 +570,20 @@ const styles = StyleSheet.create({
   expLink: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4 },
   expLinkText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
 
-  audit: { backgroundColor: "#FEF3C7", borderWidth: 1, borderColor: "#FDE68A", borderRadius: radius.md, padding: spacing.lg, gap: 10 },
+  audit: { backgroundColor: colors.surface, borderWidth: 1, borderColor: "#F1F5F9", borderRadius: 18, padding: spacing.lg, gap: 10, ...shadow.card },
   auditHead: { flexDirection: "row", alignItems: "center", gap: 10 },
-  auditIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: "#F59E0B", alignItems: "center", justifyContent: "center" },
-  auditTitle: { fontFamily: font.semibold, fontSize: type.lg, color: "#92400E" },
-  auditSub: { fontFamily: font.regular, fontSize: type.sm, color: "#78350F", lineHeight: 18 },
+  auditIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center" },
+  auditTitle: { flex: 1, fontFamily: font.semibold, fontSize: 15, color: colors.heading },
+  auditSub: { fontFamily: font.regular, fontSize: 13, color: colors.onSurfaceSecondary, lineHeight: 18 },
   auditBtnRow: { flexDirection: "row", gap: 10 },
-  auditBtn: { flex: 1, height: 36, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  auditBtnGhost: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#FCD34D" },
-  auditBtnGhostText: { fontFamily: font.semibold, fontSize: type.sm, color: "#92400E" },
+  auditBtn: { flex: 1, height: 38, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  auditBtnGhost: { backgroundColor: "#F1F5F9", borderWidth: 1, borderColor: "#E2E8F0" },
+  auditBtnGhostText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurfaceSecondary },
   auditBtnPrimary: { backgroundColor: colors.brandPrimary },
   auditBtnPrimaryText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
   auditBtnDone: { backgroundColor: "#10B981" },
   auditBtnDoneText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
-  auditCallDirect: { fontFamily: font.medium, fontSize: 12, color: "#92400E", textAlign: "center" },
+  auditCallDirect: { fontFamily: font.medium, fontSize: 12, color: colors.muted, textAlign: "center", marginTop: 2 },
 
   quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
   quickGrid: { flexDirection: "row", gap: 12 },
@@ -593,13 +593,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    borderColor: "#F1F5F9",
+    borderRadius: 18,
     padding: 12,
     justifyContent: "flex-start",
     ...shadow.card,
   },
-  qaIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  qaIcon: { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   qaTitle: { fontFamily: font.semibold, fontSize: type.sm, lineHeight: 17, color: colors.heading },
   qaBadge: {
     position: "absolute", top: 8, right: 8, zIndex: 2, flexDirection: "row", alignItems: "center", gap: 3,
@@ -607,11 +607,11 @@ const styles = StyleSheet.create({
   },
   qaBadgeText: { fontFamily: font.bold, fontSize: 10, color: "#FFFFFF", letterSpacing: 0.5 },
 
-  promo: { backgroundColor: colors.pastel.mint, borderRadius: 16, padding: spacing.lg, marginTop: spacing.xs, gap: 15 },
+  promo: { backgroundColor: "#D1FAE5", borderRadius: 18, padding: spacing.lg, marginTop: spacing.xs, gap: 15 },
   promoHead: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   promoIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   promoTitle: { fontFamily: font.bold, fontSize: type.lg, lineHeight: 21, color: colors.heading, letterSpacing: -0.2 },
   promoSub: { fontFamily: font.regular, fontSize: type.sm, lineHeight: 18, color: "#065F46", marginTop: 4 },
-  promoBtn: { minHeight: 42, borderRadius: 10, backgroundColor: "#1E6B47", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, overflow: "hidden" },
+  promoBtn: { minHeight: 42, borderRadius: 10, backgroundColor: "#065F46", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, overflow: "hidden" },
   promoBtnText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
 });
