@@ -164,11 +164,11 @@ export default function Sites() {
                       <View style={styles.siteIcon}>
                         <Icon name="building" size={20} color={colors.brandPrimary} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.name} numberOfLines={1}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.name} numberOfLines={2}>
                           {s.property_name || s.address || "Site"}
                         </Text>
-                        <Text style={styles.addr} numberOfLines={1}>
+                        <Text style={styles.addr} numberOfLines={2}>
                           {[s.address, s.postcode].filter(Boolean).join(", ") || "Address on file"}
                         </Text>
                       </View>

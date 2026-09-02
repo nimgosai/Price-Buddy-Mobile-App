@@ -98,7 +98,7 @@ function Option({ label, sub, active, onPress, testID }: { label: string; sub: s
         <Icon name="building" size={16} color={active ? "#FFFFFF" : colors.muted} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.optionLabel} numberOfLines={1}>{label}</Text>
+        <Text style={styles.optionLabel} numberOfLines={2}>{label}</Text>
         <Text style={styles.optionSub} numberOfLines={1}>{sub}</Text>
       </View>
       {active && <Icon name="check" size={18} color={colors.brandPrimary} />}

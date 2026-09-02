@@ -469,3 +469,8 @@ No login/live-data writes used — everything reconstructed from the bundle.
 4. Review screen: renewing strip simplified (icon + "Electricity · British Gas" 14 bold wrap +
    "Ends in N days" compact pill; EXPIRING SOON badge/MPAN removed); KV rows 14px w/ 12px rhythm;
    wizard buttons 48px.
+
+### SITES LIST TRUNCATION FIX (user video)
+- Site name + address on Your Sites list now wrap to 2 lines (no ellipses); business-switcher
+  sheet option labels wrap to 2 lines. Verified full names ("Manchester Warehouse",
+  "Riverside Café — Bath/Oxford") and business filtering (Price Buddy → 3 sites only).
