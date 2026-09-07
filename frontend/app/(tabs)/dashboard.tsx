@@ -410,12 +410,12 @@ export default function Dashboard() {
                 <Icon name="building" size={22} color={colors.pastel.mintIcon} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.promoTitle}>Add a site or get a quote</Text>
-                <Text style={styles.promoSub}>Add another location or compare energy prices for your business.</Text>
+                <Text style={styles.promoTitle}>Add a site or business</Text>
+                <Text style={styles.promoSub}>Add another business or location, or get an energy quote.</Text>
               </View>
             </View>
             <Pressable testID="lower-bills-cta-pill" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promoBtn, pressed && { opacity: 0.9 }]}>
-              <Text style={styles.promoBtnText}>Add site or get a quote</Text>
+              <Text style={styles.promoBtnText}>Add or get a quote</Text>
               <Icon name="chevronRight" size={16} color="#FFFFFF" />
               <CtaShimmer width={340} />
             </Pressable>
