@@ -779,7 +779,7 @@ function MeterConfirmCard({ meter, index, onEdit }: { meter: Meter; index: numbe
         <View style={[styles.confirmIcon, { backgroundColor: `${color}22` }]}>
           <Icon name={icon} size={18} color={color} />
         </View>
-        <Text style={styles.confirmTitle}>{isGas ? "Gas" : "Electric"} Meter {index + 1}</Text>
+        <Text style={styles.confirmTitle}>{isGas ? "Gas" : "Electricity"} Meter {index + 1}</Text>
         <Pressable testID={`confirm-meter-${meter.utility}-${index}-edit`} onPress={onEdit} hitSlop={8}>
           <Text style={styles.confirmEdit}>Edit</Text>
         </Pressable>
