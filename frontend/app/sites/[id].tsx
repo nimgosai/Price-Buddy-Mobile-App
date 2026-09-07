@@ -73,11 +73,12 @@ export default function SiteDetail() {
     else router.replace("/dashboard");
   };
 
-  const title = property?.property_name || property?.address || params.name || "Site";
+  // Prefer the values passed from the list so the header shows the correct
+  // name/address immediately and never swaps when the fetch resolves.
+  const title = params.name || property?.property_name || property?.address || "Site";
   const subtitle =
-    property?.address
-      ? `${property.address}${property.postcode ? `, ${property.postcode}` : ""}`
-      : params.address || undefined;
+    params.address ||
+    (property?.address ? `${property.address}${property.postcode ? `, ${property.postcode}` : ""}` : undefined);
 
   // Which utilities to show: those with a contract, else all
   const present = UTIL_ORDER.filter((u) => utilities[u]);

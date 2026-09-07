@@ -1,0 +1,24 @@
+{
+  "summary": "Verified the Site Detail header flicker bug fix in /app/frontend/app/sites/[id].tsx. Signed in as e2e_test_1786703401@example.com, enabled Demo mode (profile-demo-toggle), tapped 3 different site cards (p1 Head Office, p3 Bristol Retail Unit, p4 Riverside Café — Bath) and instrumented a MutationObserver + 40ms poller around each navigation to capture every intermediate header title/subtitle value. On the fresh p1 run the header appeared with the FINAL correct value 'Head Office' / '100 High Holborn, WC1V 6LT' on the very first mutation (t=+21ms) and never swapped. Screenshots for all 3 sites confirm the header shows the correct site's own name+address (no cross-site leaked text, no flash). Utility sections, app-tab-bar persistence, and Back button (returns to sites-header) all still work. The fix (title = params.name || property?.property_name || property?.address || 'Site'; subtitle = params.address || property.address+postcode) is working as intended. No React Native / deprecated-package issues introduced by this change.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_21.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "sites/[id].tsx: header title/subtitle now correctly prioritize route params (params.name, params.address) before the fetched property values — matches the intended fix and prevents post-fetch re-render text swap.",
+    "sites/[id].tsx line 78-81: fallback chain is well ordered (params -> property.property_name -> property.address -> 'Site').",
+    "(tabs)/sites.tsx line 100-111 (openSite): always passes name and address through router.push params, so params.name is guaranteed to be populated when opening from the Sites list — this is what makes the fix work in the demo path."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None (demo mode uses in-app mocked responses).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login via landing-signin -> signin-email-input/signin-password-input/signin-submit-button (NOT 'login-*'). Bottom tabs are found by text ('Profile', 'Sites', 'Reports', 'Support', 'Home') — use .last for the tab button. Site detail header is [data-testid=site-detail-header]; its innerText comes back as three lines: [icon-glyph, title, subtitle]. Use lines[1]/lines[2] (or a MutationObserver installed BEFORE clicking the site card) to check stability. Demo site cards exposed: site-card-p1..p5.",
+  "rca_of_issue": "Original bug: in /app/frontend/app/sites/[id].tsx the header title was computed as `property?.property_name || property?.address || params.name` while `property` starts as null. First render therefore used params.name, then when the /properties/{id}/utilities fetch resolved and setProperty ran, the memo re-ran and preferred property.property_name — a visible text swap on the header. Fix (already applied by main agent): reorder the fallback so route params win: `title = params.name || property?.property_name || property?.address || 'Site'`, same idea for subtitle. Verified on 3 different sites; no flicker observed and screenshots show correct per-site header from the very first frame."
+}
