@@ -403,19 +403,7 @@ export default function Dashboard() {
             </View>
           )}
 
-          {/* Quick actions — 2-column grid, four equal cards */}
-          <Text style={styles.quickLabel}>Quick actions</Text>
-          <View style={styles.quickGrid}>
-            <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
-              title="Scan Bill" badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
-            <QuickAction testID="action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
-              title="Meter Installation" onPress={() => setMeter(true)} />
-          </View>
-
-          {/* Have a query pill */}
-          <HaveAQueryPill />
-
-          {/* Quote promotional banner */}
+          {/* Primary CTA — green "compare tariffs" banner (above Quick actions) */}
           <View ref={ctaRef} collapsable={false} testID="lower-bills-cta" style={styles.promo}>
             <View style={styles.promoHead}>
               <View style={styles.promoIcon}>
@@ -427,11 +415,23 @@ export default function Dashboard() {
               </View>
             </View>
             <Pressable testID="lower-bills-cta-pill" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promoBtn, pressed && { opacity: 0.9 }]}>
-              <Text style={styles.promoBtnText}>Get a quote</Text>
+              <Text style={styles.promoBtnText}>Compare tariffs &amp; save</Text>
               <Icon name="chevronRight" size={16} color="#FFFFFF" />
               <CtaShimmer width={340} />
             </Pressable>
           </View>
+
+          {/* Quick actions — two core tiles side-by-side */}
+          <Text style={styles.quickLabel}>Quick actions</Text>
+          <View style={styles.quickGrid}>
+            <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
+              title="Scan Bill" badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
+            <QuickAction testID="action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
+              title="Meter Installation" onPress={() => setMeter(true)} />
+          </View>
+
+          {/* Support / chat — subtle banner near the bottom */}
+          <HaveAQueryPill />
         </ScrollView>
       )}
 
