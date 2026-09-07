@@ -22,8 +22,6 @@ import { CtaShimmer } from "@/src/components/cta-shimmer";
 import { SpotlightTour, TourStep } from "@/src/components/spotlight-tour";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
-import { useBusiness } from "@/src/business/business-context";
-import { AddBusinessModal } from "@/src/components/add-business-modal";
 import { MeterInstallModal } from "@/src/components/meter-install-modal";
 import { apiRequest } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
@@ -83,7 +81,6 @@ export default function Dashboard() {
   const router = useRouter();
   const toast = useToast();
   const { user, refreshUser } = useAuth();
-  const { refreshBusinesses } = useBusiness();
   const { width, height } = useWindowDimensions();
   const scrollRef = useTabScrollToTop();
 
@@ -91,7 +88,6 @@ export default function Dashboard() {
   const [audits, setAudits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [addBiz, setAddBiz] = useState(false);
   const [meter, setMeter] = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
@@ -412,8 +408,6 @@ export default function Dashboard() {
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
               title="Scan Bill" badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
-            <QuickAction testID="quick-action-add-business" icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
-              title="Add Business" onPress={() => setAddBiz(true)} />
             <QuickAction testID="action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
               title="Meter Installation" onPress={() => setMeter(true)} />
           </View>
@@ -441,7 +435,6 @@ export default function Dashboard() {
         </ScrollView>
       )}
 
-      <AddBusinessModal visible={addBiz} onClose={() => setAddBiz(false)} onCreated={() => { setAddBiz(false); toast("Business added.", "success"); refreshBusinesses(); load(); }} />
       <MeterInstallModal visible={meter} onClose={() => setMeter(false)} />
 
       <SpotlightTour open={tourOpen} steps={tourSteps} onClose={closeTour} />

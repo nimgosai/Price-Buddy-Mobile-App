@@ -19,6 +19,7 @@ import { ScreenHeader } from "@/src/components/screen";
 import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { useBusiness } from "@/src/business/business-context";
+import { AddBusinessModal } from "@/src/components/add-business-modal";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
 import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
@@ -34,6 +35,7 @@ export default function Profile() {
   const scrollRef = useTabScrollToTop();
 
   const [showDelete, setShowDelete] = useState(false);
+  const [addBiz, setAddBiz] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState("");
@@ -140,6 +142,7 @@ export default function Profile() {
         />
 
         <LinkRow icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon} label="My sites" onPress={() => router.push("/sites")} testID="profile-sites" />
+        <LinkRow icon="plus" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="Add a business" onPress={() => setAddBiz(true)} testID="profile-add-business" />
         <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My quote requests" onPress={() => router.push("/quote/new")} testID="profile-quotes" />
         <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={async () => { await storage.setItem("uch_tour_replay", true); router.push("/dashboard"); }} testID="profile-tour" />
         <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
@@ -166,6 +169,8 @@ export default function Profile() {
           <Icon name="chevronRight" size={16} color={colors.muted} />
         </Pressable>
       </ScrollView>
+
+      <AddBusinessModal visible={addBiz} onClose={() => setAddBiz(false)} onCreated={() => { setAddBiz(false); toast("Business added.", "success"); refreshBusinesses(); }} />
 
       <Modal visible={showDelete} transparent animationType="slide" onRequestClose={() => setShowDelete(false)}>
         <Pressable style={styles.backdrop} onPress={() => !deleting && setShowDelete(false)}>
