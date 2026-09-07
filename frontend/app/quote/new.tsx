@@ -94,6 +94,7 @@ export default function QuoteWizard() {
 
   const [selected, setSelected] = useState<Set<string>>(() => {
     if (paramUtility === "electricity") return new Set(["electric"]);
+    if (paramUtility === "broadband") return new Set(["telecoms"]);
     if (["gas", "water", "telecoms"].includes(paramUtility)) return new Set([paramUtility]);
     return new Set();
   });
@@ -145,6 +146,11 @@ export default function QuoteWizard() {
             full_address: a.full_address || match.address || "",
             postcode: a.postcode || match.postcode || "",
           }));
+          // Prefill the incumbent supplier for water / telecoms deep-links.
+          if (params.incumbent) {
+            if (paramUtility === "water") { setWaterSupplier(params.incumbent); setWaterPrefilled(true); }
+            else if (paramUtility === "telecoms" || paramUtility === "broadband") { setTelecomsSupplier(params.incumbent); setTelecomsPrefilled(true); }
+          }
         }
       })
       .catch(() => setProperties([]))
