@@ -1,0 +1,25 @@
+{
+  "summary": "Verified the FOUT (Flash Of Unstyled Text) fix delivered via /app/frontend/src/components/font-warmup.tsx and its mount in app/_layout.tsx. Signed in as e2e_test_1786703401@example.com, enabled Demo mode (profile-demo-toggle), then instrumented a 25ms font-family polling probe (~120 samples, spanning t=0-3000ms) around each navigation to detect any Geist-vs-fallback swap during first paint. Results: (a) Site Detail p1 (Head Office) — 0/119 samples had any non-Geist text; header 'Head Office' / '100 High Holborn, WC1V 6LT' rendered in Geist-Bold/Regular from t=0. (b) Site Detail p3 (Bristol Retail Unit) — every text node was Geist from t=0; the single non-Geist glyph observed was an emoji (U+1F513 '🔓') which is inherently rendered by the OS emoji font and was STABLE (identical bad=1 from t=0 to t=3000ms — no swap, therefore not FOUT). (c) All 5 tabs (Home/Sites/Reports/Support/Profile) and both modals (action-meter Meter Installation, talk-to-human) — all non-emoji text painted in Geist from the very first frame. Support/Profile/modals showed 1 stable non-Geist node throughout, tracked to the middle-dot separator '·' in 'Mon-Fri · 9am – 4pm UK' — again STABLE (not a swap), so not a FOUT. Navigation between tabs works, back button works, no red screens, no crashes. FontWarmup is correctly rendering the four Geist weights (Regular/Medium/SemiBold/Bold) off-screen and document.fonts.ready confirms all 4 Geist faces + ionicons are 'loaded' before any screen paints. Fix is working end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_22.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "font-warmup.tsx correctly paints all four Geist weights once at the root behind opacity:0 / off-screen, forcing rasterization before any screen mount. Solid implementation.",
+    "_layout.tsx: FontWarmup is placed inside ToastProvider after StatusBar and before the Stack — that ordering is correct (mounts synchronously with the root before any route renders).",
+    "use-app-fonts.ts loads the four Geist TTFs via expo-font's useFonts and _layout.tsx correctly gates the app render on (fontsLoaded || fontError) — no per-screen useFonts calls exist, so there's no chance of a duplicate loader causing the fallback flash.",
+    "Non-Geist glyphs observed during probing (emoji 🔓 on p3 site detail, middle-dot · in Support screen 'Mon-Fri · 9am – 4pm UK') are stable across the entire probe window (t=0-3000ms with identical count) — this is normal browser fallback for glyphs Geist doesn't provide, NOT a FOUT and NOT actionable."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None — demo mode uses in-app mocked responses (GET /properties, /properties/{id}/utilities, /businesses, /renewals/urgent, /reports/spend).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "To measure FOUT on the Expo web preview: install a setTimeout(25) polling probe BEFORE clicking the target, walk document.body's text nodes (NodeFilter.SHOW_TEXT), and record getComputedStyle(parent).fontFamily. Regex /Geist|ionicons/i.test(fam) marks a node as OK. IMPORTANT: strip emojis before flagging (regex /[\\p{Emoji_Presentation}\\p{Extended_Pictographic}]/gu) and expect stable middle-dot '·' separator on Support screen — both are non-Geist by design and are NOT FOUT. A true FOUT would show a bad-count that spikes then drops to 0 within the first 1-2 seconds. Login flow: landing → 'I already have an account' → signin-email-input / signin-password-input / signin-submit-button. Demo toggle: Profile tab → profile-demo-toggle.",
+  "rca_of_issue": "Original bug: On some route pushes (esp. Site Detail via /sites/[id]), a text component that mounted the first time with a particular Geist weight caused the web font engine to briefly paint a fallback (system) font before swapping to Geist — a classic FOUT. Even though expo-font's useFonts had reported loaded=true, some browsers defer actual glyph rasterization until first use of a given @font-face family; the very first Text at a new weight paid that cost visibly. Fix (already applied): src/components/font-warmup.tsx renders one dot in each of the 4 Geist weights (Regular/Medium/SemiBold/Bold) off-screen at the app root (mounted from app/_layout.tsx inside ToastProvider before <Stack>), forcing the engine to rasterize every weight during initial load. Verified: with the probe running from before-click to +3s across p1, p3, and every tab/modal, no Geist-weighted text ever fell back to a system font — every non-emoji/non-separator text was Geist from the very first sample (t=0ms)."
+}
