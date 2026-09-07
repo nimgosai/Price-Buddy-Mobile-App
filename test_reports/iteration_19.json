@@ -1,0 +1,23 @@
+{
+  "summary": "Verified SiteActionsSheet navigation fix. Logged in as e2e_test_1786703401@example.com, enabled Demo mode via profile-demo-toggle, then opened the 'Add a new site' bottom-sheet on the Sites tab three times. All three routes navigated successfully after the 260ms delayed router.push: 'site-actions-manual' -> /sites/new (add-site-header 'Onboard an existing site' visible), 'site-actions-scan' -> /scan, 'site-actions-quote' -> /quote/new. The primary reported bug (Add site manually being swallowed) is fixed and the sheet reliably closes before navigation.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "sites.tsx registers two identical useFocusEffect hooks calling load() (lines 57 and 59-63) — duplicate causes double fetch on focus. Consider removing one.",
+    "site-actions-sheet.tsx uses a fixed 260ms timeout — acceptable for RN slide animation but consider using Modal onDismiss (iOS) / onModalHide pattern for robustness on slower devices."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None. Demo mode toggled ON to display seeded demo businesses/sites.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login flow: landing -> 'I already have an account' -> /signin. Test creds in /app/memory/test_credentials.md. testIDs: signin-email-input, signin-password-input. After login, direct navigation via /profile and /sites works. Demo toggle testID: profile-demo-toggle. Sites tab exposes sites-add-new (existing sites) or sites-add-first (empty state). Sheet testIDs: site-actions-sheet, site-actions-scan, site-actions-quote, site-actions-manual, site-actions-cancel, site-actions-backdrop. Wait ~1.5-2s after tapping an option to allow the 260ms modal-close delay + router.push.",
+  "rca_of_issue": "Original bug: Modal onRequestClose / dismissal race with router.push caused the navigation to be dropped when 'Add site manually' was tapped. Fix in site-actions-sheet.tsx go() closes the modal, then wraps router.push in a 260ms setTimeout so navigation is issued after the RN Modal completes its slide-out animation. Verified reliably across all three actions."
+}

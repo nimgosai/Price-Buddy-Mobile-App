@@ -63,7 +63,9 @@ export function SiteActionsSheet({
 
   const go = (to: string) => {
     onClose();
-    router.push(to as any);
+    // Let the modal finish dismissing before navigating — pushing in the same
+    // tick can be swallowed on native while the sheet is animating out.
+    setTimeout(() => router.push(to as any), 260);
   };
 
   return (

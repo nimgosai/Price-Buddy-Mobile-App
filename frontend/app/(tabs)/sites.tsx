@@ -56,12 +56,6 @@ export default function Sites() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
