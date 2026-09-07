@@ -411,7 +411,7 @@ export default function Dashboard() {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.promoTitle}>Add a site or business</Text>
-                <Text style={styles.promoSub}>Add another business or location, or get an energy quote.</Text>
+                <Text style={styles.promoSub}>Add another business or location, or compare your utility prices.</Text>
               </View>
             </View>
             <Pressable testID="lower-bills-cta-pill" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promoBtn, pressed && { opacity: 0.9 }]}>
