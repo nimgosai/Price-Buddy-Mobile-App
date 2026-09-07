@@ -130,7 +130,7 @@ export default function Reports() {
         subtitle="Annual estimate based on your current tariffs and usage."
         onBack={goBack}
       />
-      {loading ? (
+      {loading && !data ? (
         <View style={styles.center} testID="reports-loading">
           <ActivityIndicator size="large" color={colors.brandPrimary} />
         </View>

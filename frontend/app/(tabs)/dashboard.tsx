@@ -273,18 +273,13 @@ export default function Dashboard() {
 
   return (
     <View style={styles.root}>
-      {loading ? (
-        <View style={[styles.center, { paddingTop: insets.top }]} testID="dashboard-loading">
-          <ActivityIndicator size="large" color={colors.brandPrimary} />
-        </View>
-      ) : (
-        <ScrollView
-          testID="dashboard-scroll"
-          ref={scrollRef}
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 28 }]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
+      <ScrollView
+        testID="dashboard-scroll"
+        ref={scrollRef}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 28 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
           {/* Greeting */}
           <View style={styles.greetRow}>
             <View style={styles.avatar}>
@@ -319,9 +314,8 @@ export default function Dashboard() {
             </View>
           )}
 
-          {/* Compact status badge */}
-          {/* Trust banner / expiring contracts card — mirrors the original web app */}
-          {items.length === 0 ? (
+          {/* Trust banner / expiring contracts card — only once data has loaded */}
+          {!loading && (items.length === 0 ? (
             <View style={styles.trustBanner} testID="trust-banner">
               <View style={styles.trustIcon}>
                 <Icon name="shield" size={26} color="#FFFFFF" />
@@ -372,10 +366,10 @@ export default function Dashboard() {
                 <Icon name="chevronRight" size={16} color={colors.heading} />
               </View>
             </Pressable>
-          )}
+          ))}
 
           {/* Bill verification — compact status card */}
-          {audits.length > 0 && (
+          {!loading && audits.length > 0 && (
             <View style={styles.audit} testID="audit-in-progress-card">
               <View style={styles.auditHead}>
                 <View style={styles.auditIcon}>
@@ -433,7 +427,6 @@ export default function Dashboard() {
           {/* Support / chat — subtle banner near the bottom */}
           <HaveAQueryPill />
         </ScrollView>
-      )}
 
       <MeterInstallModal visible={meter} onClose={() => setMeter(false)} />
 

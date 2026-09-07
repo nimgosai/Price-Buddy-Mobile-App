@@ -1,0 +1,25 @@
+{
+  "summary": "Verified visual-stability fix (hydration/flash bug) end-to-end via Playwright on mobile viewport (390x844). Demo mode enabled via profile-demo-toggle. Home renders the static shell (greeting, green 'Add a site or business' banner + 'Add or get a quote' pill, 'Quick actions' with Scan Bill & Meter Installation, HaveAQueryPill) immediately on first render; NO 'dashboard-loading' spinner blocks the screen; the expiring/trust status card and audit card appear once with correct copy and do NOT flip. Tab switching Home↔Sites↔Reports↔Home (3 iterations) shows no full-screen sites-loading or reports-loading spinners after first mount, all headers/labels stable. Sites business-chip switch (All businesses → Price Buddy Demo Ltd) keeps the site list visible and updates in place (5→3 sites) with sites-loading NOT visible during the transition. Regressions clean: lower-bills-cta-pill → /quote/new (Step 1 of 3), site-card-p1 → Site Detail (Head Office) with app-tab-bar persistent. No console errors, no React Native red screens, no crashes. Only benign web-only warnings (shadow*, useNativeDriver) which the request said to ignore.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "dashboard.tsx: unused 'center' style still declared (styles.center) — harmless leftover after removing the full-screen spinner.",
+    "sites.tsx and reports.tsx both keep useFocusEffect(() => load()) which triggers a background refetch on every focus. This is fine visually (list stays mounted) but causes redundant network calls on tab returns; consider a lightweight stale check.",
+    "sites.tsx line 55 dep array includes activeBizId but load already depends on bizQuery; harmless (bizQuery is memoised) but slightly redundant.",
+    "dashboard.tsx line 502 leaves the 'center' style even though the whole-page ActivityIndicator was removed — safe to delete."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "100%" },
+  "seed_data_creation": "None; Demo mode interceptor supplies /renewals/urgent, /my/audits-in-progress, /properties, /businesses, /reports/spend, /contracts.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login e2e_test_1786703401@example.com / Password123! then Profile → profile-demo-toggle to enable Demo mode BEFORE testing any tab-data flow. Tabs remain mounted after first visit (expo-router default), so testIDs from other tabs will be present in the DOM — filter by visibility if you need per-tab isolation. Fix under test: dashboard-loading full-screen ActivityIndicator was removed; static shell always renders; only the data-driven trust-banner/expiring-soon-card + audit-in-progress-card are gated behind !loading. Sites & Reports gate their full-screen spinner behind `loading && no data yet`, so business switches keep prior content visible.",
+  "rca_of_issue": "Original: dashboard.tsx returned an early ActivityIndicator while loading so the whole scroll (greeting, CTA, quick actions) popped in only after /renewals/urgent + /my/audits-in-progress resolved; because items.length=0 was the state until the fetch returned, the trust-banner rendered first then swapped to expiring-soon-card once data arrived. Sites/Reports had similar full-screen spinners on activeBizId change. Fix: render the static shell unconditionally, keep the data cards behind !loading (single render, no swap), and only show the full-screen spinner on the very first cold mount (loading && !data). Verified visually and via testID snapshots taken immediately after tab tap: no dashboard-loading, sites-loading, or reports-loading testIDs appear during tab switches or business-chip changes."
+}

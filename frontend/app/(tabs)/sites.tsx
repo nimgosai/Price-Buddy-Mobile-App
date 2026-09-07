@@ -118,7 +118,7 @@ export default function Sites() {
         subtitle={`${sites.length} ${sites.length === 1 ? "site" : "sites"}`}
         onBack={() => router.push("/dashboard")}
       />
-      {loading ? (
+      {loading && sites.length === 0 ? (
         <View style={styles.center} testID="sites-loading">
           <ActivityIndicator size="large" color={colors.brandPrimary} />
         </View>
