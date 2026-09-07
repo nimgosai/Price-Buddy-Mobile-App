@@ -8,13 +8,13 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 
 import { Button, Card, StatusPill } from "@/src/components/ui";
 import { ScreenHeader, EmptyState } from "@/src/components/screen";
+import { AppTabBar } from "@/src/components/app-tab-bar";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -33,7 +33,6 @@ function urg(days: number | null): string {
 }
 
 export default function ContractsOverview() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +75,7 @@ export default function ContractsOverview() {
         <View style={styles.center} testID="contracts-loading"><ActivityIndicator size="large" color={colors.brandPrimary} /></View>
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
@@ -140,6 +139,7 @@ export default function ContractsOverview() {
           )}
         </ScrollView>
       )}
+      <AppTabBar active="sites" />
     </View>
   );
 }

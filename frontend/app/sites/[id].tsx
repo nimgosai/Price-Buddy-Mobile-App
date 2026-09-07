@@ -7,7 +7,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
@@ -16,6 +15,7 @@ import { Button } from "@/src/components/ui";
 import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
 import { RequestChangeModal } from "@/src/components/request-change-modal";
+import { AppTabBar } from "@/src/components/app-tab-bar";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -36,7 +36,6 @@ function fmt(d?: string) {
 }
 
 export default function SiteDetail() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; name?: string; address?: string }>();
 
@@ -93,7 +92,7 @@ export default function SiteDetail() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]}
           showsVerticalScrollIndicator={false}
         >
           {error ? (
@@ -245,6 +244,7 @@ export default function SiteDetail() {
         contract={rcContract}
         onClose={() => setRcContract(null)}
       />
+      <AppTabBar active="sites" />
     </View>
   );
 }
