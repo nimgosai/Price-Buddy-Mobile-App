@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,7 +17,7 @@ import { CtaShimmer } from "@/src/components/cta-shimmer";
 import { useAuth } from "@/src/auth/auth-context";
 import { useBusiness } from "@/src/business/business-context";
 import { apiRequest } from "@/src/api/client";
-import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
 // ——— Mirrors the original web app's quote wizard exactly ———
 
@@ -39,11 +39,29 @@ const WINDOW_LABEL = Object.fromEntries(WINDOWS.map((w) => [w.value, w.label]));
 
 const SUPPLIERS = ["British Gas", "E.On Next", "EDF Energy", "Octopus Energy", "Scottish Power", "Opus Energy", "Total Energies", "SSE", "Crown Gas & Power", "Yu Energy"];
 
-type Meter = { _id: string; utility: "electric" | "gas"; supplier: string; contract_end_window: string; meter_point_number: string };
+type Meter = { _id: string; utility: "electric" | "gas"; supplier: string; contract_end_window: string; meter_point_number: string; end_date?: string; days_until_expiry?: number; verified?: boolean };
 let mid = 0;
 const newMeter = (u: "electric" | "gas", supplier = ""): Meter => ({ _id: `m${mid++}`, utility: u, supplier, contract_end_window: "", meter_point_number: "" });
 
 const UK_POSTCODE = /^([A-Z]{1,2}\d{1,2}[A-Z]?)\s*(\d[A-Z]{2})$/i;
+
+const fmtDate = (iso?: string): string => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+};
+const daysText = (days?: number): string => {
+  if (days === null || days === undefined) return "";
+  if (days < 0) return `Ended ${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"} ago`;
+  if (days === 0) return "Ends today";
+  return `Ends in ${days} ${days === 1 ? "day" : "days"}`;
+};
+const meterStatus = (m: Meter): string => {
+  const dt = daysText(m.days_until_expiry);
+  const dd = fmtDate(m.end_date);
+  return [dt, dd].filter(Boolean).join(" · ");
+};
 
 const windowFromEndDate = (endDate?: string): string => {
   if (!endDate) return "";
@@ -207,6 +225,7 @@ export default function QuoteWizard() {
 
   const current = flow[Math.min(step, flow.length - 1)];
   const isLast = step >= flow.length - 1;
+  const nextIsReview = flow[step + 1] === "review";
 
   // Reset scroll to the top whenever the step changes so each step starts at the top.
   const scrollRef = useRef<any>(null);
@@ -281,6 +300,40 @@ export default function QuoteWizard() {
     setAddr((a) => ({ ...a, property_id: "", business_name: "", full_address: "", postcode: "" }));
   };
 
+  // Pull the selected site's known meters (supplier, end date, MPAN) so the
+  // energy step can confirm them instead of asking the user to re-enter.
+  const prefillFromSite = useCallback(
+    async (propertyId: string) => {
+      try {
+        const res = await apiRequest<any>(`/properties/${propertyId}/utilities`);
+        const utils = res?.utilities || {};
+        setMeters((ms) => {
+          const next: Meter[] = [];
+          (["electric", "gas"] as const).forEach((u) => {
+            if (!selected.has(u)) return;
+            const c = utils[u === "electric" ? "electricity" : "gas"] || utils[u];
+            if (c) {
+              const m = newMeter(u, (c.supplier_name || c.supplier || "").trim());
+              m.contract_end_window = windowFromEndDate(c.end_date);
+              m.meter_point_number = (c.meter_point_number || "").trim();
+              m.end_date = c.end_date;
+              m.days_until_expiry = c.days_until_expiry;
+              m.verified = true;
+              next.push(m);
+            } else {
+              const existing = ms.find((x) => x.utility === u);
+              next.push(existing ? { ...existing, verified: false } : newMeter(u));
+            }
+          });
+          return next;
+        });
+      } catch {
+        /* keep manual entry on failure */
+      }
+    },
+    [selected],
+  );
+
   const pickProperty = (id: string) => {
     const p = properties.find((t) => t.id === id);
     const owner = businesses.find((b) => b.id === wizardBizId);
@@ -291,6 +344,7 @@ export default function QuoteWizard() {
       full_address: p?.address || "",
       postcode: p?.postcode || "",
     }));
+    prefillFromSite(id);
   };
 
   const chooseSupply = (kind: "existing" | "new") => {
@@ -319,6 +373,12 @@ export default function QuoteWizard() {
   const electricMeters = meters.filter((m) => m.utility === "electric");
   const gasMeters = meters.filter((m) => m.utility === "gas");
   const anyPrefilled = meters.some((m) => prefilledIds.has(m._id));
+
+  // Existing-site (autofill) vs new-supply (manual) branching for the energy step.
+  const selectedProp = lockedProp || properties.find((p) => p.id === addr.property_id) || null;
+  const isExistingSite = !!(lockedProp || (supplyKind === "existing" && addr.property_id));
+  const siteName = selectedProp?.property_name || selectedProp?.address || addr.business_name || "this site";
+  const showConfirmMeters = current === "energy" && isExistingSite && meters.some((m) => m.verified);
 
   const postcodeInvalid = current === "global" && !lockedProp && supplyKind === "new" && addr.postcode.trim().length > 0 && !UK_POSTCODE.test(addr.postcode.trim());
   const continueDisabled = current === "global" && !lockedProp && supplyKind === "new" && !(addr.business_name.trim() && addr.full_address.trim() && UK_POSTCODE.test(addr.postcode.trim()));
@@ -478,24 +538,55 @@ export default function QuoteWizard() {
         )}
 
         {current === "energy" && (
-          <View testID="step-energy">
-            <Text style={styles.h2}>Energy details</Text>
-            <Text style={styles.muted}>
-              {anyPrefilled ? "We've pre-filled this from your existing contract — change anything if it's wrong." : "Tell us about each meter at this site."}
-            </Text>
-            {electricMeters.length > 0 && (
-              <MeterGroup title="Electric" utility="electric" color="#F59E0B" icon="bolt" meters={meters} group={electricMeters} prefilledIds={prefilledIds} showErrors={showErrors} first
-                onUpdate={(id, p) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...p } : m)))}
-                onRemove={(id) => setMeters((ms) => ms.filter((m) => m._id !== id))}
-                onAdd={() => setMeters((ms) => [...ms, newMeter("electric", ms.find((m) => m.utility === "electric")?.supplier || "")])} />
-            )}
-            {gasMeters.length > 0 && (
-              <MeterGroup title="Gas" utility="gas" color="#FB923C" icon="fire" meters={meters} group={gasMeters} prefilledIds={prefilledIds} showErrors={showErrors}
-                onUpdate={(id, p) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...p } : m)))}
-                onRemove={(id) => setMeters((ms) => ms.filter((m) => m._id !== id))}
-                onAdd={() => setMeters((ms) => [...ms, newMeter("gas", ms.find((m) => m.utility === "gas")?.supplier || "")])} />
-            )}
-          </View>
+          showConfirmMeters ? (
+            <View testID="step-energy">
+              <Text style={styles.h2}>Confirm meter details</Text>
+              <Text style={styles.muted}>We found the following active {meters.filter((m) => m.verified).length > 1 ? "meters" : "meter"} for {siteName}:</Text>
+              {meters.map((m, i) =>
+                m.verified ? (
+                  <MeterConfirmCard
+                    key={m._id}
+                    meter={m}
+                    index={electricMeters.indexOf(m) >= 0 ? electricMeters.indexOf(m) : gasMeters.indexOf(m)}
+                    onEdit={() => setMeters((ms) => ms.map((x) => (x._id === m._id ? { ...x, verified: false } : x)))}
+                  />
+                ) : (
+                  <View key={m._id} style={styles.meterCard} testID={`meter-manual-${i}`}>
+                    <View style={styles.meterTopRow}>
+                      <Text style={styles.meterTitle}>{m.utility === "electric" ? "Electric" : "Gas"} Meter</Text>
+                      <Pressable testID={`meter-manual-${i}-remove`} onPress={() => setMeters((ms) => ms.filter((x) => x._id !== m._id))} hitSlop={8}>
+                        <Text style={styles.removeText}>Remove</Text>
+                      </Pressable>
+                    </View>
+                    <MeterFields meter={m} showErrors={showErrors} onUpdate={(p) => setMeters((ms) => ms.map((x) => (x._id === m._id ? { ...x, ...p } : x)))} />
+                  </View>
+                ),
+              )}
+              <Pressable testID="meter-add-at-address" onPress={() => setMeters((ms) => [...ms, newMeter(selected.has("electric") ? "electric" : "gas")])} style={styles.addMeter}>
+                <Icon name="plus" size={16} color={colors.brandPrimary} />
+                <Text style={styles.addMeterText}>Add another meter at this address</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View testID="step-energy">
+              <Text style={styles.h2}>Energy details</Text>
+              <Text style={styles.muted}>
+                {anyPrefilled ? "We've pre-filled this from your existing contract — change anything if it's wrong." : "Tell us about each meter at this new site."}
+              </Text>
+              {electricMeters.length > 0 && (
+                <MeterGroup title="Electric" utility="electric" color="#F59E0B" icon="bolt" meters={meters} group={electricMeters} prefilledIds={prefilledIds} showErrors={showErrors} first
+                  onUpdate={(id, p) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...p } : m)))}
+                  onRemove={(id) => setMeters((ms) => ms.filter((m) => m._id !== id))}
+                  onAdd={() => setMeters((ms) => [...ms, newMeter("electric", ms.find((m) => m.utility === "electric")?.supplier || "")])} />
+              )}
+              {gasMeters.length > 0 && (
+                <MeterGroup title="Gas" utility="gas" color="#FB923C" icon="fire" meters={meters} group={gasMeters} prefilledIds={prefilledIds} showErrors={showErrors}
+                  onUpdate={(id, p) => setMeters((ms) => ms.map((m) => (m._id === id ? { ...m, ...p } : m)))}
+                  onRemove={(id) => setMeters((ms) => ms.filter((m) => m._id !== id))}
+                  onAdd={() => setMeters((ms) => [...ms, newMeter("gas", ms.find((m) => m.utility === "gas")?.supplier || "")])} />
+              )}
+            </View>
+          )
         )}
 
         {current === "water" && (
@@ -531,7 +622,8 @@ export default function QuoteWizard() {
             </Pressable>
           ) : (
             <Pressable testID="wizard-next" onPress={next} disabled={continueDisabled} style={[styles.navBtn, styles.navPrimary, { flex: 2 }, continueDisabled && { opacity: 0.45 }]}>
-              <Text style={styles.navPrimaryText}>Continue</Text>
+              <Text style={styles.navPrimaryText}>{nextIsReview ? "Continue to Review" : "Continue"}</Text>
+              {nextIsReview ? <Icon name="chevronRight" size={16} color="#FFFFFF" /> : null}
             </Pressable>
           )}
         </View>
@@ -589,7 +681,6 @@ function MeterGroup({ title, utility, color, icon, group, prefilledIds, showErro
   title: string; utility: "electric" | "gas"; color: string; icon: IconName; meters: Meter[]; group: Meter[];
   prefilledIds: Set<string>; showErrors: boolean; onUpdate: (id: string, p: Partial<Meter>) => void; onRemove: (id: string) => void; onAdd: () => void; first?: boolean;
 }) {
-  const mpxLabel = utility === "gas" ? "MPRN" : "MPAN";
   return (
     <View style={[{ marginBottom: 28 }, !first && styles.groupDivider]}>
       <View style={styles.meterHead}>
@@ -617,39 +708,7 @@ function MeterGroup({ title, utility, color, icon, group, prefilledIds, showErro
                 </Pressable>
               )}
             </View>
-            <View style={styles.inputWrap}>
-              <Text style={styles.label}>Supplier</Text>
-              <SupplierPicker value={m.supplier} onChange={(v) => onUpdate(m._id, { supplier: v })} testidPrefix={`meter-${utility}-${i}`} error={showErrors && !m.supplier?.trim()} />
-            </View>
-            <View style={[styles.inputWrap, { marginBottom: 0 }]}>
-              <Text style={styles.label}>Contract end date</Text>
-              <SelectField
-                testID={`meter-${utility}-${i}-end`}
-                value={m.contract_end_window}
-                onChange={(v) => onUpdate(m._id, { contract_end_window: v })}
-                placeholder="Select…"
-                sheetTitle="Contract end date"
-                error={showErrors && !m.contract_end_window}
-                options={WINDOWS}
-              />
-            </View>
-            <View style={[styles.inputWrap, { marginTop: 12, marginBottom: 0 }]}>
-              <Text style={styles.label}>
-                {mpxLabel} <Text style={styles.labelOptional}>(optional)</Text>
-              </Text>
-              <TextInput
-                testID={`meter-${utility}-${i}-mpx`}
-                value={m.meter_point_number}
-                onChangeText={(t) => onUpdate(m._id, { meter_point_number: t })}
-                placeholder={utility === "gas" ? "e.g. 1234567890" : "e.g. 2199992424131"}
-                placeholderTextColor={colors.muted}
-                inputMode="numeric"
-                style={[styles.input, styles.inputMono]}
-              />
-              <Text style={styles.helperText}>
-                Providing your MPAN / MPRN speeds up your quote. If left blank, our team will look this up from your address.
-              </Text>
-            </View>
+            <MeterFields meter={m} showErrors={showErrors} onUpdate={(p) => onUpdate(m._id, p)} testidPrefix={`meter-${utility}-${i}`} />
           </View>
         );
       })}
@@ -657,6 +716,93 @@ function MeterGroup({ title, utility, color, icon, group, prefilledIds, showErro
         <Icon name="plus" size={16} color={colors.brandPrimary} />
         <Text style={styles.addMeterText}>Add another {title} Meter</Text>
       </Pressable>
+    </View>
+  );
+}
+
+// Shared manual meter inputs (supplier, end date, MPAN/MPRN).
+function MeterFields({ meter, showErrors, onUpdate, testidPrefix }: {
+  meter: Meter; showErrors: boolean; onUpdate: (p: Partial<Meter>) => void; testidPrefix?: string;
+}) {
+  const utility = meter.utility;
+  const mpxLabel = utility === "gas" ? "MPRN" : "MPAN";
+  const tp = testidPrefix || `meter-${utility}`;
+  return (
+    <>
+      <View style={styles.inputWrap}>
+        <Text style={styles.label}>Supplier</Text>
+        <SupplierPicker value={meter.supplier} onChange={(v) => onUpdate({ supplier: v })} testidPrefix={tp} error={showErrors && !meter.supplier?.trim()} />
+      </View>
+      <View style={[styles.inputWrap, { marginBottom: 0 }]}>
+        <Text style={styles.label}>Contract end date</Text>
+        <SelectField
+          testID={`${tp}-end`}
+          value={meter.contract_end_window}
+          onChange={(v) => onUpdate({ contract_end_window: v })}
+          placeholder="Select…"
+          sheetTitle="Contract end date"
+          error={showErrors && !meter.contract_end_window}
+          options={WINDOWS}
+        />
+      </View>
+      <View style={[styles.inputWrap, { marginTop: 12, marginBottom: 0 }]}>
+        <Text style={styles.label}>
+          {mpxLabel} <Text style={styles.labelOptional}>(optional)</Text>
+        </Text>
+        <TextInput
+          testID={`${tp}-mpx`}
+          value={meter.meter_point_number}
+          onChangeText={(t) => onUpdate({ meter_point_number: t })}
+          placeholder={utility === "gas" ? "e.g. 1234567890" : "e.g. 2199992424131"}
+          placeholderTextColor={colors.muted}
+          inputMode="numeric"
+          style={[styles.input, styles.inputMono]}
+        />
+        <Text style={styles.helperText}>
+          Providing your MPAN / MPRN speeds up your quote. If left blank, our team will look this up from your address.
+        </Text>
+      </View>
+    </>
+  );
+}
+
+// Read-only confirmation card for a meter we already have on file for the site.
+function MeterConfirmCard({ meter, index, onEdit }: { meter: Meter; index: number; onEdit: () => void }) {
+  const isGas = meter.utility === "gas";
+  const color = isGas ? "#FB923C" : "#F59E0B";
+  const icon: IconName = isGas ? "fire" : "bolt";
+  const mpxLabel = isGas ? "MPRN" : "MPAN";
+  const status = meterStatus(meter);
+  return (
+    <View style={styles.confirmCard} testID={`confirm-meter-${meter.utility}-${index}`}>
+      <View style={styles.confirmHead}>
+        <View style={[styles.confirmIcon, { backgroundColor: `${color}22` }]}>
+          <Icon name={icon} size={18} color={color} />
+        </View>
+        <Text style={styles.confirmTitle}>{isGas ? "Gas" : "Electric"} Meter {index + 1}</Text>
+        <Pressable testID={`confirm-meter-${meter.utility}-${index}-edit`} onPress={onEdit} hitSlop={8}>
+          <Text style={styles.confirmEdit}>Edit</Text>
+        </Pressable>
+      </View>
+      <View style={styles.confirmRow}>
+        <Text style={styles.confirmLabel}>Supplier</Text>
+        <View style={styles.confirmValRight}>
+          <Text style={styles.confirmVal} numberOfLines={1}>{meter.supplier || "—"}</Text>
+          <View style={styles.currentTag}><Text style={styles.currentTagText}>Current supplier</Text></View>
+        </View>
+      </View>
+      {status ? (
+        <View style={styles.confirmRow}>
+          <Text style={styles.confirmLabel}>Contract status</Text>
+          <Text style={[styles.confirmVal, { flex: 1, textAlign: "right" }]} numberOfLines={2}>{status}</Text>
+        </View>
+      ) : null}
+      {meter.meter_point_number ? (
+        <View style={styles.confirmRow}>
+          <Text style={styles.confirmLabel}>{mpxLabel}</Text>
+          <Text style={[styles.confirmVal, styles.inputMono, { flex: 1, textAlign: "right" }]} numberOfLines={1}>{meter.meter_point_number}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -752,7 +898,7 @@ function ReviewStep({ selected, contact, addr, meters, waterSupplier, telecomsSu
           {meters.map((m, i) => (
             <View key={m._id} testID={`review-meter-${i}`} style={styles.miniCard}>
               <Text style={styles.miniCardTitle}>
-                {m.utility === "electric" ? "Electric" : "Gas"} — {m.supplier === "__idk__" ? "I don't know" : m.supplier || "—"}
+                {m.utility === "electric" ? "Electricity" : "Gas"} · {m.supplier === "__idk__" ? "I don't know" : m.supplier || "—"}
               </Text>
               {m.meter_point_number ? (
                 <Text testID={`review-meter-${i}-mpx`} style={styles.miniCardMpx}>
@@ -760,7 +906,9 @@ function ReviewStep({ selected, contact, addr, meters, waterSupplier, telecomsSu
                   {m.meter_point_number}
                 </Text>
               ) : null}
-              <Text style={styles.miniCardSub}>Contract end: {WINDOW_LABEL[m.contract_end_window] || "—"}</Text>
+              <Text style={styles.miniCardSub}>
+                {meterStatus(m) || `Contract end: ${WINDOW_LABEL[m.contract_end_window] || "—"}`}
+              </Text>
             </View>
           ))}
         </ReviewCard>
@@ -854,6 +1002,18 @@ const styles = StyleSheet.create({
 
   addMeter: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.brandPrimary, borderRadius: radius.md, paddingVertical: spacing.md, backgroundColor: colors.brandTertiary },
   addMeterText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
+
+  confirmCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: 12, ...shadow.card },
+  confirmHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  confirmIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  confirmTitle: { flex: 1, fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
+  confirmEdit: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
+  confirmRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingVertical: 7, borderTopWidth: 1, borderTopColor: colors.divider },
+  confirmLabel: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
+  confirmVal: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  confirmValRight: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 6 },
+  currentTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, borderWidth: 1, borderColor: "#FFD5C9" },
+  currentTagText: { fontFamily: font.bold, fontSize: 10, letterSpacing: 0.3, color: colors.brandPrimary },
 
   renewPill: { borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 18, flexDirection: "row", alignItems: "center", gap: 12 },
   renewIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", flexShrink: 0 },
