@@ -27,8 +27,8 @@ const ACTIONS: Action[] = [
   },
   {
     key: "quote",
-    title: "Get a quote",
-    desc: "Market check for a new acquisition or potential switch.",
+    title: "Compare utility prices",
+    desc: "Electricity, gas, water or telecoms — see your options.",
     icon: "document",
     bg: colors.pastel.mint,
     fg: colors.pastel.mintIcon,
