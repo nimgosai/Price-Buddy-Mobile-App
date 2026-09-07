@@ -275,8 +275,8 @@ export default function QuoteWizard() {
         contact,
         address: addr,
         energy_meters: meters,
-        water_supplier: selected.has("water") ? waterSupplier : null,
-        telecoms_supplier: selected.has("telecoms") ? telecomsSupplier : null,
+        water_supplier: selected.has("water") ? (waterSupplier === "__idk__" ? "Unknown / To be verified by team" : waterSupplier) : null,
+        telecoms_supplier: selected.has("telecoms") ? (telecomsSupplier === "__idk__" ? "Unknown / To be verified by team" : telecomsSupplier) : null,
       };
       const res = await apiRequest<any>("/quotes/multi", { method: "POST", body: payload });
       router.replace({ pathname: "/quote/success", params: { id: res?.quote_request_id || "" } });
@@ -808,14 +808,31 @@ function MeterConfirmCard({ meter, index, onEdit }: { meter: Meter; index: numbe
 }
 
 function SupplierStep({ title, placeholder, value, onChange, testID, error }: { title: string; placeholder: string; value: string; onChange: (t: string) => void; testID: string; error?: boolean }) {
+  const idk = value === "__idk__";
   return (
     <View testID={`step-${testID}`}>
       <Text style={styles.h2}>{title}</Text>
       <Text style={styles.muted}>That&apos;s all we need — we already have your business details.</Text>
       <View style={styles.inputWrap}>
         <Text style={styles.label}>Supplier</Text>
-        <TextInput testID={`${testID}-supplier`} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.muted} style={[styles.input, error && styles.inputError]} />
+        <TextInput
+          testID={`${testID}-supplier`}
+          value={idk ? "" : value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          placeholderTextColor={colors.muted}
+          style={[styles.input, error && !idk && styles.inputError]}
+        />
       </View>
+      <Pressable testID={`${testID}-idk`} onPress={() => onChange(idk ? "" : "__idk__")} style={styles.idkRow} hitSlop={6}>
+        <View style={[styles.idkBox, idk && styles.idkBoxOn]}>{idk ? <Icon name="check" size={14} color="#FFFFFF" /> : null}</View>
+        <Text style={styles.idkLabel}>I don&apos;t know my supplier</Text>
+      </Pressable>
+      {idk ? (
+        <View testID={`${testID}-idk-note`} style={styles.idkNote}>
+          <Text style={styles.idkNoteText}>No problem! Our team will identify your supplier from your address and meter records.</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -915,12 +932,12 @@ function ReviewStep({ selected, contact, addr, meters, waterSupplier, telecomsSu
       )}
       {selected.has("water") && (
         <ReviewCard title="WATER">
-          <KV k="Supplier" v={waterSupplier || "—"} />
+          <KV k="Supplier" v={waterSupplier === "__idk__" ? "To be identified by team" : waterSupplier || "—"} />
         </ReviewCard>
       )}
       {selected.has("telecoms") && (
         <ReviewCard title="TELECOMS">
-          <KV k="Supplier" v={telecomsSupplier || "—"} />
+          <KV k="Supplier" v={telecomsSupplier === "__idk__" ? "To be identified by team" : telecomsSupplier || "—"} />
         </ReviewCard>
       )}
     </View>
@@ -1002,6 +1019,13 @@ const styles = StyleSheet.create({
 
   addMeter: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.brandPrimary, borderRadius: radius.md, paddingVertical: spacing.md, backgroundColor: colors.brandTertiary },
   addMeterText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
+
+  idkRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 14, paddingVertical: 4 },
+  idkBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  idkBoxOn: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  idkLabel: { fontFamily: font.medium, fontSize: type.base, color: colors.heading },
+  idkNote: { marginTop: 10, backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: 12 },
+  idkNoteText: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, lineHeight: 18 },
 
   confirmCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: 12, ...shadow.card },
   confirmHead: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
