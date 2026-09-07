@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/src/components/icon";
+import { AddBusinessModal } from "@/src/components/add-business-modal";
+import { useToast } from "@/src/components/toast";
 import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -27,8 +29,10 @@ const VARIANT_STYLE: Record<Variant, { bg: string; border: string; iconBg: strin
 
 /** Business switcher chip — only rendered when the owner has more than one business. */
 export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: Variant; testID?: string }) {
-  const { businesses, activeBizId, activeBusiness, switchBusiness } = useBusiness();
+  const { businesses, activeBizId, activeBusiness, switchBusiness, refreshBusinesses } = useBusiness();
   const [open, setOpen] = useState(false);
+  const [addBiz, setAddBiz] = useState(false);
+  const toast = useToast();
   const insets = useSafeAreaInsets();
 
   if (businesses.length <= 1) return null;
@@ -60,6 +64,15 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
                 onPress={() => { switchBusiness(b.id); setOpen(false); }}
               />
             ))}
+            <Pressable testID="biz-add-business" onPress={() => { setOpen(false); setAddBiz(true); }} style={styles.addRow}>
+              <View style={styles.addIcon}>
+                <Icon name="plus" size={16} color={colors.brandPrimary} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.addLabel}>Add a business</Text>
+                <Text style={styles.addSub}>For a separate legal company you manage</Text>
+              </View>
+            </Pressable>
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -87,6 +100,12 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
       </Pressable>
 
       {renderSheet()}
+
+      <AddBusinessModal
+        visible={addBiz}
+        onClose={() => setAddBiz(false)}
+        onCreated={() => { setAddBiz(false); toast("Business added.", "success"); refreshBusinesses(); }}
+      />
     </>
   );
 }
@@ -131,4 +150,9 @@ const styles = StyleSheet.create({
   optionIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center" },
   optionLabel: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   optionSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 1 },
+
+  addRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary, marginTop: spacing.xs, marginBottom: spacing.sm },
+  addIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  addLabel: { fontFamily: font.semibold, fontSize: type.title, color: colors.brandPrimary },
+  addSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 1 },
 });
