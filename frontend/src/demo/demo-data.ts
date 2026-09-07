@@ -16,6 +16,23 @@ export function isDemoEnabled() {
 
 export const DEMO_MODE_KEY = "uch_demo_mode";
 
+// Append a site to the in-memory demo store so it shows immediately in the
+// Sites tab and business switcher (demo mode only).
+let demoPropSeq = 0;
+export function addDemoProperty(p: { business_id: string; property_name: string; address: string; postcode: string }) {
+  const business = BUSINESSES.find((b) => b.id === p.business_id);
+  const prop = {
+    id: `pnew${++demoPropSeq}`,
+    business_id: p.business_id,
+    property_name: (p.property_name || p.address || "New site").trim(),
+    business_name: business?.company_name || "",
+    address: p.address.trim(),
+    postcode: p.postcode.trim().toUpperCase(),
+  };
+  PROPERTIES.push(prop);
+  return prop;
+}
+
 const DAY = 24 * 60 * 60 * 1000;
 const iso = (days: number) => new Date(Date.now() + days * DAY).toISOString();
 
@@ -167,7 +184,11 @@ export function getDemoResponse(path: string): any | undefined {
   const propIds = new Set(props.map((p) => p.id));
   const contracts = bizId ? CONTRACTS.filter((x) => propIds.has(x.property_id)) : CONTRACTS;
 
-  if (clean === "/businesses") return BUSINESSES;
+  if (clean === "/businesses") return BUSINESSES.map((b) => ({
+    ...b,
+    site_count: PROPERTIES.filter((p) => p.business_id === b.id).length,
+    contract_count: CONTRACTS.filter((x) => PROPERTIES.some((p) => p.id === x.property_id && p.business_id === b.id)).length,
+  }));
   if (clean === "/properties") return props;
   if (clean === "/contracts") return contracts;
   const one = clean.match(/^\/contracts\/([^/]+)$/);

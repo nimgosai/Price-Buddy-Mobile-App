@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only verification of the rebuilt 'Onboard an existing site' (/sites/new) flow at mobile viewport 390x844 against the live external backend with Demo Mode ON. ALL requested acceptance criteria pass: (1) Reached /sites/new via Sites → sites-business-chip → biz-add-site AND via Home Quick Action action-add-site-business → add-chooser-onboard. (2) Header 'add-site-header' reads 'Onboard an existing site — Add a branch, premises or meter'. (3) Old manual ticket form is GONE — no 'Submit to my account manager' string, and the submit button label is 'Save site' with testID 'add-site-submit'. (4) Step 1 'add-site-business' SelectField exposes options 'add-site-business-opt-b1' (Price Buddy Demo Ltd · 3 sites), 'add-site-business-opt-b2' (Riverside Cafés Ltd · 2 sites), and 'add-site-business-opt-__add_business__' (+ Add a new business) which opens AddBusinessModal (testID 'new-biz-modal'). (5) Step 2 exposes 'add-site-method-scan' (Recommended pill visible) and 'add-site-method-manual'; tapping manual reveals 'add-site-manual-form' with 'add-site-name', 'add-site-address', 'add-site-postcode' and meter toggles 'add-site-meter-type-electric' / 'add-site-meter-type-gas'. (6) Validation: empty submit shows 'add-site-error'; entering 'INVALID' as postcode reveals 'add-site-postcode-error'. (7) Happy path: with business b1 selected, filling Site name 'Leicester Branch', Address '9 Market Street', Postcode 'LE1 5GG', meter=Electric and tapping 'add-site-submit' redirects to the Sites tab (sites-header present); the new site 'Leicester Branch — 9 Market Street, LE1 5GG' appears under the Price Buddy Demo Ltd group and the group count badge updates to '4 sites' (verified on screen — see screenshot). (8) Regression: 'Get a quote' entry from Home ('lower-bills-cta-pill') still reaches step-service (verified in the previous run of this session before entering /sites/new). Non-blocking web warnings (shadow*, useNativeDriver) unchanged.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Global styles / animated components", "issue": "Expo-web deprecation warnings 'shadow* style props are deprecated (use boxShadow)' and 'useNativeDriver is not supported' — non-blocking, carried over from prior iterations."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "None functional. All review-request acceptance criteria pass end-to-end.",
+    "Optional cleanup (not blocking): only one BusinessSwitcherChip should be present in the DOM at a time on the Sites tab. Playwright's strict mode reports 2 matching '[data-testid=\"sites-business-chip\"]' nodes on /sites — likely a stale/duplicated node kept in DOM by react-native-web after focus/unfocus. Visually only one chip renders. Consider adding a unique key or gating render so only one instance remains mounted.",
+    "Optional (unchanged): gate CtaShimmer's useNativeDriver by Platform.OS !== 'web' and migrate shadow*/pointerEvents props to their new equivalents."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/sites/new.tsx correctly removes the old ticket form and implements a clean two-step onboarding: Business SelectField (with in-line '+ Add a new business' opening AddBusinessModal) → method chooser (Scan/Manual) with the manual form revealed inline. Save button is 'Save site' with testID 'add-site-submit'.",
+    "Manual-form validation is sound: empty fields set 'add-site-error' and an invalid UK postcode reveals 'add-site-postcode-error' before submission. The UK_POSTCODE regex on line 22 accepts 'LE1 5GG' and rejects 'INVALID'.",
+    "Demo mode branch (isDemoEnabled()) delegates to addDemoProperty in /app/frontend/src/demo/demo-data.ts, which pushes into the in-memory PROPERTIES store so the site immediately shows on the Sites tab and increments the business site_count from 3 to 4 (verified on screen).",
+    "AddBusinessModal integration correctly closes the picker, opens the modal, and on create refreshes businesses then selects the new business id.",
+    "Two sites-business-chip nodes are present in the DOM on the Sites tab (Playwright strict-mode complaint). Not user-visible but worth investigating for future testing scripts."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (external live backend not exercised)", "frontend": "100% (all acceptance criteria)"},
+  "seed_data_creation": "None — used e2e_test_1786703401@example.com with Demo Mode toggled ON via 'profile-demo-toggle'. In-memory demo store initially has businesses b1 (3 sites) + b2 (2 sites). Test added 'Leicester Branch' under b1 during the happy path.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Bottom tabs use expo-router built-in Tabs which do NOT expose testIDs — click via page.get_by_role('button', name='Profile'|'Sites'|'Home') at 390x844 mobile viewport. Sign-in inputs use placeholders 'you@business.co.uk' and 'Your password'. Landing page requires tapping 'I already have an account' before showing the login form. Demo toggle: 'profile-demo-toggle'. SelectField options render with testID '{selectTestID}-opt-{value}', so business options are 'add-site-business-opt-b1', 'add-site-business-opt-b2', 'add-site-business-opt-__add_business__'. Two identical 'sites-business-chip' nodes may exist — always call .first when clicking. New sites created in demo mode persist only until page reload.",
+  "rca_of_issue": "N/A — new flow verified. Playwright script had two non-functional issues: (a) sites-business-chip resolves to 2 nodes so .first is required; (b) after navigating to /sites/new via the Home QA path, the tab bar is not rendered, so a subsequent 'Home' tap requires clicking the browser back button or the ScreenHeader onBack ('sites-header' subsequently exposes the tabs)."
+}
