@@ -407,15 +407,15 @@ export default function Dashboard() {
           <View ref={ctaRef} collapsable={false} testID="lower-bills-cta" style={styles.promo}>
             <View style={styles.promoHead}>
               <View style={styles.promoIcon}>
-                <Icon name="pound" size={24} color={colors.pastel.mintIcon} />
+                <Icon name="building" size={22} color={colors.pastel.mintIcon} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.promoTitle}>Cut your business energy costs</Text>
-                <Text style={styles.promoSub}>Compare quotes from trusted UK suppliers.</Text>
+                <Text style={styles.promoTitle}>Add a site or get a quote</Text>
+                <Text style={styles.promoSub}>Add another location or compare energy prices for your business.</Text>
               </View>
             </View>
             <Pressable testID="lower-bills-cta-pill" onPress={() => router.push("/quote/new")} style={({ pressed }) => [styles.promoBtn, pressed && { opacity: 0.9 }]}>
-              <Text style={styles.promoBtnText}>Compare tariffs &amp; save</Text>
+              <Text style={styles.promoBtnText}>Add site or get a quote</Text>
               <Icon name="chevronRight" size={16} color="#FFFFFF" />
               <CtaShimmer width={340} />
             </Pressable>
