@@ -117,6 +117,8 @@ export default function QuoteWizard() {
   const [renewingContract, setRenewingContract] = useState<any>(null);
   const [waterSupplier, setWaterSupplier] = useState("");
   const [telecomsSupplier, setTelecomsSupplier] = useState("");
+  const [waterPrefilled, setWaterPrefilled] = useState(false);
+  const [telecomsPrefilled, setTelecomsPrefilled] = useState(false);
   const [error, setError] = useState("");
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -327,6 +329,15 @@ export default function QuoteWizard() {
           });
           return next;
         });
+        // Pre-fill Water / Telecoms suppliers from the site's records too.
+        if (selected.has("water") && utils.water?.supplier_name) {
+          setWaterSupplier(utils.water.supplier_name);
+          setWaterPrefilled(true);
+        }
+        if (selected.has("telecoms") && (utils.telecoms?.supplier_name || utils.broadband?.supplier_name)) {
+          setTelecomsSupplier((utils.telecoms || utils.broadband).supplier_name);
+          setTelecomsPrefilled(true);
+        }
       } catch {
         /* keep manual entry on failure */
       }
@@ -590,10 +601,10 @@ export default function QuoteWizard() {
         )}
 
         {current === "water" && (
-          <SupplierStep testID="water" title="Who's your current Water supplier?" placeholder="e.g. Anglian Water, Thames Water" value={waterSupplier} onChange={setWaterSupplier} error={showErrors && !waterSupplier.trim()} />
+          <SupplierStep testID="water" title="Who's your current Water supplier?" placeholder="e.g. Anglian Water, Thames Water" value={waterSupplier} prefilled={waterPrefilled} onChange={(t) => { setWaterSupplier(t); setWaterPrefilled(false); }} error={showErrors && !waterSupplier.trim()} />
         )}
         {current === "telecoms" && (
-          <SupplierStep testID="telecoms" title="Who's your current Telecoms supplier?" placeholder="e.g. BT, Virgin, Sky Business" value={telecomsSupplier} onChange={setTelecomsSupplier} error={showErrors && !telecomsSupplier.trim()} />
+          <SupplierStep testID="telecoms" title="Who's your current Telecoms supplier?" placeholder="e.g. BT, Virgin, Sky Business" value={telecomsSupplier} prefilled={telecomsPrefilled} onChange={(t) => { setTelecomsSupplier(t); setTelecomsPrefilled(false); }} error={showErrors && !telecomsSupplier.trim()} />
         )}
 
         {current === "review" && (
@@ -807,7 +818,7 @@ function MeterConfirmCard({ meter, index, onEdit }: { meter: Meter; index: numbe
   );
 }
 
-function SupplierStep({ title, placeholder, value, onChange, testID, error }: { title: string; placeholder: string; value: string; onChange: (t: string) => void; testID: string; error?: boolean }) {
+function SupplierStep({ title, placeholder, value, onChange, testID, error, prefilled }: { title: string; placeholder: string; value: string; onChange: (t: string) => void; testID: string; error?: boolean; prefilled?: boolean }) {
   const idk = value === "__idk__";
   return (
     <View testID={`step-${testID}`}>
@@ -823,6 +834,9 @@ function SupplierStep({ title, placeholder, value, onChange, testID, error }: { 
           placeholderTextColor={colors.muted}
           style={[styles.input, error && !idk && styles.inputError]}
         />
+        {prefilled && !idk ? (
+          <Text testID={`${testID}-prefilled-note`} style={styles.helperText}>Pre-filled from your site records — change it if this isn&apos;t right.</Text>
+        ) : null}
       </View>
       <Pressable testID={`${testID}-idk`} onPress={() => onChange(idk ? "" : "__idk__")} style={styles.idkRow} hitSlop={6}>
         <View style={[styles.idkBox, idk && styles.idkBoxOn]}>{idk ? <Icon name="check" size={14} color="#FFFFFF" /> : null}</View>
