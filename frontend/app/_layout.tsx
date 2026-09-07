@@ -13,6 +13,7 @@ import { AuthProvider } from "@/src/auth/auth-context";
 import { BusinessProvider } from "@/src/business/business-context";
 import { ToastProvider } from "@/src/components/toast";
 import { FontWarmup } from "@/src/components/font-warmup";
+import { colors } from "@/src/theme/theme";
 
 // Disable logbox errors etc so that users can see the app
 // and agent works as expected.
@@ -57,7 +58,7 @@ export default function RootLayout() {
               <ToastProvider>
                 <StatusBar style="dark" />
                 <FontWarmup />
-                <Stack screenOptions={{ headerShown: false }} />
+                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surfaceSecondary } }} />
               </ToastProvider>
             </BusinessProvider>
           </AuthProvider>

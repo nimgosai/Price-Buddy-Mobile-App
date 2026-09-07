@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from "expo-router";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth/auth-context";
@@ -18,7 +18,7 @@ export default function TabsLayout() {
   const { user, ready } = useAuth();
   const insets = useSafeAreaInsets();
 
-  if (!ready) return null;
+  if (!ready) return <View style={{ flex: 1, backgroundColor: colors.surfaceSecondary }} />;
   if (!user) return <Redirect href="/signin" />;
 
   const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 10 : 0);
