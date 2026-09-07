@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -90,7 +89,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [meter, setMeter] = useState(false);
-  const [addChooser, setAddChooser] = useState(false);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
   const [showTryIt, setShowTryIt] = useState(false);
@@ -423,15 +421,13 @@ export default function Dashboard() {
             </Pressable>
           </View>
 
-          {/* Quick actions — three core tiles */}
+          {/* Quick actions — two core tiles side-by-side */}
           <Text style={styles.quickLabel}>Quick actions</Text>
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
               title="Scan Bill" badge={showTryIt ? "Try it" : undefined} onPress={() => router.push("/scan")} />
             <QuickAction testID="action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
               title="Meter Installation" onPress={() => setMeter(true)} />
-            <QuickAction testID="action-add-site-business" icon="plus" bg={colors.pastel.blue} fg={colors.pastel.blueIcon}
-              title="Add Site / Business" onPress={() => setAddChooser(true)} />
           </View>
 
           {/* Support / chat — subtle banner near the bottom */}
@@ -440,36 +436,6 @@ export default function Dashboard() {
       )}
 
       <MeterInstallModal visible={meter} onClose={() => setMeter(false)} />
-
-      <Modal visible={addChooser} transparent animationType="slide" onRequestClose={() => setAddChooser(false)}>
-        <Pressable style={styles.chooserBackdrop} onPress={() => setAddChooser(false)}>
-          <Pressable style={[styles.chooserSheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}} testID="add-chooser-sheet">
-            <View style={styles.chooserGrabber} />
-            <Text style={styles.chooserTitle}>Add a site or business</Text>
-            <Text style={styles.chooserSub}>What would you like to do?</Text>
-            <Pressable testID="add-chooser-onboard" onPress={() => { setAddChooser(false); router.push("/sites/new"); }} style={({ pressed }) => [styles.chooserRow, pressed && { opacity: 0.85 }]}>
-              <View style={[styles.chooserIcon, { backgroundColor: colors.pastel.blue }]}>
-                <Icon name="mapPin" size={20} color={colors.pastel.blueIcon} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.chooserRowTitle}>Onboard an existing site</Text>
-                <Text style={styles.chooserRowSub}>Add a branch, premises or meter you already run</Text>
-              </View>
-              <Icon name="chevronRight" size={18} color={colors.muted} />
-            </Pressable>
-            <Pressable testID="add-chooser-quote" onPress={() => { setAddChooser(false); router.push("/quote/new"); }} style={({ pressed }) => [styles.chooserRow, pressed && { opacity: 0.85 }]}>
-              <View style={[styles.chooserIcon, { backgroundColor: colors.pastel.mint }]}>
-                <Icon name="pound" size={20} color={colors.pastel.mintIcon} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.chooserRowTitle}>Get a quote for new premises</Text>
-                <Text style={styles.chooserRowSub}>Compare tariffs for a brand-new supply</Text>
-              </View>
-              <Icon name="chevronRight" size={18} color={colors.muted} />
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       <SpotlightTour open={tourOpen} steps={tourSteps} onClose={closeTour} />
     </View>
@@ -636,14 +602,4 @@ const styles = StyleSheet.create({
   promoSub: { fontFamily: font.regular, fontSize: type.sm, lineHeight: 18, color: "#065F46", marginTop: 4 },
   promoBtn: { minHeight: 42, borderRadius: 10, backgroundColor: "#065F46", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, overflow: "hidden" },
   promoBtnText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
-
-  chooserBackdrop: { flex: 1, backgroundColor: "rgba(20,15,40,0.55)", justifyContent: "flex-end" },
-  chooserSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: spacing.lg },
-  chooserGrabber: { width: 40, height: 4, borderRadius: 4, backgroundColor: colors.border, alignSelf: "center", marginBottom: spacing.md },
-  chooserTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, letterSpacing: -0.3 },
-  chooserSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2, marginBottom: spacing.md },
-  chooserRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
-  chooserIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  chooserRowTitle: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
-  chooserRowSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 1 },
 });
