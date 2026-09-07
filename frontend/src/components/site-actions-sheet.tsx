@@ -34,15 +34,6 @@ const ACTIONS: Action[] = [
     fg: colors.pastel.mintIcon,
     to: "/quote/new",
   },
-  {
-    key: "manual",
-    title: "Add site manually",
-    desc: "No bill? Tell us the address and we'll set it up for you.",
-    icon: "building",
-    bg: colors.pastel.peach,
-    fg: colors.pastel.peachIcon,
-    to: "/sites/new",
-  },
 ];
 
 export function SiteActionsSheet({
