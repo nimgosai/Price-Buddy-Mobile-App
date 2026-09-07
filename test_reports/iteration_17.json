@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only regression for the new 'Add Business / Site' flow alongside 'Get a Quote' at mobile viewport 390x844 against the live external backend (Demo Mode enabled). ALL acceptance criteria verified: (1) Demo mode toggled ON via profile-demo-toggle and the two demo businesses (Price Buddy Demo Ltd, Riverside Cafes Ltd) plus 5 demo sites (p1-p5) are returned. (2) Home Quick Actions renders EXACTLY three tiles — testIDs 'quick-action-scan', 'action-meter', 'action-add-site-business' (no other quick-action-*/action-* testIDs on the page). (3) Tapping 'action-add-site-business' opens the bottom-sheet 'add-chooser-sheet' with both rows 'add-chooser-onboard' and 'add-chooser-quote'; onboard navigates to /sites/new and quote navigates to /quote/new (step-service present). (4) Green banner CTA 'lower-bills-cta-pill' shows the exact label 'Compare tariffs & save' and navigates to /quote/new. (5) Home layout order top-to-bottom is greeting (y=18) → status card 'expiring-soon-card' (y=140) → green banner 'lower-bills-cta' (y=531) → Quick actions row (y=702) — the demo account has expiring contracts so trust-banner is replaced by expiring-soon-card, but the requested order (status card → green banner → Quick actions) is preserved. (6) Sites tab 'sites-business-chip' renders with 'VIEWING SITES FOR / All businesses (2) / Switch' and a chevron; tapping opens the 'Switch business' drawer containing 'biz-add-site' (→ /sites/new) and 'biz-add-business' (opens AddBusinessModal, exposes testIDs 'new-biz-modal' and 'new-biz-type-limited_company'). (7) Persistent bottom nav 'app-tab-bar' is VISIBLE on Site Detail (opened site-card-p1 → /sites/p1) and correctly HIDDEN on the Get a Quote wizard (/quote/new). (8) Regression: full Quote wizard path service → global → energy → review completed end-to-end (service-electric → contact + new-supply address + postcode SW1A 1AA → meter-electric-0 supplier Octopus Energy + end under_6m → step-review renders 'Electricity · Octopus Energy' with 'Contract end: Under 6 months'). No red screens or blocking console errors observed. React Native issues carried over from previous iteration (useNativeDriver / shadow*/pointerEvents web warnings) remain non-blocking and are unchanged.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "CtaShimmer (dashboard/wizard CTA)", "issue": "Non-blocking web warning: 'Animated: useNativeDriver is not supported ... falling back to JS-based animation.' Consider gating useNativeDriver by Platform.OS !== 'web'. Reference: /app/frontend/src/components/cta-shimmer.tsx"},
+      {"component": "Global styles", "issue": "Deprecation warnings on Expo web: 'shadow*' style props are deprecated (use boxShadow) and 'props.pointerEvents is deprecated' (use style.pointerEvents). Non-blocking."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "None required — every acceptance criterion in the review request passes at 390px mobile viewport against the live backend with Demo Mode enabled.",
+    "Optional (unchanged from prior iterations): gate CtaShimmer's useNativeDriver behind Platform.OS !== 'web' and migrate deprecated shadow*/pointerEvents props to silence Expo web console warnings."
+  ],
+  "critical_code_review_comments": [
+    "dashboard.tsx correctly renders exactly three Quick Action tiles in the desired order and the layout sequence (greeting → status card → green promo → quick actions → HaveAQueryPill) matches the spec.",
+    "The 'Add site / Business' chooser is implemented as a native Modal with a slide animation and dedicated testIDs (add-chooser-sheet/onboard/quote) and correctly closes before router.push to avoid stacking sheets.",
+    "business-switcher-chip.tsx guards render with businesses.length <= 1, so the chip only appears when the demo account has both businesses — verified with the two demo businesses.",
+    "AppTabBar is intentionally NOT mounted in /app/frontend/app/quote/new.tsx and IS mounted on /app/frontend/app/sites/[id].tsx (line 247) — matches the spec.",
+    "biz-add-business closes the drawer and opens AddBusinessModal (testID 'new-biz-modal'); on success it calls refreshBusinesses to update the switcher counts."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (external live backend not exercised in this pass)", "frontend": "100%"},
+  "seed_data_creation": "None — used pre-registered account e2e_test_1786703401@example.com with Demo Mode toggled ON (client-side interceptor returns the 2 demo businesses and 5 demo sites p1-p5).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Sign-in inputs have placeholders 'you@business.co.uk' and 'Your password' (not testIDs). AddBusinessModal exposes testID 'new-biz-modal' and type radios like 'new-biz-type-limited_company'. Demo Mode toggle is 'profile-demo-toggle' on the Profile screen and may briefly navigate/reload after toggling — wait ~3s before proceeding. Site cards use IDs 'site-card-p1'…'site-card-p5' in demo mode. The green banner button testID is 'lower-bills-cta-pill' (label 'Compare tariffs & save'). Chooser sheet uses 'add-chooser-sheet', 'add-chooser-onboard', 'add-chooser-quote'. Bottom nav testID is 'app-tab-bar' — expected visible on tabs+Site Detail, hidden on /quote/new.",
+  "rca_of_issue": "N/A — new Add Site / Business flow and layout reorder verified end-to-end with no regressions to the Get-a-Quote wizard."
+}

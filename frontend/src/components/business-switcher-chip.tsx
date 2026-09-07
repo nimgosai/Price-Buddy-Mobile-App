@@ -1,6 +1,7 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { Icon } from "@/src/components/icon";
 import { AddBusinessModal } from "@/src/components/add-business-modal";
@@ -33,6 +34,7 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
   const [open, setOpen] = useState(false);
   const [addBiz, setAddBiz] = useState(false);
   const toast = useToast();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   if (businesses.length <= 1) return null;
@@ -64,13 +66,22 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
                 onPress={() => { switchBusiness(b.id); setOpen(false); }}
               />
             ))}
+            <Pressable testID="biz-add-site" onPress={() => { setOpen(false); router.push("/sites/new"); }} style={styles.addRow}>
+              <View style={styles.addIcon}>
+                <Icon name="mapPin" size={16} color={colors.brandPrimary} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.addLabel}>Add a new site</Text>
+                <Text style={styles.addSub}>A branch, premises or meter for this business</Text>
+              </View>
+            </Pressable>
             <Pressable testID="biz-add-business" onPress={() => { setOpen(false); setAddBiz(true); }} style={styles.addRow}>
               <View style={styles.addIcon}>
                 <Icon name="plus" size={16} color={colors.brandPrimary} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.addLabel}>Add a business</Text>
-                <Text style={styles.addSub}>For a separate legal company you manage</Text>
+                <Text style={styles.addLabel}>Add a new business</Text>
+                <Text style={styles.addSub}>A separate legal company you manage</Text>
               </View>
             </Pressable>
           </ScrollView>
@@ -96,7 +107,10 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
           <Text style={[styles.chipKicker, { color: vs.kicker }]}>{kicker}</Text>
           <Text style={styles.chipName} numberOfLines={1}>{name}</Text>
         </View>
-        <Text style={[styles.switch, { color: vs.kicker }]}>Switch</Text>
+        <View style={styles.switchWrap}>
+          <Text style={[styles.switch, { color: vs.kicker }]}>Switch</Text>
+          <Icon name="chevronDown" size={16} color={vs.kicker} />
+        </View>
       </Pressable>
 
       {renderSheet()}
@@ -139,6 +153,7 @@ const styles = StyleSheet.create({
   chipKicker: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase" },
   chipName: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 1 },
   switch: { fontFamily: font.semibold, fontSize: type.sm },
+  switchWrap: { flexDirection: "row", alignItems: "center", gap: 2 },
 
   backdrop: { flex: 1, backgroundColor: "rgba(20,15,40,0.55)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: spacing.lg },
