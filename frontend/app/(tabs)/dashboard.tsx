@@ -45,30 +45,6 @@ function utilityLabel(u?: string): string {
   return u ? u.charAt(0).toUpperCase() + u.slice(1) : "Utility";
 }
 
-function urgencyFor(days: number | null | undefined, utility?: string): string {
-  if (days === null || days === undefined) return "missing";
-  if (days <= 0) return "expired";
-  if (days <= 30) return "critical";
-  if (days <= 60) return "high";
-  if (days <= 90) return "medium";
-  const u = (utility || "").toLowerCase();
-  if (["electricity", "electric", "gas"].includes(u) && days <= 365) return "renewable";
-  if (days <= 180) return "low";
-  return "normal";
-}
-
-type Cfg = { title: string; pill: string; accent: string; bg: string; border: string };
-const URGENCY_CFG: Record<string, Cfg> = {
-  missing: { title: "Action required: end date missing", pill: "No end date", accent: "#EA580C", bg: "#FFF1ED", border: "#FFE0D6" },
-  expired: { title: "Action required: contract has ended", pill: "Expired", accent: "#991B1B", bg: "#FEE2E2", border: "#FECACA" },
-  critical: { title: "Action required: Avoid out-of-contract rates", pill: "Critical", accent: "#DC2626", bg: "#FFE7E1", border: "#FECACA" },
-  high: { title: "Action required: Avoid out-of-contract rates", pill: "Ending soon", accent: "#EA580C", bg: "#FFF1ED", border: "#FFE0D6" },
-  medium: { title: "Renewal window opening", pill: "Approaching", accent: "#B45309", bg: "#FEF3C7", border: "#FDE68A" },
-  renewable: { title: "Renewable now — lock in a new rate", pill: "Renewable now", accent: "#6D28D9", bg: "#EDE9FE", border: "#DDD6FE" },
-  low: { title: "Upcoming contract renewals", pill: "Tracking", accent: "#6D28D9", bg: "#F5F3FF", border: "#DDD6FE" },
-  normal: { title: "All good — tracking your contracts", pill: "Locked in", accent: "#059669", bg: "#ECFDF5", border: "#A7F3D0" },
-};
-
 function greeting(): { salutation: string; subtitle: string } {
   const h = new Date().getHours();
   if (h >= 5 && h < 12) return { salutation: "Good morning", subtitle: "A fresh start — let's see what's ahead today." };
@@ -221,19 +197,18 @@ export default function Dashboard() {
 
   const g = greeting();
   const first = items[0];
-  const cfg = first ? URGENCY_CFG[urgencyFor(first.days_until_expiry, first.utility_type)] : null;
 
   const utilChips = useMemo(() => {
-    const seen = new Set<string>();
-    const out: string[] = [];
+    const EMOJI: Record<string, string> = { electricity: "⚡", electric: "⚡", gas: "🔥", water: "💧", telecoms: "🌐", broadband: "🌐" };
+    const map = new Map<string, { label: string; emoji: string; count: number }>();
     items.forEach((it) => {
-      const l = utilityLabel(it.utility_type);
-      if (!seen.has(l)) {
-        seen.add(l);
-        out.push(l);
-      }
+      const key = String(it.utility_type || "").toLowerCase();
+      const label = utilityLabel(it.utility_type);
+      const e = map.get(label) || { label, emoji: EMOJI[key] || "•", count: 0 };
+      e.count += 1;
+      map.set(label, e);
     });
-    return out;
+    return Array.from(map.values());
   }, [items]);
 
   const requestCall = async (id: string) => {
@@ -327,45 +302,32 @@ export default function Dashboard() {
               </View>
             </View>
           ) : (
-            <Pressable testID="expiring-soon-card" onPress={() => router.push("/renewals")} style={({ pressed }) => [styles.expCard, pressed && { opacity: 0.95 }]}>
-              <View style={styles.expTopRow}>
-                <View testID="expiring-count" style={[styles.expCount, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
-                  <Text style={[styles.expCountText, { color: cfg?.accent }]}>{items.length}</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <PulseDot color={cfg?.accent || "#DC2626"} />
-                    <Text style={[styles.expDays, { color: cfg?.accent }]}>
-                      {first.days_until_expiry < 0 ? `${Math.abs(first.days_until_expiry)} days overdue` : `${first.days_until_expiry} days remaining`}
-                    </Text>
-                  </View>
-                  <Text style={styles.expMeta}>
-                    {[first.supplier_name || first.business_name, items.length > 1 ? `+${items.length - 1} more` : ""]
-                      .filter(Boolean)
-                      .join(" · ")}
+            <View testID="expiring-soon-card" style={styles.alertCard}>
+              <View style={styles.alertTopRow}>
+                <Text testID="expiring-card-title" style={styles.alertTitle}>
+                  {items.length} contract{items.length === 1 ? "" : "s"} ending soon
+                </Text>
+                <View testID="expiring-days-badge" style={styles.daysBadge}>
+                  <PulseDot color="#DC2626" />
+                  <Text style={styles.daysBadgeText}>
+                    {first.days_until_expiry < 0 ? `${Math.abs(first.days_until_expiry)}d overdue` : `${first.days_until_expiry} days left`}
                   </Text>
                 </View>
-                {first.renewable_now ? (
-                  <View testID="renewable-pill" style={[styles.renewablePill, { backgroundColor: cfg?.bg, borderColor: cfg?.border }]}>
-                    <Text style={[styles.renewablePillText, { color: cfg?.accent }]}>Renewable now</Text>
-                  </View>
-                ) : null}
               </View>
-              <Text testID="expiring-card-title" style={styles.expTitle}>{cfg?.title}</Text>
+              <Text style={styles.alertSub}>Lock in new rates now to avoid out-of-contract price increases.</Text>
               {utilChips.length > 0 && (
                 <View style={styles.expChips}>
                   {utilChips.map((c) => (
-                    <View key={c} style={styles.expChip}>
-                      <Text style={styles.expChipText}>{c}</Text>
-                    </View>
+                    <Pressable key={c.label} testID={`util-pill-${c.label}`} onPress={() => router.push("/renewals")} style={({ pressed }) => [styles.expChip, pressed && { opacity: 0.7 }]}>
+                      <Text style={styles.expChipText}>{c.emoji} {c.label} ({c.count})</Text>
+                    </Pressable>
                   ))}
                 </View>
               )}
-              <View style={styles.expLink} testID="view-sites-link">
-                <Text style={styles.expLinkText}>{items.length > 1 ? `View these ${items.length} contracts` : "View this contract"}</Text>
-                <Icon name="chevronRight" size={16} color={colors.heading} />
-              </View>
-            </Pressable>
+              <Pressable testID="view-sites-link" onPress={() => router.push("/renewals")} style={({ pressed }) => [styles.alertBtn, pressed && { opacity: 0.9 }]}>
+                <Text style={styles.alertBtnText}>Review &amp; Lock In Rates ({items.length}) →</Text>
+              </Pressable>
+            </View>
           ))}
 
           {/* Bill verification — compact status card */}
@@ -549,8 +511,17 @@ const styles = StyleSheet.create({
   renewablePillText: { fontFamily: font.bold, fontSize: type.kicker },
   expTitle: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading, marginBottom: 12 },
   expChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
-  expChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
-  expChipText: { fontFamily: font.medium, fontSize: type.sm, color: colors.onSurfaceSecondary },
+  expChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#FDE68A" },
+  expChipText: { fontFamily: font.semibold, fontSize: type.sm, color: "#92400E" },
+
+  alertCard: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 16, padding: spacing.lg, ...shadow.card },
+  alertTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 6 },
+  alertTitle: { flex: 1, fontFamily: font.bold, fontSize: 18, color: colors.heading, letterSpacing: -0.3 },
+  daysBadge: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" },
+  daysBadgeText: { fontFamily: font.bold, fontSize: 12, color: "#B91C1C" },
+  alertSub: { fontFamily: font.regular, fontSize: type.sm, color: "#78350F", lineHeight: 19, marginBottom: 14 },
+  alertBtn: { height: 50, borderRadius: 12, backgroundColor: "#0F172A", alignItems: "center", justifyContent: "center" },
+  alertBtnText: { fontFamily: font.semibold, fontSize: type.lg, color: "#FFFFFF" },
   expLink: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4 },
   expLinkText: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
 
