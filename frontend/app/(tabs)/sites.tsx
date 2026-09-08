@@ -71,7 +71,9 @@ export default function Sites() {
     const q = query.trim().toLowerCase();
     if (!q) return sorted;
     return sorted.filter((s) =>
-      `${s.property_name || ""} ${s.address || ""} ${s.postcode || ""}`.toLowerCase().includes(q),
+      `${s.property_name || ""} ${s.address || ""} ${s.postcode || ""} ${s.meter_point_number || ""} ${s.mpan || ""} ${s.mprn || ""}`
+        .toLowerCase()
+        .includes(q),
     );
   }, [sites, query]);
 
@@ -157,24 +159,39 @@ export default function Sites() {
             </View>
           ) : (
             <>
-              {sites.length > 5 && (
-                <View style={styles.searchWrap}>
-                  <Icon name="search" size={16} color={colors.muted} />
-                  <TextInput
-                    testID="sites-search"
-                    value={query}
-                    onChangeText={setQuery}
-                    placeholder="Search sites by name or postcode"
-                    placeholderTextColor={colors.muted}
-                    style={styles.searchInput}
-                  />
-                </View>
-              )}
+              <View style={styles.searchWrap}>
+                <Icon name="search" size={16} color={colors.muted} />
+                <TextInput
+                  testID="sites-search"
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search by site name, postcode, or address..."
+                  placeholderTextColor={colors.muted}
+                  style={styles.searchInput}
+                  returnKeyType="search"
+                />
+                {query.length > 0 && (
+                  <Pressable testID="sites-search-clear" onPress={() => setQuery("")} hitSlop={10} style={styles.searchClear}>
+                    <Icon name="close" size={14} color={colors.muted} />
+                  </Pressable>
+                )}
+              </View>
 
               {filtered.length === 0 ? (
-                <Card testID="sites-no-match" style={styles.noMatch}>
-                  <Text style={styles.noMatchText}>No sites match “{query}”.</Text>
-                </Card>
+                <View testID="sites-no-match" style={styles.noMatch}>
+                  <View style={styles.noMatchIcon}>
+                    <Icon name="search" size={24} color={colors.muted} />
+                  </View>
+                  <Text style={styles.noMatchTitle}>No sites found for “{query.trim()}”</Text>
+                  <Text style={styles.noMatchSub}>Check your spelling or add this as a new location.</Text>
+                  <Button
+                    testID="sites-no-match-add"
+                    label="Add this site"
+                    icon="add"
+                    onPress={() => setSheet(true)}
+                    style={{ marginTop: spacing.lg, alignSelf: "stretch" }}
+                  />
+                </View>
               ) : isAll ? (
                 groups.map((g) => (
                   <View key={g.id} testID={`site-group-${g.id}`} style={styles.group}>
@@ -304,14 +321,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     height: 48,
+    marginBottom: spacing.md,
   },
   searchInput: { flex: 1, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, height: "100%" },
+  searchClear: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center" },
 
-  noMatch: { alignItems: "center", paddingVertical: spacing.lg },
-  noMatchText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
+  noMatch: { alignItems: "center", paddingVertical: spacing["2xl"], paddingHorizontal: spacing.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18 },
+  noMatchIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center", marginBottom: spacing.md },
+  noMatchTitle: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading, textAlign: "center" },
+  noMatchSub: { fontFamily: font.regular, fontSize: type.base, color: colors.muted, textAlign: "center", marginTop: spacing.xs, lineHeight: 20 },
 
   card: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   siteIcon: {
