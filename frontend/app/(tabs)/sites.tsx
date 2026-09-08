@@ -165,7 +165,7 @@ export default function Sites() {
                   testID="sites-search"
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search by site name, postcode, or address..."
+                  placeholder="Search sites or postcodes..."
                   placeholderTextColor={colors.muted}
                   style={styles.searchInput}
                   returnKeyType="search"
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: spacing.md,
   },
-  searchInput: { flex: 1, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, height: "100%" },
+  searchInput: { flex: 1, minWidth: 0, fontFamily: font.regular, fontSize: type.lg, color: colors.onSurface, height: "100%" },
   searchClear: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center" },
 
   noMatch: { alignItems: "center", paddingVertical: spacing["2xl"], paddingHorizontal: spacing.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18 },
