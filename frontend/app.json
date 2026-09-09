@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.emergent.billverify.dyo6wt",
@@ -66,7 +67,17 @@
       "expo-secure-store",
       "expo-status-bar",
       "expo-web-browser",
-      "@react-native-vector-icons/ionicons"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "@react-native-vector-icons/ionicons",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true

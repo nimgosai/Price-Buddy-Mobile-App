@@ -577,3 +577,29 @@ No login/live-data writes used — everything reconstructed from the bundle.
   push=true when granted, and navigates to /dashboard regardless (Maybe later skips the native
   prompt). NOTE: real push DELIVERY + the native permission dialog require a dev/production build —
   not testable in Expo Go/web preview.
+
+### ENTERPRISE HARDENING / CLEANUP PASS
+- Types: fixed ALL TypeScript errors (was 18 from the RN 0.86 upgrade) → `tsc --noEmit` now 0 errors.
+  Root causes: new @react-native-vector-icons has no `.glyphMap` type (switched icon prop types to
+  `React.ComponentProps<typeof Ionicons>["name"]` in ui.tsx & screen.tsx); RN 0.86 RefObject<View|null>
+  (dashboard measure/QuickAction/innerRef); ColorValue vs string in tab bar icon (_layout.tsx);
+  React 19 useRef needs initial arg (portal.tsx). Removed the `icon: any` in QuickAction → IconName.
+  ESLint clean (no unused imports/dead vars).
+- Dependencies pruned (verified 0 imports, not plugins, not referenced by metro): removed
+  expo-symbols, date-fns, react-native-dotenv, expo-blur, expo-haptics, react-native-webview.
+  Kept expo-web-browser/expo-image/expo-font/expo-secure-store/expo-status-bar (registered plugins),
+  expo-file-system (upload peer).
+- Security/storage: already compliant — auth tokens use expo-secure-store (Keychain / Android
+  EncryptedSharedPreferences) via storage.secureGet/Set/Remove; only non-sensitive flags use
+  AsyncStorage. No hardcoded secrets (only the public backend URL via EXPO_PUBLIC_UCH_BACKEND_URL).
+  Input validation already present: email regex+trim (signin/signup), password min-8, UK postcode
+  regex (quote), numeric meter fields.
+- Production build hardening (app.json): "jsEngine":"hermes" (bytecode, not plain JS); added
+  expo-build-properties plugin → Android enableProguardInReleaseBuilds + enableShrinkResourcesInReleaseBuilds
+  (R8 shrink/obfuscation). Sourcemaps are not shipped to clients by default in production bundles.
+- Log stripping: new babel.config.js (presets: babel-preset-expo) adds
+  babel-plugin-transform-remove-console (exclude: ["error"]) ONLY when BABEL_ENV/NODE_ENV=production —
+  dev/preview keep logs.
+- Crash resilience: new src/components/error-boundary.tsx wraps the entire root tree in app/_layout.tsx
+  (inside GestureHandlerRootView) → friendly recovery screen instead of white screen / leaked stack trace.
+- Verified: tsc 0 errors, ESLint clean, web+iOS+Android bundles compile, app boots, login→dashboard works.

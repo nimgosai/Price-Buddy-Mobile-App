@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from "expo-router";
-import { Platform, View } from "react-native";
+import { Platform, View, type ColorValue } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth/auth-context";
@@ -7,8 +7,8 @@ import { Icon, IconName } from "@/src/components/icon";
 import { colors, font } from "@/src/theme/theme";
 
 function renderTabIcon(name: IconName) {
-  const TabBarIcon = ({ color, size }: { color: string; size: number }) => (
-    <Icon name={name} size={size} color={color} />
+  const TabBarIcon = ({ color, size }: { color: ColorValue; size: number }) => (
+    <Icon name={name} size={size} color={color as string} />
   );
   TabBarIcon.displayName = `TabIcon(${name})`;
   return TabBarIcon;

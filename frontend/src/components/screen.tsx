@@ -4,6 +4,8 @@ import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
 /** Sticky, safe-area-aware screen header. */
 export function ScreenHeader({
   title,
@@ -58,7 +60,7 @@ export function EmptyState({
   testID,
   children,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IoniconName;
   title: string;
   message: string;
   testID?: string;

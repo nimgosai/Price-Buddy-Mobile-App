@@ -13,6 +13,7 @@ import { BusinessProvider } from "@/src/business/business-context";
 import { ToastProvider } from "@/src/components/toast";
 import { FontWarmup } from "@/src/components/font-warmup";
 import { PortalProvider } from "@/src/components/portal";
+import { ErrorBoundary } from "@/src/components/error-boundary";
 import { colors } from "@/src/theme/theme";
 
 // Disable logbox errors etc so that users can see the app
@@ -47,21 +48,23 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <KeyboardProvider>
-          <PortalProvider>
-            <AuthProvider>
-              <BusinessProvider>
-                <ToastProvider>
-                  <StatusBar style="dark" />
-                  <FontWarmup />
-                  <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surfaceSecondary } }} />
-                </ToastProvider>
-              </BusinessProvider>
-            </AuthProvider>
-          </PortalProvider>
-        </KeyboardProvider>
-      </SafeAreaProvider>
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <KeyboardProvider>
+            <PortalProvider>
+              <AuthProvider>
+                <BusinessProvider>
+                  <ToastProvider>
+                    <StatusBar style="dark" />
+                    <FontWarmup />
+                    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surfaceSecondary } }} />
+                  </ToastProvider>
+                </BusinessProvider>
+              </AuthProvider>
+            </PortalProvider>
+          </KeyboardProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

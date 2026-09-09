@@ -35,13 +35,13 @@ type PortalApi = {
 const PortalContext = createContext<PortalApi | null>(null);
 
 export function PortalProvider({ children }: { children: ReactNode }) {
-  const storeRef = useRef<PortalStore>();
+  const storeRef = useRef<PortalStore | null>(null);
   if (!storeRef.current) {
     storeRef.current = { nodes: new Map(), listeners: new Set(), version: 0 };
   }
   const store = storeRef.current;
 
-  const apiRef = useRef<PortalApi>();
+  const apiRef = useRef<PortalApi | null>(null);
   if (!apiRef.current) {
     const emit = () => store.listeners.forEach((l) => l());
     apiRef.current = {

@@ -13,6 +13,8 @@ import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
 /* ---------------- Button ---------------- */
 type ButtonProps = {
   label: string;
@@ -20,8 +22,8 @@ type ButtonProps = {
   variant?: "primary" | "secondary" | "ghost";
   loading?: boolean;
   disabled?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
-  iconRight?: keyof typeof Ionicons.glyphMap;
+  icon?: IoniconName;
+  iconRight?: IoniconName;
   testID?: string;
   style?: ViewStyle;
 };
@@ -74,7 +76,7 @@ export function Button({
 type FieldProps = TextInputProps & {
   label: string;
   error?: string | null;
-  rightIcon?: keyof typeof Ionicons.glyphMap;
+  rightIcon?: IoniconName;
   onRightIconPress?: () => void;
   testID?: string;
   boxStyle?: ViewStyle;

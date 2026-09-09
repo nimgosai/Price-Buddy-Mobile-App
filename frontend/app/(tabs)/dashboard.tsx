@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import Ionicons from "@react-native-vector-icons/ionicons";
 
-import { Icon } from "@/src/components/icon";
+import { Icon, IconName } from "@/src/components/icon";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
 import { CtaShimmer } from "@/src/components/cta-shimmer";
 import { SpotlightTour, TourStep } from "@/src/components/spotlight-tour";
@@ -77,7 +77,7 @@ export default function Dashboard() {
   const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
   const tourTriggered = useRef(false);
 
-  const measure = (ref: React.RefObject<View>) =>
+  const measure = (ref: React.RefObject<View | null>) =>
     new Promise<{ x: number; y: number; w: number; h: number } | null>((resolve) => {
       if (!ref.current) return resolve(null);
       ref.current.measureInWindow((x, y, w, h) => resolve({ x, y, w, h }));
@@ -425,7 +425,7 @@ function PulseDot({ color }: { color: string }) {
 }
 
 function QuickAction({ icon, bg, fg, title, onPress, testID, badge, innerRef }: {
-  icon: any; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View>;
+  icon: IconName; bg: string; fg: string; title: string; onPress: () => void; testID?: string; badge?: string; innerRef?: React.RefObject<View | null>;
 }) {
   const { width } = useWindowDimensions();
   const narrow = width < 360;
