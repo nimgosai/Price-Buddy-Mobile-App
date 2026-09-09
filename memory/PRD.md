@@ -603,3 +603,15 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Crash resilience: new src/components/error-boundary.tsx wraps the entire root tree in app/_layout.tsx
   (inside GestureHandlerRootView) → friendly recovery screen instead of white screen / leaked stack trace.
 - Verified: tsc 0 errors, ESLint clean, web+iOS+Android bundles compile, app boots, login→dashboard works.
+
+### FIX — Dashboard status card logic for brand-new users
+- Problem: brand-new users (0 contracts) saw a misleading "Fully secured / You're completely
+  covered" card, because the status card only keyed off `items` (expiring list), not total contracts.
+- Fix (app/(tabs)/dashboard.tsx): added `contractCount` state fetched from GET /dashboard/overview
+  (all_contracts.length). Status card now gated on `(contractCount ?? 0) > 0`:
+    • contractCount === 0 → render NO status card (green "Add a site or business" promo is the single
+      primary action directly under the greeting).
+    • contractCount > 0 & items.length === 0 → green "Protected / All contracts actively monitored"
+      card (copy updated from "Fully secured / You're completely covered").
+    • contractCount > 0 & items.length > 0 → amber/red "N contracts ending soon → Review & Lock In Rates".
+- Verified all 3 states on web (e2e account = 0 contracts → no card; demo data → expiring alert).

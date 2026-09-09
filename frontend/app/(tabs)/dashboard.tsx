@@ -61,6 +61,7 @@ export default function Dashboard() {
   const scrollRef = useTabScrollToTop();
 
   const [items, setItems] = useState<any[]>([]);
+  const [contractCount, setContractCount] = useState<number | null>(null);
   const [audits, setAudits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -129,6 +130,13 @@ export default function Dashboard() {
       setItems(list);
     } catch {
       setItems([]);
+    }
+    try {
+      const ov = await apiRequest<any>("/dashboard/overview");
+      const all = ov?.all_contracts || ov?.contracts || [];
+      setContractCount(Array.isArray(all) ? all.length : 0);
+    } catch {
+      setContractCount(0);
     }
     apiRequest<any[]>("/my/audits-in-progress")
       .then((a) => setAudits(Array.isArray(a) ? a : []))
@@ -289,16 +297,18 @@ export default function Dashboard() {
             </View>
           )}
 
-          {/* Trust banner / expiring contracts card — only once data has loaded */}
-          {!loading && (items.length === 0 ? (
+          {/* Status card — only for users WITH contracts. Brand-new users
+              (contractCount === 0) see no status card; the green "Add a site
+              or business" banner below becomes their single primary action. */}
+          {!loading && (contractCount ?? 0) > 0 && (items.length === 0 ? (
             <View style={styles.trustBanner} testID="trust-banner">
               <View style={styles.trustIcon}>
                 <Icon name="shield" size={26} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.trustKicker}>Fully secured</Text>
-                <Text style={styles.trustTitle}>You&apos;re completely covered</Text>
-                <Text style={styles.trustSub}>No utility contracts expiring soon — our systems are watching everything.</Text>
+                <Text style={styles.trustKicker}>Protected</Text>
+                <Text style={styles.trustTitle}>All contracts actively monitored</Text>
+                <Text style={styles.trustSub}>Every contract is verified and watched — we&apos;ll alert you up to 18 months before renewal.</Text>
               </View>
             </View>
           ) : (
