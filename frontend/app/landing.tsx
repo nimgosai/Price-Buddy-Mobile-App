@@ -9,7 +9,7 @@ import { Button } from "@/src/components/ui";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 const BADGES = [
-  { emoji: "⚡", label: "365-Day Alerts" },
+  { emoji: "⚡", label: "18-Month\nEnergy Alerts" },
   { emoji: "💬", label: "Same-Day Reply" },
   { emoji: "👤", label: "Named Manager" },
 ];
