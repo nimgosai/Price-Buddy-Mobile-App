@@ -126,7 +126,8 @@ export function RequestChangeModal({
                 <Text style={styles.mini}>Details</Text>
                 <TextInput
                   testID="rc-message"
-                  value={message}
+                  key={visible ? "rc-open" : "rc-closed"}
+                  defaultValue=""
                   onChangeText={setMessage}
                   placeholder="e.g. The day rate on my bill is 32.4p but the app shows 28.1p"
                   placeholderTextColor={colors.muted}

@@ -519,3 +519,16 @@ No login/live-data writes used — everything reconstructed from the bundle.
   `src/utils/use-tab-scroll-to-top.ts` now imports `useScrollToTop` from `expo-router`.
 - Verified: web + iOS + android bundles all compile; icons render everywhere (no tofu);
   login, tabs, demo data, site detail, quote wizard, shimmer animations, bottom sheets all OK.
+
+### FIX — Multiline chat/notes text invisible on device (New-Arch/RN 0.86 Fabric bug, post-SDK57)
+- Symptom (user video, real phone/Expo Go): typing in the "Message us directly" sheet showed
+  NO text in the field. Confirmed web-only-fine; native-only bug after SDK 54→57 (RN 0.81→0.86).
+- Root cause: controlled `multiline` TextInput (`value=` + onChangeText) round-trips through JS on
+  every keystroke; on RN 0.86 Fabric the multiline view fails to render the value on Android.
+  (Single-line controlled inputs are unaffected — user logged in fine on device.)
+- Fix: made all 4 multiline inputs UNCONTROLLED — dropped `value=`, kept `onChangeText` for
+  tracking (send-button enable + payload), added `defaultValue=""` and a remount `key` tied to the
+  sheet's open/visible flag so the field resets to empty on each reopen. Files:
+  have-a-query-pill.tsx, request-change-modal.tsx, meter-install-modal.tsx, contracts/[id]/edit.tsx.
+- Verified on web (text displays, value tracked, send enables). MUST be re-verified on device via
+  Expo Go — the web preview never reproduced the bug.

@@ -142,7 +142,7 @@ export default function ContractEdit() {
             <Text style={styles.label}>Anything else? (optional)</Text>
             <TextInput
               testID="contract-edit-notes"
-              value={notes}
+              defaultValue=""
               onChangeText={setNotes}
               placeholder="Add any other details for your account manager"
               placeholderTextColor={colors.muted}

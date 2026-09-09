@@ -182,7 +182,8 @@ export function MeterInstallModal({
                 <Text style={styles.mini}>Notes (optional)</Text>
                 <TextInput
                   testID="mi-notes"
-                  value={notes}
+                  key={visible ? "mi-notes-open" : "mi-notes-closed"}
+                  defaultValue=""
                   onChangeText={setNotes}
                   placeholder="e.g. our smart meter has been faulty for 2 months"
                   placeholderTextColor={colors.muted}

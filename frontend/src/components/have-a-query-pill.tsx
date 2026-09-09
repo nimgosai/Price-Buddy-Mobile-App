@@ -91,7 +91,8 @@ export function HaveAQueryPill() {
                   </Text>
                   <TextInput
                     testID="concierge-input"
-                    value={text}
+                    key={open ? "cq-open" : "cq-closed"}
+                    defaultValue=""
                     onChangeText={setText}
                     placeholder="Type your message…"
                     placeholderTextColor={colors.muted}
