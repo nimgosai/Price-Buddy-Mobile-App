@@ -548,3 +548,32 @@ No login/live-data writes used — everything reconstructed from the bundle.
   reflow). edit.tsx notes (full screen, not a Modal) just uses uncontrolled.
 - Verified on web (Playwright): chat types + sends (done view), meter-install types, ZERO
   "Maximum update depth" errors, layouts intact. MUST be re-confirmed on device.
+
+### ONBOARDING / AUTH UI POLISH BATCH (user-directed)
+- Landing (app/landing.tsx): removed run-on paragraph + trust strip; added 3-column trust badge
+  chips (🏢 All-in-One/Utilities · ⚡ 18-Month/Early Alerts · 👤 Named/Manager); 3 core action
+  rows (Snap a bill / Better rates / Human support, multi-utility copy); consolidated dark CTA card
+  ("Ready to take control…", "Get Started →" iconRight, "Already have an account? Sign In");
+  tightened spacing to fit one viewport; kept partners link.
+- Splash carousel (app/splash.tsx): 3 slides updated — "Snap your bills" (scan icon) / "Lock in
+  lower rates" (trending-down) / "Stay fully protected" (shield-check); buttons "Next →" /
+  "Get Started →"; Skip → registration; 3-dot pagination kept.
+- Sign In (app/signin.tsx): reordered — primary "Sign in" button below fields, "New here? Create an
+  account" beneath it; "Forgot password?" right-aligned under password; inputs 12px radius / 48px
+  min height; background-tap Keyboard.dismiss; removed sticky footer.
+- Sign Up (app/signup.tsx): Step 1 — "Continue →" (iconRight) moved below password + "Already have
+  an account? Sign in" beneath; labels Full name (e.g. John Smith) / Work email / Password; 12px
+  radius inputs+button; sticky footer now Step-2 only. Step 2 — business-type is a fixed 2×2 grid
+  (48% width, 48px height), active = coral #FF6B4A border + #FFF1EE tint (no width/padding change →
+  no layout jump); "Create account →" iconRight.
+- ScreenHeader (src/components/screen.tsx): title numberOfLines 1→2 (no more ellipsis truncation).
+- Shared Button (src/components/ui.tsx): added optional `iconRight` prop. TextField: added optional
+  `boxStyle` prop to override the input box (used for 12px radius on auth screens).
+- Push pre-permission (app/onboarding/push-primer.tsx): rebuilt — title "Never miss a contract
+  renewal", subtitle, simulated notification preview card (Price Buddy • 2m ago / ⚡ Contract renewal
+  window open / body), 3 value bullets, "Turn On Renewal Alerts →" + "Maybe later". Installed
+  expo-notifications@57; handler sets Android channel (importance MAX, vibration, lightColor
+  #FF6B4A), calls requestPermissionsAsync({ios:{alert,badge,sound}}), syncs PUT /me/preferences
+  push=true when granted, and navigates to /dashboard regardless (Maybe later skips the native
+  prompt). NOTE: real push DELIVERY + the native permission dialog require a dev/production build —
+  not testable in Expo Go/web preview.

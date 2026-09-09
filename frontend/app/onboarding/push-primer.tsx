@@ -1,87 +1,129 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { Image } from "expo-image";
+import * as Notifications from "expo-notifications";
 import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { Button } from "@/src/components/ui";
-import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 const BENEFITS = [
-  { icon: "alarm-outline" as const, text: "Renewal reminders before your contract ends" },
-  { icon: "shield-checkmark-outline" as const, text: "Updates when your bill has been verified" },
-  { icon: "pricetag-outline" as const, text: "Alerts when we find you a better deal" },
+  { emoji: "⏰", text: "18-month advance alerts before contracts expire" },
+  { emoji: "📄", text: "Instant status updates when bills are verified" },
+  { emoji: "🛡️", text: "Zero spam — strictly critical contract & saving alerts" },
 ];
 
 export default function PushPrimer() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const toast = useToast();
   const { user, refreshUser } = useAuth();
   const [saving, setSaving] = useState(false);
 
-  const enable = async () => {
+  const handleEnableNotifications = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      await apiRequest("/me/preferences", {
-        method: "PUT",
-        body: {
-          email_notifications_enabled: user?.email_notifications_enabled ?? true,
-          push_notifications_enabled: true,
-        },
+      // 1. Android 13+ channel requirement
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "Default",
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: "#FF6B4A",
+        });
+      }
+
+      // 2. Request runtime permission on iOS & Android 13+
+      const { status } = await Notifications.requestPermissionsAsync({
+        ios: { allowAlert: true, allowBadge: true, allowSound: true },
       });
-      refreshUser().catch(() => {});
-      toast("Notifications on — we'll keep you posted.", "success");
-    } catch {
-      // non-blocking
+
+      // Sync the account preference when the user allows.
+      if (status === "granted") {
+        apiRequest("/me/preferences", {
+          method: "PUT",
+          body: {
+            email_notifications_enabled: user?.email_notifications_enabled ?? true,
+            push_notifications_enabled: true,
+          },
+        })
+          .then(() => refreshUser().catch(() => {}))
+          .catch(() => {});
+      }
+    } catch (error) {
+      console.error("Permission error:", error);
     } finally {
+      // 3. Proceed to the main app regardless of outcome
       setSaving(false);
       router.replace("/dashboard");
     }
   };
 
+  // Soft decline — go straight to the app without triggering the native prompt.
+  const maybeLater = () => router.replace("/dashboard");
+
   return (
     <View style={styles.root}>
-      <View style={[styles.wrap, { paddingTop: insets.top + spacing["3xl"] }]}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.xl }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.icon}>
-          <Ionicons name="notifications" size={44} color={colors.brandPrimary} />
+          <Ionicons name="notifications" size={40} color={colors.brandPrimary} />
         </View>
+
         <Text testID="push-primer-title" style={styles.title}>
-          Stay in the loop
+          Never miss a contract renewal
         </Text>
         <Text style={styles.sub}>
-          Turn on notifications so you never miss a renewal, a verified bill, or a better deal.
+          Avoid expensive out-of-contract rates and get alerted the moment lower tariffs become available.
         </Text>
+
+        {/* Simulated notification banner */}
+        <View style={styles.notifCard} testID="push-primer-preview">
+          <View style={styles.notifHeader}>
+            <Image
+              source={require("../../assets/images/icon.png")}
+              style={styles.notifAppIcon}
+              contentFit="cover"
+            />
+            <Text style={styles.notifMeta}>Price Buddy • 2m ago</Text>
+          </View>
+          <Text style={styles.notifTitle}>⚡ Contract renewal window open</Text>
+          <Text style={styles.notifBody}>
+            Lock in lower rates today to prevent out-of-contract price hikes.
+          </Text>
+        </View>
 
         <View style={styles.benefits}>
           {BENEFITS.map((b, i) => (
             <View key={i} style={styles.benefit}>
               <View style={styles.benefitIcon}>
-                <Ionicons name={b.icon} size={18} color={colors.brandPrimary} />
+                <Text style={styles.benefitEmoji}>{b.emoji}</Text>
               </View>
               <Text style={styles.benefitText}>{b.text}</Text>
             </View>
           ))}
         </View>
-      </View>
+      </ScrollView>
 
       <View style={[styles.cta, { paddingBottom: insets.bottom + spacing.lg }]}>
         <Button
           testID="push-primer-enable"
-          label="Enable notifications"
-          icon="notifications-outline"
-          onPress={enable}
+          label="Turn On Renewal Alerts"
+          iconRight="arrow-forward"
+          onPress={handleEnableNotifications}
           loading={saving}
         />
         <Button
           testID="push-primer-skip"
-          label="Not now"
+          label="Maybe later"
           variant="ghost"
-          onPress={() => router.replace("/dashboard")}
+          onPress={maybeLater}
         />
       </View>
     </View>
@@ -90,26 +132,42 @@ export default function PushPrimer() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
-  wrap: { flex: 1, alignItems: "center", paddingHorizontal: spacing.xl },
+  scroll: { alignItems: "center", paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
   icon: {
-    width: 96,
-    height: 96,
+    width: 84,
+    height: 84,
     borderRadius: radius.lg,
     backgroundColor: colors.brandTertiary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
-  title: { fontFamily: font.bold, fontSize: type["2xl"], color: colors.heading, textAlign: "center" },
+  title: { fontFamily: font.bold, fontSize: type["2xl"], color: colors.heading, textAlign: "center", letterSpacing: -0.4 },
   sub: {
     fontFamily: font.regular,
-    fontSize: type.lg,
+    fontSize: type.base,
     color: colors.muted,
     textAlign: "center",
-    marginTop: spacing.md,
-    lineHeight: 24,
+    marginTop: spacing.sm,
+    lineHeight: 22,
   },
-  benefits: { alignSelf: "stretch", gap: spacing.lg, marginTop: spacing["2xl"] },
+
+  notifCard: {
+    alignSelf: "stretch",
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginTop: spacing.xl,
+  },
+  notifHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
+  notifAppIcon: { width: 22, height: 22, borderRadius: 6, backgroundColor: colors.surface },
+  notifMeta: { fontFamily: font.semibold, fontSize: type.kicker, color: colors.muted, letterSpacing: 0.2 },
+  notifTitle: { fontFamily: font.bold, fontSize: type.title, color: colors.heading },
+  notifBody: { fontFamily: font.regular, fontSize: type.sm, color: colors.onSurfaceSecondary, marginTop: 3, lineHeight: 18 },
+
+  benefits: { alignSelf: "stretch", gap: spacing.md, marginTop: spacing.xl },
   benefit: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   benefitIcon: {
     width: 40,
@@ -119,7 +177,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  benefitText: { flex: 1, fontFamily: font.medium, fontSize: type.base, color: colors.onSurface },
+  benefitEmoji: { fontSize: 18 },
+  benefitText: { flex: 1, fontFamily: font.medium, fontSize: type.base, color: colors.onSurface, lineHeight: 20 },
+
   cta: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
