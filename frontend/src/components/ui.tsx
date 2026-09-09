@@ -77,10 +77,11 @@ type FieldProps = TextInputProps & {
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightIconPress?: () => void;
   testID?: string;
+  boxStyle?: ViewStyle;
 };
 
 export const TextField = forwardRef<TextInput, FieldProps>(function TextField(
-  { label, error, rightIcon, onRightIconPress, testID, style, ...rest },
+  { label, error, rightIcon, onRightIconPress, testID, style, boxStyle, ...rest },
   ref,
 ) {
   const [focused, setFocused] = useState(false);
@@ -92,6 +93,7 @@ export const TextField = forwardRef<TextInput, FieldProps>(function TextField(
           styles.fieldBox,
           focused && styles.fieldBoxFocused,
           !!error && styles.fieldBoxError,
+          boxStyle,
         ]}
       >
         <TextInput

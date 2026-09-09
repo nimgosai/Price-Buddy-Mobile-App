@@ -1,11 +1,8 @@
 import { useState, useRef } from "react";
-import { StyleSheet, Text, View, TextInput, Pressable } from "react-native";
+import { StyleSheet, Text, View, TextInput, Pressable, Keyboard } from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  KeyboardAwareScrollView,
-  KeyboardStickyView,
-} from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter } from "expo-router";
 
 import { Button, TextField } from "@/src/components/ui";
@@ -57,95 +54,98 @@ export default function SignIn() {
       <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + spacing["2xl"] },
+          { paddingTop: insets.top + spacing["2xl"], paddingBottom: insets.bottom + spacing["2xl"] },
         ]}
-        bottomOffset={90}
+        bottomOffset={20}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.brandRow}>
-          <Image
-            source={require("../assets/images/pricebuddy-logo.webp")}
-            style={styles.logoImg}
-            contentFit="contain"
-          />
-        </View>
+        <Pressable style={styles.dismiss} onPress={() => Keyboard.dismiss()} accessible={false}>
+          <View style={styles.brandRow}>
+            <Image
+              source={require("../assets/images/pricebuddy-logo.webp")}
+              style={styles.logoImg}
+              contentFit="contain"
+            />
+          </View>
 
-        <Text testID="signin-title" style={styles.title}>
-          Welcome back
-        </Text>
-        <Text style={styles.subtitle}>
-          Sign in to manage your contracts.
-        </Text>
-
-        <View style={styles.form}>
-          <TextField
-            testID="signin-email-input"
-            label="Email"
-            value={email}
-            onChangeText={(t) => {
-              setEmail(t);
-              if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
-            }}
-            error={errors.email}
-            placeholder="you@business.co.uk"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            returnKeyType="next"
-            onSubmitEditing={() => passwordRef.current?.focus()}
-          />
-          <TextField
-            testID="signin-password-input"
-            ref={passwordRef}
-            label="Password"
-            value={password}
-            onChangeText={(t) => {
-              setPassword(t);
-              if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
-            }}
-            error={errors.password}
-            placeholder="Your password"
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            returnKeyType="go"
-            onSubmitEditing={onSubmit}
-            rightIcon={showPassword ? "eye-off" : "eye"}
-            onRightIconPress={() => setShowPassword((s) => !s)}
-          />
-
-          <Pressable
-            testID="signin-forgot-link"
-            onPress={() => router.push("/forgot-password")}
-            hitSlop={8}
-            style={styles.forgotWrap}
-          >
-            <Text style={styles.forgotText}>Forgot password?</Text>
-          </Pressable>
-        </View>
-
-        <Pressable
-          testID="signin-signup-link"
-          onPress={() => router.push("/signup")}
-          hitSlop={8}
-          style={styles.signupWrap}
-        >
-          <Text style={styles.signupText}>
-            New here? <Text style={styles.signupTextBold}>Create an account</Text>
+          <Text testID="signin-title" style={styles.title}>
+            Welcome back
           </Text>
-        </Pressable>
-      </KeyboardAwareScrollView>
+          <Text style={styles.subtitle}>
+            Sign in to manage your contracts.
+          </Text>
 
-      <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.form}>
+            <TextField
+              testID="signin-email-input"
+              label="Email"
+              boxStyle={styles.inputBox}
+              value={email}
+              onChangeText={(t) => {
+                setEmail(t);
+                if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
+              }}
+              error={errors.email}
+              placeholder="you@business.co.uk"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
+            <View>
+              <TextField
+                testID="signin-password-input"
+                ref={passwordRef}
+                label="Password"
+                boxStyle={styles.inputBox}
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
+                }}
+                error={errors.password}
+                placeholder="Your password"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                returnKeyType="go"
+                onSubmitEditing={onSubmit}
+                rightIcon={showPassword ? "eye-off" : "eye"}
+                onRightIconPress={() => setShowPassword((s) => !s)}
+              />
+              <Pressable
+                testID="signin-forgot-link"
+                onPress={() => router.push("/forgot-password")}
+                hitSlop={8}
+                style={styles.forgotWrap}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </Pressable>
+            </View>
+          </View>
+
           <Button
             testID="signin-submit-button"
             label="Sign in"
             onPress={onSubmit}
             loading={submitting}
+            style={styles.submitBtn}
           />
-        </View>
-      </KeyboardStickyView>
+
+          <Pressable
+            testID="signin-signup-link"
+            onPress={() => router.push("/signup")}
+            hitSlop={8}
+            style={styles.signupWrap}
+          >
+            <Text style={styles.signupText}>
+              New here? <Text style={styles.signupTextBold}>Create an account</Text>
+            </Text>
+          </Pressable>
+        </Pressable>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -173,20 +173,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   form: { marginTop: spacing["2xl"], gap: spacing.lg },
-  forgotWrap: { alignSelf: "flex-start", paddingVertical: spacing.xs },
+  dismiss: { flex: 1 },
+  inputBox: { borderRadius: 12, minHeight: 48 },
+  forgotWrap: { alignSelf: "flex-end", paddingVertical: spacing.xs, marginTop: spacing.sm },
   forgotText: {
     fontFamily: font.semibold,
     fontSize: type.base,
     color: colors.brandSecondary,
   },
-  signupWrap: { alignSelf: "center", marginTop: spacing.xl, paddingVertical: spacing.sm },
+  submitBtn: { marginTop: spacing.xl },
+  signupWrap: { alignSelf: "center", marginTop: spacing.lg, paddingVertical: spacing.sm },
   signupText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
   signupTextBold: { fontFamily: font.semibold, color: colors.brandPrimary },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
 });
