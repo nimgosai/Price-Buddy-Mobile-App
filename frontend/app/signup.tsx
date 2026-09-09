@@ -110,21 +110,23 @@ export default function SignUp() {
           <Text style={styles.lead}>Start free — no card needed.</Text>
           <TextField
             testID="signup-name-input"
-            label="Your name"
+            label="Full name"
+            boxStyle={styles.inputBox}
             value={fullName}
             onChangeText={(t) => {
               setFullName(t);
               if (errors.fullName) setErrors((p) => ({ ...p, fullName: "" }));
             }}
             error={errors.fullName}
-            placeholder="Adebayo Okafor"
+            placeholder="e.g. John Smith"
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current?.focus()}
           />
           <TextField
             testID="signup-email-input"
             ref={emailRef}
-            label="Email"
+            label="Work email"
+            boxStyle={styles.inputBox}
             value={email}
             onChangeText={(t) => {
               setEmail(t);
@@ -142,6 +144,7 @@ export default function SignUp() {
             testID="signup-password-input"
             ref={pwRef}
             label="Password"
+            boxStyle={styles.inputBox}
             value={password}
             onChangeText={(t) => {
               setPassword(t);
@@ -155,6 +158,13 @@ export default function SignUp() {
             onRightIconPress={() => setShow((s) => !s)}
             returnKeyType="go"
             onSubmitEditing={onNext}
+          />
+          <Button
+            testID="signup-next"
+            label="Continue"
+            iconRight="arrow-forward"
+            onPress={onNext}
+            style={styles.continueBtn}
           />
           <Pressable
             testID="signup-have-account"
@@ -209,15 +219,13 @@ export default function SignUp() {
         </KeyboardAwareScrollView>
       )}
 
-      <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-          {step === 1 ? (
-            <Button testID="signup-next" label="Continue" onPress={onNext} />
-          ) : (
+      {step === 2 ? (
+        <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
             <Button testID="signup-submit" label="Create account" onPress={submit} loading={submitting} />
-          )}
-        </View>
-      </KeyboardStickyView>
+          </View>
+        </KeyboardStickyView>
+      ) : null}
     </View>
   );
 }
@@ -225,6 +233,8 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   scroll: { padding: spacing.lg, gap: spacing.lg },
+  inputBox: { borderRadius: 12, minHeight: 48 },
+  continueBtn: { borderRadius: 12, marginTop: spacing.sm },
   lead: { fontFamily: font.regular, fontSize: type.lg, color: colors.onSurfaceSecondary },
   label: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
   typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
@@ -243,7 +253,7 @@ const styles = StyleSheet.create({
   typeText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurfaceSecondary },
   typeTextActive: { color: colors.brandPrimary },
   field: { marginTop: spacing.sm },
-  haveAccount: { alignSelf: "center", marginTop: spacing.md, paddingVertical: spacing.sm },
+  haveAccount: { alignSelf: "center", paddingVertical: spacing.sm },
   haveAccountText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
   haveAccountBold: { fontFamily: font.semibold, color: colors.brandPrimary },
   footer: {
