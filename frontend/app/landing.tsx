@@ -9,15 +9,15 @@ import { Button } from "@/src/components/ui";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
 const BADGES = [
-  { emoji: "⚡", label: "18-Month\nEnergy Alerts" },
-  { emoji: "💬", label: "Same-Day Reply" },
-  { emoji: "👤", label: "Named Manager" },
+  { emoji: "🏢", label: "All-in-One\nUtilities" },
+  { emoji: "⚡", label: "18-Month\nEarly Alerts" },
+  { emoji: "👤", label: "Named\nManager" },
 ];
 
 const FEATURES = [
-  { icon: "scan-outline" as const, title: "Snap a bill", body: "Upload a bill to track contract end dates automatically." },
-  { icon: "trending-down-outline" as const, title: "Better rates", body: "Compare trusted UK suppliers before contracts expire." },
-  { icon: "headset-outline" as const, title: "Human support", body: "Speak to your dedicated manager whenever you need advice." },
+  { icon: "scan-outline" as const, title: "Snap a bill", body: "Upload any energy, water, or broadband bill to track renewal dates automatically." },
+  { icon: "trending-down-outline" as const, title: "Better rates", body: "We compare trusted UK suppliers to secure lower rates before contracts expire." },
+  { icon: "headset-outline" as const, title: "Human support", body: "Your dedicated account manager handles all utility switches and queries." },
 ];
 
 export default function Landing() {
