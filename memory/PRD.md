@@ -532,3 +532,19 @@ No login/live-data writes used — everything reconstructed from the bundle.
   have-a-query-pill.tsx, request-change-modal.tsx, meter-install-modal.tsx, contracts/[id]/edit.tsx.
 - Verified on web (text displays, value tracked, send enables). MUST be re-verified on device via
   Expo Go — the web preview never reproduced the bug.
+
+### FIX v2 — Multiline input still laggy on device: root cause = RN <Modal> separate window
+- After the uncontrolled fix, the user's device (Expo Go, SDK57/RN0.86, New Arch) showed text
+  appearing but with a multi-second LAG. Root cause: React Native's <Modal> spawns a SEPARATE
+  Android window; multiline TextInput inside it + KeyboardProvider (react-native-keyboard-controller)
+  has a known New-Architecture input-lag/render bug (maintainers advise avoiding <Modal>, keeping
+  overlays in the same rootView).
+- Fix: added a lightweight in-tree Portal (src/components/portal.tsx, external-store based via
+  useSyncExternalStore so mounting a portal re-renders ONLY the outlet — avoids the update-depth
+  loop the naive version caused). PortalProvider mounted in _layout.tsx INSIDE KeyboardProvider.
+- Converted all 3 bottom-sheets from <Modal> to <Portal> + keyboard-controller's KeyboardAvoidingView,
+  rendered in the same window: have-a-query-pill.tsx, request-change-modal.tsx, meter-install-modal.tsx.
+  Multiline inputs are uncontrolled (defaultValue + onChangeText) with a FIXED height (no per-keystroke
+  reflow). edit.tsx notes (full screen, not a Modal) just uses uncontrolled.
+- Verified on web (Playwright): chat types + sends (done view), meter-install types, ZERO
+  "Maximum update depth" errors, layouts intact. MUST be re-confirmed on device.

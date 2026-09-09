@@ -1,18 +1,17 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/src/components/icon";
+import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -58,14 +57,16 @@ export function HaveAQueryPill() {
         </Text>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <Pressable style={styles.backdrop} onPress={close}>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ width: "100%" }}>
-            <Pressable
-              style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
-              onPress={() => {}}
-              testID="concierge-sheet"
-            >
+      {open ? (
+        <Portal>
+          <View style={StyleSheet.absoluteFill}>
+            <Pressable style={styles.backdrop} onPress={close}>
+              <KeyboardAvoidingView behavior="padding" style={{ width: "100%" }}>
+                <Pressable
+                  style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
+                  onPress={() => {}}
+                  testID="concierge-sheet"
+                >
               <View style={styles.grabber} />
               {success ? (
                 <View style={styles.doneWrap}>
@@ -91,7 +92,6 @@ export function HaveAQueryPill() {
                   </Text>
                   <TextInput
                     testID="concierge-input"
-                    key={open ? "cq-open" : "cq-closed"}
                     defaultValue=""
                     onChangeText={setText}
                     placeholder="Type your message…"
@@ -121,7 +121,9 @@ export function HaveAQueryPill() {
             </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
-      </Modal>
+          </View>
+        </Portal>
+      ) : null}
     </>
   );
 }
@@ -149,7 +151,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: font.bold, fontSize: type.lg, color: colors.heading },
   sub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 4, marginBottom: spacing.md, lineHeight: 18 },
   textarea: {
-    minHeight: 110,
+    height: 120,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,

@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { Icon } from "@/src/components/icon";
+import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -74,15 +73,16 @@ export function RequestChangeModal({
     }
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ width: "100%" }}>
-          <Pressable
-            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
-            onPress={() => {}}
-            testID="rc-modal"
-          >
+  return visible ? (
+    <Portal>
+        <View style={StyleSheet.absoluteFill}>
+          <Pressable style={styles.backdrop} onPress={close}>
+            <KeyboardAvoidingView behavior="padding" style={{ width: "100%" }}>
+              <Pressable
+                style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
+                onPress={() => {}}
+                testID="rc-modal"
+              >
             <View style={styles.grabber} />
             {done ? (
               <View style={styles.doneWrap}>
@@ -154,11 +154,12 @@ export function RequestChangeModal({
                 </View>
               </>
             )}
+              </Pressable>
+            </KeyboardAvoidingView>
           </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
-  );
+        </View>
+      </Portal>
+  ) : null;
 }
 
 const styles = StyleSheet.create({
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   optActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
   optText: { flex: 1, fontFamily: font.medium, fontSize: type.base, color: colors.heading },
   textarea: {
-    minHeight: 96,
+    height: 96,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,

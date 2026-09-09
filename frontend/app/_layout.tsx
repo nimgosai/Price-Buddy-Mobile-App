@@ -12,6 +12,7 @@ import { AuthProvider } from "@/src/auth/auth-context";
 import { BusinessProvider } from "@/src/business/business-context";
 import { ToastProvider } from "@/src/components/toast";
 import { FontWarmup } from "@/src/components/font-warmup";
+import { PortalProvider } from "@/src/components/portal";
 import { colors } from "@/src/theme/theme";
 
 // Disable logbox errors etc so that users can see the app
@@ -48,15 +49,17 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <KeyboardProvider>
-          <AuthProvider>
-            <BusinessProvider>
-              <ToastProvider>
-                <StatusBar style="dark" />
-                <FontWarmup />
-                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surfaceSecondary } }} />
-              </ToastProvider>
-            </BusinessProvider>
-          </AuthProvider>
+          <PortalProvider>
+            <AuthProvider>
+              <BusinessProvider>
+                <ToastProvider>
+                  <StatusBar style="dark" />
+                  <FontWarmup />
+                  <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surfaceSecondary } }} />
+                </ToastProvider>
+              </BusinessProvider>
+            </AuthProvider>
+          </PortalProvider>
         </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

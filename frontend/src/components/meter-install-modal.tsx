@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,9 +8,11 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, IconName } from "@/src/components/icon";
+import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -106,15 +105,16 @@ export function MeterInstallModal({
     }
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.kav}>
-          <Pressable
-            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
-            onPress={() => {}}
-            testID="meter-install-modal"
-          >
+  return visible ? (
+    <Portal>
+      <View style={StyleSheet.absoluteFill}>
+        <Pressable style={styles.backdrop} onPress={close}>
+          <KeyboardAvoidingView behavior="padding" style={styles.kav}>
+            <Pressable
+              style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
+              onPress={() => {}}
+              testID="meter-install-modal"
+            >
             <View style={styles.grabber} />
             {done ? (
               <View style={styles.doneWrap}>
@@ -237,11 +237,12 @@ export function MeterInstallModal({
                 </View>
               </ScrollView>
             )}
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-    </Modal>
-  );
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </View>
+    </Portal>
+  ) : null;
 }
 
 const styles = StyleSheet.create({
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     backgroundColor: colors.surface,
   },
-  textarea: { minHeight: 76, textAlignVertical: "top" },
+  textarea: { height: 96, textAlignVertical: "top" },
   contactRow: { flexDirection: "row", gap: spacing.sm },
   contactBtn: { flex: 1, height: 44, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   contactBtnActive: { borderWidth: 2, borderColor: colors.heading },
