@@ -21,6 +21,7 @@ type ButtonProps = {
   loading?: boolean;
   disabled?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
+  iconRight?: keyof typeof Ionicons.glyphMap;
   testID?: string;
   style?: ViewStyle;
 };
@@ -32,6 +33,7 @@ export function Button({
   loading = false,
   disabled = false,
   icon,
+  iconRight,
   testID,
   style,
 }: ButtonProps) {
@@ -61,6 +63,7 @@ export function Button({
         <View style={styles.btnInner}>
           {icon && <Ionicons name={icon} size={18} color={fg} />}
           <Text style={[styles.btnText, { color: fg }]}>{label}</Text>
+          {iconRight && <Ionicons name={iconRight} size={18} color={fg} />}
         </View>
       )}
     </Pressable>

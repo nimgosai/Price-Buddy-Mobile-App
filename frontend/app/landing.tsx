@@ -32,7 +32,7 @@ export default function Landing() {
       >
         <LinearGradient
           colors={["#FDE7DF", "#F8F9FC"]}
-          style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}
+          style={[styles.hero, { paddingTop: insets.top + spacing.lg }]}
         >
           <Image
             source={require("../assets/images/pricebuddy-logo.webp")}
@@ -76,7 +76,7 @@ export default function Landing() {
             <Button
               testID="landing-create-account"
               label="Get Started"
-              icon="chevron-forward"
+              iconRight="arrow-forward"
               onPress={() => router.push("/splash")}
               style={styles.ctaButton}
             />
@@ -108,13 +108,13 @@ export default function Landing() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
-  hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, alignItems: "flex-start" },
-  logo: { width: 96, height: 72, marginBottom: spacing.md },
+  hero: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, alignItems: "flex-start" },
+  logo: { width: 96, height: 72, marginBottom: spacing.sm },
   eyebrow: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.brandPrimary, textTransform: "uppercase", marginBottom: spacing.sm },
   headline: { fontFamily: font.bold, fontSize: type["3xl"], color: colors.heading, letterSpacing: -0.6, lineHeight: 36 },
   accent: { fontFamily: font.semibold, fontSize: type.lg, color: colors.brandPrimary, marginTop: spacing.sm },
 
-  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.lg },
+  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.md },
 
   badgeRow: { flexDirection: "row", gap: spacing.sm },
   badge: {
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   badgeEmoji: { fontSize: 20 },
   badgeLabel: { fontFamily: font.semibold, fontSize: type.kicker, color: colors.heading, textAlign: "center", lineHeight: 14 },
 
-  features: { gap: spacing.lg },
+  features: { gap: spacing.md },
   feature: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   featureIcon: {
     width: 48,
@@ -146,11 +146,11 @@ const styles = StyleSheet.create({
   featureTitle: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   featureBody: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2, lineHeight: 18 },
 
-  ctaCard: { backgroundColor: colors.surfaceInverse, borderRadius: radius.md, padding: spacing.xl, marginTop: spacing.xs },
+  ctaCard: { backgroundColor: colors.surfaceInverse, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.xs },
   ctaTitle: { fontFamily: font.bold, fontSize: type.xl, color: "#FFFFFF", letterSpacing: -0.3, lineHeight: 26 },
-  ctaSub: { fontFamily: font.regular, fontSize: type.sm, color: "rgba(255,255,255,0.75)", marginTop: spacing.xs, marginBottom: spacing.lg },
+  ctaSub: { fontFamily: font.regular, fontSize: type.sm, color: "rgba(255,255,255,0.75)", marginTop: spacing.xs, marginBottom: spacing.md },
   ctaButton: { alignSelf: "stretch" },
-  signinLink: { alignSelf: "center", paddingVertical: spacing.md },
+  signinLink: { alignSelf: "center", paddingVertical: spacing.sm },
   signinText: { fontFamily: font.regular, fontSize: type.sm, color: "rgba(255,255,255,0.8)" },
   signinTextBold: { fontFamily: font.semibold, color: "#FFFFFF" },
 
