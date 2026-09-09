@@ -1,7 +1,6 @@
 import { useCallback, useRef } from "react";
 import { ScrollView } from "react-native";
-import { useScrollToTop } from "@react-navigation/native";
-import { useFocusEffect } from "expo-router";
+import { useScrollToTop, useFocusEffect } from "expo-router";
 
 /**
  * Keeps a tab's ScrollView anchored to the top:

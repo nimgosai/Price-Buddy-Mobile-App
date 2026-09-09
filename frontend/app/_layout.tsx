@@ -7,7 +7,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { StatusBar } from "expo-status-bar";
 
-import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { useAppFonts } from "@/src/hooks/use-app-fonts";
 import { AuthProvider } from "@/src/auth/auth-context";
 import { BusinessProvider } from "@/src/business/business-context";
@@ -27,17 +26,15 @@ TextAny.defaultProps = { ...(TextAny.defaultProps || {}), allowFontScaling: fals
 const TextInputAny = TextInput as unknown as { defaultProps?: Record<string, unknown> };
 TextInputAny.defaultProps = { ...(TextInputAny.defaultProps || {}), allowFontScaling: false };
 
-// Keep the native splash visible from cold start until icon fonts register.
-// Required because @expo/vector-icons' componentDidMount fallback fires
-// Font.loadAsync against a broken vendor path if any <Icon> mounts before
-// the family is registered — which throws on Android Expo Go.
+// Keep the native splash visible from cold start until the app fonts register.
+// Icon fonts (@react-native-vector-icons) load themselves lazily via Expo's
+// dynamic font loader on first <Ionicons> mount, so no manual preload is needed.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [iconsLoaded, iconError] = useIconFonts();
   const [fontsLoaded, fontError] = useAppFonts();
 
-  const ready = (iconsLoaded || iconError) && (fontsLoaded || fontError);
+  const ready = fontsLoaded || fontError;
 
   useEffect(() => {
     if (ready) {
@@ -45,8 +42,6 @@ export default function RootLayout() {
     }
   }, [ready]);
 
-  // If the CDN is unreachable we fall through on error rather than wedging
-  // the app — icons will tofu, but the app still boots.
   if (!ready) return null;
 
   return (

@@ -505,3 +505,17 @@ No login/live-data writes used — everything reconstructed from the bundle.
 - Review shows "I don't know" instead of "__idk__". Red-border validation intact. Verified full
   live submission (ref F7C82FD8) at 320px & 390px.
 - NOTE FOR USER: the published/live app only updates after Re-publish — preview is ahead.
+
+### EXPO SDK 54 → 57 UPGRADE (verified by testing_agent iteration_25 — 0 regressions)
+- `yarn expo install expo@latest` + `--fix` → expo 57.0.21, RN 0.86.3, react 19.2.3,
+  reanimated 4.5.1, worklets 0.10.1, expo-router 57.0.20. expo-doctor 20/20 pass.
+- app.json: removed `newArchEnabled` and `edgeToEdgeEnabled` (required for SDK 55+).
+- Vector icons migrated (required for SDK 56+): `@expo/vector-icons` → `@react-native-vector-icons/ionicons`
+  (v13) across 24 files (all used only `{ Ionicons }`). Config plugin auto-added to app.json.
+  v13 auto-loads its font via Expo dynamic font loader on first <Ionicons> mount, so the old
+  CDN workaround hook `src/hooks/use-icon-fonts.ts` was DELETED and `_layout.tsx` simplified
+  (now gates only on useAppFonts).
+- SDK 57 breaking change fixed: expo-router no longer hoists `@react-navigation/native`.
+  `src/utils/use-tab-scroll-to-top.ts` now imports `useScrollToTop` from `expo-router`.
+- Verified: web + iOS + android bundles all compile; icons render everywhere (no tofu);
+  login, tabs, demo data, site detail, quote wizard, shimmer animations, bottom sheets all OK.
