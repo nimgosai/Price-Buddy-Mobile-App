@@ -15,8 +15,6 @@ const FEATURES = [
   { icon: "headset-outline" as const, title: "Human support", body: "Speak to a dedicated account manager when you need help." },
 ];
 
-const TRUST = ["For UK businesses", "Real human support", "No bot handoffs"];
-
 export default function Landing() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -45,15 +43,6 @@ export default function Landing() {
             Snap a bill, stay ahead of renewals, and get better-rate options before contracts end —
             with a dedicated account manager when you need clear answers.
           </Text>
-
-          <View style={styles.trustStrip} testID="landing-trust-strip">
-            {TRUST.map((t, i) => (
-              <View key={t} style={styles.trustItem}>
-                {i > 0 && <Text style={styles.trustDot}>·</Text>}
-                <Text style={styles.trustText}>{t}</Text>
-              </View>
-            ))}
-          </View>
         </LinearGradient>
 
         <View style={styles.features}>
