@@ -12,19 +12,19 @@ import { colors, font, spacing, type } from "@/src/theme/theme";
 
 const SLIDES = [
   {
-    icon: "document-text-outline" as const,
-    title: "Snap a bill",
-    body: "Upload a bill and we'll pull in the key details for you.",
+    icon: "scan-outline" as const,
+    title: "Snap your bills",
+    body: "Upload any energy, water, or broadband bill — we'll extract your contract details automatically.",
   },
   {
     icon: "trending-down-outline" as const,
-    title: "Find better rates",
-    body: "We compare the market and line up better options before renewal.",
+    title: "Lock in lower rates",
+    body: "We compare leading UK suppliers to find cheaper tariffs and secure your savings before contracts renew.",
   },
   {
-    icon: "alarm-outline" as const,
-    title: "Stay ahead of renewals",
-    body: "Get reminders before contracts end, so you stay in control.",
+    icon: "shield-checkmark-outline" as const,
+    title: "Stay fully protected",
+    body: "Get renewal alerts up to 18 months in advance with a dedicated account manager on hand whenever you need advice.",
   },
 ];
 
@@ -90,7 +90,8 @@ export default function Splash() {
         </View>
         <Button
           testID="splash-next"
-          label={index === SLIDES.length - 1 ? "Get started" : "Next"}
+          label={index === SLIDES.length - 1 ? "Get Started" : "Next"}
+          iconRight="arrow-forward"
           onPress={next}
         />
       </View>
