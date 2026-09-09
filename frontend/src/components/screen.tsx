@@ -36,7 +36,7 @@ export function ScreenHeader({
           </Pressable>
         ) : null}
         <View style={{ flex: 1 }}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={styles.title} numberOfLines={2}>
             {title}
           </Text>
           {subtitle ? (

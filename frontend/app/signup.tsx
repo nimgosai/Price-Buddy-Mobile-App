@@ -222,7 +222,7 @@ export default function SignUp() {
       {step === 2 ? (
         <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
           <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-            <Button testID="signup-submit" label="Create account" onPress={submit} loading={submitting} />
+            <Button testID="signup-submit" label="Create account" iconRight="arrow-forward" onPress={submit} loading={submitting} />
           </View>
         </KeyboardStickyView>
       ) : null}
@@ -239,19 +239,21 @@ const styles = StyleSheet.create({
   label: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
   typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   typeChip: {
+    width: "48%",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     height: 48,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  typeChipActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  typeChipActive: { borderColor: "#FF6B4A", backgroundColor: "#FFF1EE" },
   typeText: { fontFamily: font.semibold, fontSize: type.base, color: colors.onSurfaceSecondary },
-  typeTextActive: { color: colors.brandPrimary },
+  typeTextActive: { color: "#FF6B4A" },
   field: { marginTop: spacing.sm },
   haveAccount: { alignSelf: "center", paddingVertical: spacing.sm },
   haveAccountText: { fontFamily: font.regular, fontSize: type.base, color: colors.muted },
