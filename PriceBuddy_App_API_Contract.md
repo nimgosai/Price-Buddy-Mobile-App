@@ -65,8 +65,7 @@ will break.
 ## 6. Support, callbacks & change requests
 | Method | Path | Auth | Body |
 |---|---|---|---|
-| POST | `/concierge/messages` | yes | `{ message }` |
-| GET | `/concierge/messages` | yes | message history |
+| POST | `/concierge/messages` | yes | `{ message }` — the app **sends** a concierge message. (The app does not fetch a history feed.) |
 | POST | `/change-requests` | yes | `{ request_type, message, contract_id?, property_id? }` — used for callbacks, contract-change requests **and** account-deletion requests (`request_type: "account_deletion"`) |
 | POST | `/meter-installs` | yes | `{ business_id, install_type, fuel, notes, preferred_contact, best_time }` |
 
