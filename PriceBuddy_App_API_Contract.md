@@ -86,3 +86,52 @@ will break.
 3. The **Document Centre** can reuse the same file-upload/storage mechanism the `/scans` upload already uses.
 4. **Confirm which backend is the live/current one** (this app talks to `utility-contract-hub.emergent.host`) and build against that version.
 5. Respect the product rules: no email-open/pixel/PDF-download tracking, no in-app supplier comparison in v1, and a customer tap is never a binding contract.
+
+---
+
+## Plain-English glossary (what each endpoint does, in business terms)
+
+**Signing in & accounts**
+- `POST /login` — Customer signs in with email + password; gives back a login token.
+- `POST /register` — Customer creates a new account (and optionally their company + business type).
+- `GET /me` — Fetches the signed-in customer's profile (name, email, company, alert preferences).
+- `PUT /me/preferences` — Saves the customer's choices: email alerts on/off, push on/off, and whether they've finished the intro tour.
+- `POST /auth/forgot-password` — Customer asks for a password-reset email.
+- `POST /auth/reset-password` — Customer sets a new password using the link/token from that email.
+- `POST /auth/confirm-device` — Confirms a new device/login using a one-time code.
+
+**Their businesses & sites**
+- `GET /businesses` — Lists the companies the customer manages (with how many sites each has).
+- `POST /businesses` — Adds a new company (name, company number, VAT/charity number, postcode, type).
+- `GET /properties` — Lists the customer's sites/locations (optionally just for one business).
+- `POST /properties` — Adds a new site (name, address, postcode, main meter type).
+- `GET /properties/{id}/utilities` — Opens one site and shows its electricity, gas, water, broadband and telecoms details: supplier, meter numbers (MPAN/MPRN), rates, and contract end dates.
+
+**The home screen & reports**
+- `GET /dashboard/overview` — The big-picture summary: all their contracts, which are expiring, etc. (The app counts these to decide what the home screen shows.)
+- `GET /renewals/urgent` — The list of contracts coming up for renewal soon (drives the "contracts ending soon" alert).
+- `GET /reports/spend` — Their estimated annual spend, broken down by utility and by site.
+
+**Getting a quote (unchanged in v1)**
+- `POST /quotes/multi` — Customer submits a *request* for a quote (which utilities, their meters/suppliers, contact and address). ⚠️ This is the customer asking us for a quote — it is **not** the comparison PDF we email out afterwards.
+- `GET /contracts/{id}` — Pulls an existing contract's details to pre-fill the quote form.
+
+**Scanning & checking bills**
+- `POST /scans` — Customer uploads a bill (photo(s) or a PDF) for us to read.
+- `GET /scans/{id}` — Checks the status of an uploaded bill and the details we pulled from it.
+- `POST /scans/{id}/confirm` — Customer confirms the details we extracted (supplier, meter number, dates, usage, which site it belongs to).
+- `POST /scans/{id}/request-call` — Customer asks us to call them about a bill we're checking.
+- `GET /my/audits-in-progress` — Shows any bill checks we're currently working on for them.
+
+**Talking to us / asking for help**
+- `POST /concierge/messages` — Customer sends us a message from the in-app chat.
+- `POST /change-requests` — Customer asks for something: a callback, a change to a contract, or to delete their account.
+- `POST /meter-installs` — Customer requests a new/updated meter installation (type, fuel, notes, best time to contact).
+
+**News & invite/onboarding links (no login needed)**
+- `GET /news` — Loads news/updates shown in the app.
+- `GET /share/{token}` — Opens a shared link (e.g. something we've shared with them).
+- `GET /onboarding/{token}` — Opens a personalised set-up link we've emailed a new customer.
+- `POST /onboarding/{token}/upload-bill` — Lets a new customer upload a bill from that link before they even have an account.
+- `POST /onboarding/{token}/request-callback` — Lets a new customer ask us to call them back (name + phone).
+
