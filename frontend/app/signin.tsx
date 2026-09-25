@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { StyleSheet, Text, View, TextInput, Pressable, Keyboard } from "react-native";
+import { StyleSheet, Text, View, TextInput, Pressable, Keyboard, Platform } from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -22,23 +22,37 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
-  const validate = () => {
-    const next: { email?: string; password?: string } = {};
-    if (!email.trim()) next.email = "Enter your email";
-    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = "Enter a valid email";
-    if (!password) next.password = "Enter your password";
-    setErrors(next);
-    return Object.keys(next).length === 0;
+  // On web, browser/password-manager autofill often fills the field WITHOUT
+  // firing onChangeText, so React state stays empty. Read the live DOM value
+  // as a fallback so an autofilled login still works.
+  const liveValue = (ref: React.RefObject<TextInput | null>) => {
+    if (Platform.OS !== "web" || !ref.current) return "";
+    const node = ref.current as unknown as { value?: string };
+    return typeof node.value === "string" ? node.value : "";
   };
 
   const onSubmit = async () => {
     if (submitting) return;
-    if (!validate()) return;
+
+    const emailVal = (email || liveValue(emailRef)).trim();
+    const pwVal = password || liveValue(passwordRef);
+    // Keep state in sync so the UI reflects any autofilled values.
+    if (emailVal !== email) setEmail(emailVal);
+    if (pwVal !== password) setPassword(pwVal);
+
+    const next: { email?: string; password?: string } = {};
+    if (!emailVal) next.email = "Enter your email";
+    else if (!/^\S+@\S+\.\S+$/.test(emailVal)) next.email = "Enter a valid email";
+    if (!pwVal) next.password = "Enter your password";
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
     setSubmitting(true);
     try {
-      await signIn(email, password);
+      await signIn(emailVal, pwVal);
       router.replace("/dashboard");
     } catch (e) {
       const msg =
@@ -80,6 +94,7 @@ export default function SignIn() {
           <View style={styles.form}>
             <TextField
               testID="signin-email-input"
+              ref={emailRef}
               label="Email"
               boxStyle={styles.inputBox}
               value={email}
@@ -92,6 +107,9 @@ export default function SignIn() {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
+              importantForAutofill="yes"
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
             />
@@ -110,6 +128,9 @@ export default function SignIn() {
                 placeholder="Your password"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                autoComplete="current-password"
+                textContentType="password"
+                importantForAutofill="yes"
                 returnKeyType="go"
                 onSubmitEditing={onSubmit}
                 rightIcon={showPassword ? "eye-off" : "eye"}
