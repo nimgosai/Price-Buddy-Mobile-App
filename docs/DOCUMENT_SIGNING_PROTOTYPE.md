@@ -173,3 +173,82 @@ timestamps; authenticated file access; **closing-app recovery / resuming after k
 **staff email + real notifications delivery**; duplicate-protection under real network
 loss; auth-expiry mid-session; supplier acceptance of the signed output. First-open
 and completed notifications are **backend work** and are only simulated here.
+
+---
+# 14. Handover addendum (test results, on-device checklist, scope)
+
+## 14.1 Scope confirmation
+- **Quote History** and **Default Business** are **NOT implemented** — suggested future work only. No code was written for either. The only files touched for this signing work are listed in §2 plus `src/components/icon.tsx` (added `warning`, `eye` icons) and `app/(tabs)/dashboard.tsx` (the My Documents card). `app/signin.tsx` is an UNRELATED Login-Autofill change tracked separately and NOT part of this feature.
+- **Nothing was deployed/published.** Integration & deployment are the client developer's responsibility in their own app.
+
+## 14.2 The 12 tested scenarios and results (ALL PASS)
+Tested with the automated testing agent (report: `/app/test_reports/iteration_26.json`).
+1. View-only quote (`doc_q_01`) — read-only 2-page viewer, View-only badge, note, NO signing UI, no "not found". **PASS**
+2. Cancelled (plain, `doc_sc_cancel`) — status screen "This request is cancelled" + Back. **PASS**
+3. Cancelled while open (`doc_loa_cancel_live`) — submit → full-screen "Signing unavailable" + back. **PASS**
+4. Multi-page supplier (`doc_sc_01`) — pages 1/2/3, "5 of 5 fields", submit gated on fields + declaration, submit → processing → completed. **PASS**
+5. Processing fail + recovery (`doc_loa_fail`) — needs_attention "you don't need to sign again"; retry-processing → completed without re-signing. **PASS**
+6. Lost response + repeated taps (`doc_loa_lost`) — first tap inline error + button→"Try again" + double-tap blocked; retry → completed (same idempotency key). **PASS**
+7. Expired (plain, `doc_loa_exp`) — status "This request is expired" + Back. **PASS**
+8. Expires while open (`doc_loa_exp_live`) — submit → terminal "Signing unavailable". **PASS**
+9. Superseded version (`doc_superseded`) — submit → terminal "document was updated / reopen latest". **PASS**
+10. Unauthorized (`doc_unauth`) — review load error "not authorised" + Try again. **PASS**
+11. Happy-path LOA (`doc_loa_01`) — sign → processing → completed + "Simulated — demo fixture"; audit modal (DEMO FIXTURE). **PASS**
+12. Filters — "Needs signature" / "Completed" chips filter correctly. **PASS**
+
+## 14.3 These were WEB-PREVIEW tests ONLY
+All 12 results above were produced on the **web preview** (React Native Web, mobile viewport). They were **NOT** run on a physical iPhone or Android device. On-device behaviour (native touch signature, keyboard, safe-area, app background/kill) is UNVERIFIED and must be checked with §14.4 before handover sign-off.
+
+## 14.4 iPhone / Android manual test checklist
+Open in Expo Go (scan the QR) or a dev build. For each step: note Pass/Fail and attach a screen recording if it fails.
+Report failures as: **Scenario # → step # → device/OS version → expected vs actual → screen recording**.
+
+A. List & navigation
+  1. Open the app → Home → tap the **My Documents** card. **Expect:** list opens with the yellow "Demo signing" banner and 12 rows.
+  2. Tap the **Needs signature** then **Completed** filter chips. **Expect:** list filters; chips highlight.
+
+B. View-only (must NOT record a signing event)
+  3. Tap "Quote — Electricity renewal options" (View only). **Expect:** read-only viewer, 2 pages, "View only" badge, note line, NO fields, NO declaration, NO "Sign and submit".
+  4. Tap back. **Expect:** returns to list, no errors.
+
+C. Happy-path LOA
+  5. Tap "Letter of Authority — Electricity". **Expect:** review screen, "Page 1 of 1", "0 of 4 fields completed".
+  6. Tap each dashed field → fill name/job title/email (keyboard appears, text saves), then the signature field → **draw with your finger** → Apply. **Expect:** boxes turn green; "4 of 4".
+  7. Tick the declaration checkbox; tap **Sign and submit**. **Expect:** processing spinner → "Document signed successfully" + "Simulated — demo fixture".
+  8. Tap **View signing audit record**. **Expect:** demo audit modal labelled DEMO FIXTURE.
+
+D. Multi-page contract
+  9. Tap "Supplier Contract — British Gas (3-year)". Scroll. **Expect:** pages 1,2,3 render; "0 of 5".
+  10. Try **Sign and submit** before completing. **Expect:** disabled/greyed.
+  11. Acknowledge on page 1, complete name/initials/two signatures on page 3, tick declaration, submit. **Expect:** processing → completed.
+
+E. Safe recovery
+  12. Tap "…Gas (demo: processing fails)", complete + submit. **Expect:** processing → "We need a moment to finish" + "you don't need to sign again" + **Try to finish processing**.
+  13. Tap **Try to finish processing** (do NOT re-sign). **Expect:** processing → "Document signed successfully".
+  14. Tap "…EV charging (demo: lost response)", complete + submit. **Expect:** inline red error, button becomes **Try again**. Tap again. **Expect:** completed. Rapid double-tap must not double-submit.
+
+F. Terminal states
+  15. "…Broadband (demo: cancelled while open)" → complete + submit. **Expect:** full-screen "Signing unavailable" (cancelled) + Back.
+  16. "…Waste (demo: expires while open)" → complete + submit. **Expect:** "Signing unavailable" (expired).
+  17. "…Electricity (demo: updated version)" → complete + submit. **Expect:** "Signing unavailable" (reopen latest version).
+  18. "…(demo: not your document)". **Expect:** "Couldn't open document" + not-authorised + Try again.
+  19. "Letter of Authority — Telecoms" (Expired) and "Supplier Contract — EDF (cancelled)". **Expect:** status screen explains expired/cancelled + Back.
+
+G. First-open behaviour (see §14.6 — no visible UI; confirm indirectly)
+  20. Open then leave and re-open the same review screen a few times. **Expect:** no crashes/duplicate dialogs (the dedup is internal).
+  21. Open the unauthorized doc. **Expect:** error screen only — a failed load must not be treated as an "open".
+
+## 14.5 View-only must never record a signing event (intended behaviour)
+`app/documents/[id]/view.tsx` calls **only** `documentSigningService.getViewDocument(id)`. It does **not** call `recordFirstOpen` or any signing-request endpoint. A view-only quote/bill therefore **cannot** generate a first-open or signing event. When the real backend is built, `GET /documents/{id}/view` MUST be a plain read endpoint with no side effects (no event emission, no staff alert).
+
+## 14.6 First-open tracking — what was and wasn't verified
+- **Design (enforced in code):** `review.tsx` calls `recordFirstOpen` **once**, inside a `useEffect` that runs **only** when the signing request has loaded successfully AND is not terminal AND there was no load error (`req && !terminal && !loadError`), guarded by a `firstOpenDone` ref. The mock adapter additionally de-dupes via an in-session `Set` and returns `{duplicate:true}` on repeats. A failed PDF/request load leaves `req === null`, so the effect never fires → **no first-open on failed load**. Terminal (expired/cancelled) loads also do not record.
+- **Verification status:** this is **verified by code logic / inspection**, NOT by an observable UI assertion — first-open has no on-screen output, so the automated web test could not count the events directly. If you want observable proof, I can add a temporary dev-only log or a debug badge. **Real staff emails and notifications remain backend work and were NOT tested.**
+
+## 14.7 New API endpoints (request/response shapes)
+Types are the single source of truth in `src/features/documents/types.ts`.
+- `GET /documents/{id}/view` → `ViewOnlyDocument` `{ id, title, type, businessName, siteLabel?, dateIssued, pageCount, pages: DocumentPage[], note? }`. **No side effects.**
+- `POST /signing-requests/{id}/retry-processing` → `CompletionStatus` with `status:"processing"`. MUST operate on the EXISTING accepted submission only — **never** create a new submission and **never** require re-signing. Idempotent; safe to call repeatedly.
+
+## 14.8 What was NOT verified (do not claim as proven)
+Production PDF signature placement, secure backend authorization, real server timestamps, real email/notification delivery, and closing-app / resume-after-kill recovery were **NOT** verified — the mock cannot prove any of these. They require the real backend and a security review.
