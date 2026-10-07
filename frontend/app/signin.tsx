@@ -75,7 +75,16 @@ export default function SignIn() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <Pressable style={styles.dismiss} onPress={() => Keyboard.dismiss()} accessible={false}>
+        {/* On web, clicks on the inputs bubble up to this Pressable and
+            Keyboard.dismiss() would blur the field just focused, so only
+            dismiss on native (where there's an on-screen keyboard). */}
+        <Pressable
+          style={styles.dismiss}
+          onPress={() => {
+            if (Platform.OS !== "web") Keyboard.dismiss();
+          }}
+          accessible={false}
+        >
           <View style={styles.brandRow}>
             <Image
               source={require("../assets/images/pricebuddy-logo.webp")}

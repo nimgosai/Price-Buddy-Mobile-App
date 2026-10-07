@@ -141,6 +141,23 @@ export const ICONS: Record<string, Def> = {
       { t: "path", d: "M7.5 13c.4 1.3.5 2.7.2 4.1-.3 1.2-.9 2.4-1.7 3.2h12" },
     ],
   },
+  warning: {
+    mode: "stroke",
+    sw: 2,
+    els: [
+      { t: "path", d: "M12 3L2 20h20L12 3z" },
+      { t: "path", d: "M12 10v5" },
+      { t: "circle", cx: 12, cy: 18, r: 0.9, fill: true },
+    ],
+  },
+  eye: {
+    mode: "stroke",
+    sw: 2,
+    els: [
+      { t: "path", d: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" },
+      { t: "circle", cx: 12, cy: 12, r: 3 },
+    ],
+  },
 };
 
 export type IconName = keyof typeof ICONS;

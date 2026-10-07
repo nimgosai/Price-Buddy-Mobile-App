@@ -396,6 +396,22 @@ export default function Dashboard() {
               title="Meter Installation" onPress={() => setMeter(true)} />
           </View>
 
+          {/* My Documents — full-width card linking to the Documents hub */}
+          <Pressable
+            testID="home-my-documents"
+            onPress={() => router.push("/documents")}
+            style={({ pressed }) => [styles.docCard, pressed && { opacity: 0.95 }]}
+          >
+            <View style={styles.docCardIcon}>
+              <Icon name="document" size={22} color="#7C3AED" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.docCardTitle}>My Documents</Text>
+              <Text style={styles.docCardSub}>Access your utility contracts, LOAs and quotes</Text>
+            </View>
+            <Icon name="chevronRight" size={20} color={colors.muted} />
+          </Pressable>
+
           {/* Support / chat — subtle banner near the bottom */}
           <HaveAQueryPill />
         </ScrollView>
@@ -549,6 +565,10 @@ const styles = StyleSheet.create({
 
   quickLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, color: colors.muted, textTransform: "uppercase", marginTop: 2, marginLeft: 4 },
   quickGrid: { flexDirection: "row", gap: 12 },
+  docCard: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 16, marginTop: 12 },
+  docCardIcon: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: "#EDE9FE", alignItems: "center", justifyContent: "center" },
+  docCardTitle: { fontFamily: font.bold, fontSize: type.title, color: colors.heading },
+  docCardSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, marginTop: 2 },
   qa: {
     flex: 1,
     minHeight: 100,

@@ -615,3 +615,42 @@ No login/live-data writes used — everything reconstructed from the bundle.
       card (copy updated from "Fully secured / You're completely covered").
     • contractCount > 0 & items.length > 0 → amber/red "N contracts ending soon → Review & Lock In Rates".
 - Verified all 3 states on web (e2e account = 0 contracts → no card; demo data → expiring alert).
+
+### FEATURE — Documents & In-App Signing PROTOTYPE (mock-backed, customer frontend only)
+- Home: added full-width "My Documents" card in app/(tabs)/dashboard.tsx (below Quick Actions,
+  above chat banner) → routes to /documents. No nav/tab changes.
+- New feature module src/features/documents/: types.ts (shared contract + coordinate convention),
+  config.ts (mock switch — explicit, off by default in prod, hard error if misconfigured),
+  service.ts (documentSigningService + generateIdempotencyKey), mock-adapter.ts (honest sim),
+  fixtures.ts (synthetic LOA/supplier-contract/quote/completed+audit/expired), DocumentPageCanvas.tsx
+  (swappable image/synthetic page renderer, separated from signing), SignaturePad.tsx (svg+PanResponder,
+  in-memory, SVG-dataURI output, per-field apply).
+- Screens: app/documents/index.tsx (list + All/Needs signature/Completed filters + loading/empty/error/
+  retry + demo banner), app/documents/[id]/review.tsx (multi-page viewer, zoom, normalized-coord field
+  overlays, progress "X of N", Start/Next field, field editors incl. signature via Portal, declaration,
+  idempotent submit), app/documents/[id]/status.tsx (bounded-backoff polling → processing/completed,
+  server-time Europe/London w/ BST label, signed-PDF/audit/combined actions, synthetic audit viewer).
+- Deps: NO new runtime dep (reused react-native-svg + PanResponder + expo-image). 0 TS errors, lint clean,
+  web+iOS+android bundles compile. Full journey verified on web E2E (sign→submit→processing→completed).
+- Honest labelling throughout: "Demo signing — not a live signed document", simulated/demo fixtures.
+- Handover doc: /app/docs/DOCUMENT_SIGNING_PROTOTYPE.md (API contract, coordinate convention, signature
+  format, real-PDF-viewer integration, backend checklist, notifications, developer handover, tested-vs-
+  simulated-vs-outstanding). Mock enabled in dev via EXPO_PUBLIC_DOC_SIGNING_MOCK.
+- NOT production-ready: real PDF viewer, backend, file storage, timestamps, notifications/emails, supplier
+  acceptance, closing-app recovery, security review all still required.
+
+### FEATURE UPDATE — Documents prototype: completed remaining mock scenarios (this session)
+Extended the signing prototype to cover the full brief. All frontend-only, mock-backed; tested on WEB preview (not yet on physical devices).
+- VIEW-ONLY: new app/documents/[id]/view.tsx + ViewOnlyDocument type + svc.getViewDocument + MOCK_VIEW_DOCS. Quote row now opens a read-only multi-page viewer (no sign/declaration/not-found). openDoc routes status "available" → /view.
+- CANCELLED: plain cancelled fixture (sr_sc_cancel) → status screen "This request is cancelled". Mid-session: sr_loa_cancel_live rejects on submit → full-screen "Signing unavailable" (terminal-back).
+- MULTI-PAGE: verified 3-page British Gas contract (ack p1, name/initials/2 signatures p3); submit blocked until 5/5 fields + declaration.
+- PROCESSING FAILURE + SAFE RECOVERY: MOCK_PROCESSING_BEHAVIOR fail_then_recover (sr_loa_fail) → needs_attention state in status.tsx with "Try to finish processing" (svc.retryProcessing / POST /signing-requests/{id}/retry-processing). Retry re-runs processing only, never re-signs/creates a 2nd submission.
+- LOST RESPONSE + REPEATED TAPS: MOCK_SUBMIT_OVERRIDE lost_response (sr_loa_lost) records submission server-side then drops response on 1st attempt; retry with SAME idempotencyKey is recognised → processing (no duplicate). review.tsx submit guards repeated taps (submitting flag) + inline retryable error banner (button → "Try again").
+- EXPIRED: plain (sr_loa_exp) → status screen; mid-session sr_loa_exp_live → terminal "Signing unavailable".
+- SUPERSEDED: sr_superseded → terminal on submit (reopen latest version).
+- UNAUTHORIZED: doc_unauth/sr_unauthorized → review load error "not authorised" + retry.
+- FIRST-OPEN: recorded only after req loads successfully & is signable (not on load fail / terminal); dedup via in-session Set.
+- review.tsx now separates loadError (full-screen+retry) vs terminal cancelled/expired/superseded (full-screen "Signing unavailable" + Back) vs submitError (inline retryable). Added icons: warning, eye.
+- Docs updated: /app/docs/DOCUMENT_SIGNING_PROTOTYPE.md (API table +/documents/{id}/view +/retry-processing; §13 tested-vs-simulated split web vs on-device).
+- Testing: testing_agent iteration_26 — 12/12 scenarios PASS on web, no bugs, no code changes by tester.
+- STILL NOT production-ready: real PDF viewer, real backend, file storage, server timestamps, notifications/emails, supplier acceptance, closing-app recovery, on-device testing, security review.
