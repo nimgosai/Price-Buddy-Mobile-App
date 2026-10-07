@@ -1,8 +1,15 @@
 # Price Buddy — Documents & In-App Signing Prototype (Handover)
 
-> **Status: PROTOTYPE. Not production-ready.** The backend, real PDF viewer,
-> file storage, notifications/emails and supplier-acceptance are **not** built
-> here and must be implemented and security-reviewed separately.
+> **Frontend status: APPROVED & CODE-FROZEN.** The customer-facing signing prototype was
+> tested on a physical Android device (multi-stroke touch drawing, sequential field gating,
+> auto-scroll across pages, first-open tracking, recovery states) and approved. No further
+> UI/feature changes are planned on this frontend. **The authoritative developer reference is
+> §17 (Final Developer Handover Package).**
+>
+> **Backend status: NOT built here.** The backend, real PDF viewer, file storage,
+> notifications/emails and supplier-acceptance are **not** built in this project and must be
+> implemented and security-reviewed separately. Do not claim production PDF placement, secure
+> server authorization, real timestamps, real email delivery or closing-app recovery as proven.
 
 ## 1. What was built in this Emergent frontend project
 A customer-facing document hub + in-app signing journey, wired to a **clearly
@@ -371,3 +378,223 @@ developer can mount the signing screens from his own Documents section by passin
   the three visual states, and end-to-end submit were verified on the web preview (iteration_28).
   Backend still owns authoritative field placement/validation (frontend ordering/locking is UX, **not**
   authorization).
+
+---
+# 17. FINAL DEVELOPER HANDOVER PACKAGE (authoritative — frontend code-frozen)
+
+> This section is the single consolidated reference for the backend developer. Where earlier
+> sections differ in brevity, THIS section is authoritative. The frontend is code-frozen.
+
+## 17.1 Frontend screens & components (complete list)
+
+**Screens (Expo Router, under `app/documents/`):**
+| File | Route | Purpose |
+|---|---|---|
+| `app/documents/index.tsx` | `/documents` | My Documents list: filters (All / Needs signature / Completed), status badges, loading/empty/error, routing |
+| `app/documents/[id]/review.tsx` | `/documents/{signingRequestId}/review` | Guided review & sign: page canvas, placed-field overlays, sequential gating, signature capture, declaration, idempotent submit, display-gated first-open |
+| `app/documents/[id]/status.tsx` | `/documents/{signingRequestId}/status` | Poll processing → completed; needs_attention (retry-processing); completed view + file actions + audit modal |
+| `app/documents/[id]/view.tsx` | `/documents/{documentId}/view` | Read-only viewer (no signing side effects) |
+
+**Feature module (`src/features/documents/`):**
+| File | Purpose |
+|---|---|
+| `types.ts` | Shared TypeScript contract (single source of truth) + coordinate convention |
+| `service.ts` | `documentSigningService` — the only API entry point the screens call (+ `generateIdempotencyKey`) |
+| `config.ts` | Mock-mode switch (`EXPO_PUBLIC_DOC_SIGNING_MOCK`) + `assertUsableConfig()` |
+| `mock-adapter.ts` | DEV-only honest backend simulation (delete when wiring real backend) |
+| `fixtures.ts` | DEV-only synthetic documents/requests/fields/audit + scenario controls |
+| `debug.ts` | DEV-only first-open counters/log (gated on `__DEV__`) |
+| `DocumentPageCanvas.tsx` | Swappable page renderer (image/synthetic) + first-page display callbacks; replace with a real PDF viewer |
+| `SignaturePad.tsx` | Signature/initials capture (react-native-svg + PanResponder); multi-stroke, empty-rejection, SVG data-URI output |
+
+**Shared UI reused (already in the app, not part of this feature):** `src/components/icon.tsx`
+(added `warning`, `eye` icons), `src/components/portal.tsx` (overlay/modal), theme `src/theme/theme.ts`.
+**One host touch-point:** `app/(tabs)/dashboard.tsx` — the "My Documents" card linking to `/documents`.
+
+## 17.2 Normalized coordinate convention (percent naming)
+
+Each placed field carries a normalized rectangle. In the TypeScript contract this is `rect {x,y,w,h}`
+as floats in **[0..1]**; expressed as the percentages your admin tool/back end will likely use:
+
+| Contract key (`rect`) | Percent name | Meaning |
+|---|---|---|
+| (field) `page` | `page_number` | 1-based page index |
+| `x` | `x_percent` | left edge, fraction of **displayed** page width (0..1 → 0–100%) |
+| `y` | `y_percent` | top edge, fraction of **displayed** page height |
+| `w` | `width_percent` | box width, fraction of page width |
+| `h` | `height_percent` | box height, fraction of page height |
+
+Origin = **top-left** of the **rotation-corrected displayed** page. The backend also sends per-page
+`widthPt`,`heightPt` (PDF points) and `rotation` (0/90/180/270) and converts normalized → PDF
+user-space points on the unrotated page (inverse rotation) to burn values into the final PDF.
+Example: `{page_number:1, x_percent:0.10, y_percent:0.74, width_percent:0.45, height_percent:0.10}`
+→ a signature box 10% from the left, 74% down, 45% wide, 10% tall of page 1.
+⚠️ Prototype overlay alignment does NOT prove final PDF placement — integration-test against the real PDF.
+
+## 17.3 Supported field types
+
+`type` values and the `value` the client submits for each:
+
+| `type` | Rendered in prototype | Submitted `value` format | Validation |
+|---|---|---|---|
+| `signature` | ✅ | SVG data URI `data:image/svg+xml;utf8,<svg viewBox="0 0 W H">…</svg>` (prod may request base64 PNG) | must contain real ink (≥1 line); empty rejected |
+| `initials` | ✅ | same as signature | same |
+| `full_name` | ✅ | text | non-empty; `prefill` supported |
+| `job_title` | ✅ | text | non-empty |
+| `email` | ✅ | text | email format; `autoCapitalize=none` |
+| `telephone` | ✅ (phone keypad) | text | phone format |
+| `date_signed` | ✅ (read-only) | server-filled UTC → displayed Europe/London | backend authoritative; client never sets |
+| `checkbox` / `acknowledgement` | ✅ (as `acknowledgement`) | `"true"` when ticked | required tick |
+| `sort_code` (bank) | ⬜ contract-defined, **add in your build** | text `"NN-NN-NN"` (6 digits) | 6 digits; format `\d{2}-\d{2}-\d{2}` |
+| `account_number` (bank) | ⬜ contract-defined, **add in your build** | text (8 digits) | 8 digits `\d{8}` |
+
+> Note: the prototype's `types.ts` currently enumerates `signature | full_name | job_title | email |
+> telephone | initials | date_signed | acknowledgement`. **`checkbox` is the same concept as
+> `acknowledgement`**; the **bank-detail types (`sort_code`, `account_number`)** are part of the agreed
+> backend contract but are NOT yet rendered by the prototype's `FieldEditor` — add a numeric/formatted
+> `TextInput` + validation for them in your standalone build (no other workflow change needed).
+
+## 17.4 Complete API contract
+
+Transport: HTTPS + existing **Bearer token**. All times **UTC** (ISO-8601). The backend MUST enforce
+ownership + signer permissions server-side (frontend filtering/hidden buttons are NOT authorization).
+
+### Shared schemas
+```jsonc
+// DocumentSummary
+{ "id": "doc_loa_01", "signingRequestId": "sr_loa_01" /* null for view-only */,
+  "title": "Letter of Authority — Electricity", "type": "loa",         // loa|supplier_contract|quote|bill|other
+  "businessName": "Acme Bakery Ltd", "siteLabel": "Head Office — Manchester",
+  "dateIssued": "2026-09-18T09:00:00Z",
+  "status": "awaiting_signature" }  // awaiting_signature|processing|completed|expired|cancelled|needs_attention|available
+
+// DocumentPage
+{ "page": 1, "widthPt": 595, "heightPt": 842, "rotation": 0, "imageUri": "https://…/page1.png" /* or null */ }
+
+// FieldDefinition
+{ "id": "f_sign", "page": 1, "type": "signature", "label": "Tap to sign",
+  "required": true, "signerId": "signer_1",
+  "rect": { "x": 0.10, "y": 0.74, "w": 0.45, "h": 0.10 },
+  "prefill": null, "readOnly": false }
+
+// SigningRequest
+{ "signingRequestId": "sr_loa_01", "documentId": "doc_loa_01",
+  "documentVersion": "v1-sha256:…",            // immutable; submit must reject a mismatch
+  "title": "…", "businessName": "…", "companyNumber": "01234567",
+  "signer": { "id": "signer_1", "name": "Anne Baker", "role": "Director", "email": "anne@…" },
+  "status": "awaiting_signature", "pageCount": 1, "pages": [DocumentPage],
+  "fields": [FieldDefinition],
+  "declaration": { "version": "v1", "text": "I have reviewed this document and intend to sign it." },
+  "expiresAt": "2026-12-31T23:59:59Z" }
+
+// ViewOnlyDocument
+{ "id": "doc_q_01", "title": "…", "type": "quote", "businessName": "…", "siteLabel": "…",
+  "dateIssued": "2026-09-15T11:00:00Z", "pageCount": 2, "pages": [DocumentPage], "note": "View-only…" }
+```
+
+### Endpoints
+```jsonc
+// 1) GET /documents                      -> 200 DocumentSummary[]
+
+// 2) GET /documents/{documentId}/view    -> 200 ViewOnlyDocument      (READ-ONLY, no side effects)
+
+// 3) GET /signing-requests/{id}          -> 200 SigningRequest        (document + field overlay defs)
+
+// 4) POST /signing-requests/{id}/first-open
+//    body: {}                            -> 200 { "recorded": true, "duplicate": false }
+//    Call ONLY after the first page visibly renders. Backend DEDUPES (one staff alert per request,
+//    across sessions/devices). Tracking failure must not block review; client retries safely.
+
+// 5) POST /signing-requests/{id}/submit
+//    body (SubmissionPayload):
+{ "signingRequestId": "sr_loa_01", "documentVersion": "v1-sha256:…",
+  "fields": [ { "fieldId": "f_name", "value": "Anne Baker" },
+              { "fieldId": "f_sign", "value": "data:image/svg+xml;utf8,<svg …/>" } ],
+  "declaration": { "version": "v1", "accepted": true },
+  "idempotencyKey": "idem_abc123" }        // reused on retry => never double-sign
+//    -> 202 SubmissionAck: { "signingRequestId":"sr_loa_01", "status":"processing", "receivedAt":"<UTC>" }
+//    'completed' is set by the backend ONLY after signed PDF + audit are stored (never from a tap).
+
+// 6) GET /signing-requests/{id}/status    -> 200 CompletionStatus
+{ "signingRequestId":"sr_loa_01", "status":"completed",   // processing|completed|needs_attention|expired|cancelled
+  "completion": { "reference":"PB-SR-2026-000418", "signatoryName":"Anne Baker",
+                  "signedAtUtc":"2026-08-01T10:14:32Z",   // authoritative server time
+                  "signedPdfUrl":"https://…(auth, short-lived)",
+                  "auditRecordUrl":"https://…", "combinedUrl":"https://…" },
+  "message": null }                        // rejection/needs_attention reason when not completed
+
+// 7) POST /signing-requests/{id}/retry-processing
+//    body: {}                            -> 200 CompletionStatus { status:"processing" }
+//    Recovers a stuck/failed job for the EXISTING accepted submission. MUST NOT create a new
+//    submission and MUST NOT require re-signing. Idempotent; safe to call repeatedly.
+
+// 8) File access (signed PDF & audit): authenticated, short-lived URLs returned in `completion`
+//    (signedPdfUrl, auditRecordUrl, optional combinedUrl). No permanent public links.
+//    GET /signing-requests/{id}/audit -> 200 structured audit record (optional; prototype shows synthetic).
+```
+
+### Error codes
+Return a JSON body `{ "code": "<code>", "message": "<human text>" }`. Client branches on `code`.
+
+| `code` | Suggested HTTP | Where | Client behaviour |
+|---|---|---|---|
+| `unauthorized` | 401/403 | get request, any | Full-screen "Couldn't open document / not authorised" + Try again |
+| `not_found` | 404 | get/submit/status | Error screen + retry |
+| `expired` | 409 | get → terminal; submit | "Signing unavailable" (expired) |
+| `cancelled` | 409 | get → terminal; submit | "Signing unavailable" (cancelled) |
+| `superseded` | 409 | submit (version mismatch) | "Signing unavailable — reopen latest version" |
+| `validation_failed` | 422 | submit | Show message; keep user on review (prototype relies on client gating + server re-validation) |
+| network/5xx/timeout | — | submit | Inline retryable error; "Try again" reuses the SAME idempotencyKey (no duplicate) |
+
+Status taxonomy: keep **signing status** (`awaiting_signature|processing|completed|needs_attention|expired|cancelled`)
+SEPARATE from supplier-acceptance status. Record "Opened", not "Read". IP is supporting metadata, not identity proof.
+
+## 17.5 Clean code export (standalone repo)
+
+**Copy these (portable, no app-specific coupling except the small shared UI noted):**
+```
+src/features/documents/            # types.ts, service.ts, config.ts, DocumentPageCanvas.tsx, SignaturePad.tsx
+                                   #   (DEV-only, delete for prod: mock-adapter.ts, fixtures.ts, debug.ts)
+app/documents/index.tsx            # optional hub — skip if integrating into your own Documents list
+app/documents/[id]/review.tsx      # reusable signing screen (takes a signingRequestId)
+app/documents/[id]/status.tsx      # reusable status screen (takes a signingRequestId)
+app/documents/[id]/view.tsx        # reusable read-only viewer (takes a documentId)
+src/components/icon.tsx            # or map these icon names to your own set: warning, eye, arrowLeft,
+                                   #   chevronRight, shield, document, check, close
+src/components/portal.tsx          # overlay host (or use your own modal)
+src/theme/theme.ts                 # colors/spacing/fonts referenced by the screens (or remap)
+```
+
+**Steps:**
+1. Create the same folders in your repo and copy the files above. Keep import aliases (`@/src/...`) or
+   rewrite them to your paths.
+2. Ensure deps exist: `react-native-svg`, `expo-image`, `expo-router`, `react-native-safe-area-context`
+   (all standard Expo). No new runtime dependency was introduced by this feature.
+3. **Delete the DEV-only files** `mock-adapter.ts`, `fixtures.ts`, `debug.ts`, and remove the
+   `mockRenderFirstPageFails` usage + the `__DEV__` first-open dev badge from `review.tsx`.
+4. Mount the signing screens from YOUR Documents section by navigating with a **signingRequestId**
+   (`/documents/{signingRequestId}/review` and `/status`) and a **documentId** for `/view`. You do not
+   need the prototype's `app/documents/index.tsx` hub.
+5. Replace `DocumentPageCanvas` with a real PDF viewer (see §17.6) — same props, same overlay box.
+
+## 17.6 Turn OFF mock & connect the real backend
+- `service.ts` already calls the real endpoints via `apiRequest(...)` when mock is off; no code change
+  needed to switch.
+- Set env: `EXPO_PUBLIC_DOC_SIGNING_MOCK=false`.
+- Configure the API base used by `apiRequest` / `config.ts` (`DOC_SIGNING_API_BASE`) to your live host.
+  **No hard-coded Emergent domains, no frontend secrets.** If mock is off AND no API base is set,
+  `assertUsableConfig()` throws a clear error (no silent fallback to mock).
+- With mock off: `mockRenderFirstPageFails` returns `false`, so the REAL image/PDF render callback
+  governs first-open; `debug.ts` logs nothing (`__DEV__` false in production).
+
+## 17.7 Production PDF viewer (replace the image/synthetic canvas)
+`DocumentPageCanvas` is isolated from signing logic. To swap in a native engine (e.g.
+`react-native-pdf` in a dev/prod build, or pdf.js on web):
+1. Render the real page at `displayWidth`, preserving aspect (`widthPt×heightPt`) and `rotation`;
+   keep the overlay layer (`children`) on top in the SAME box.
+2. Keep `pageDisplaySize()` returning the displayed page box so the **same normalized coordinate
+   props** (`rect` / percent values) stay aligned on zoom/resize/rotation/different page sizes.
+3. Load the exact PDF **version** bytes from the authenticated backend URL.
+4. **First-open:** call `onContentDisplayed` from the viewer's **first-page rendered** callback (and
+   `onContentError` on render failure) — NOT when metadata or bytes merely download.
+No change to the signing workflow, field definitions, adapter, or submission is required.
