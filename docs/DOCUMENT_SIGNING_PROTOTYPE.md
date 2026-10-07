@@ -101,6 +101,15 @@ must be **applied explicitly to each signature field** (no silent reuse across f
 2. Keep `pageDisplaySize()` returning the displayed page box so overlays stay aligned on
    zoom/resize/rotation/different page sizes.
 3. Load the exact PDF **version** bytes from the authenticated backend URL.
+4. **First-open gating (IMPORTANT):** `DocumentPageCanvas` exposes `onContentDisplayed` /
+   `onContentError` callbacks that fire **only for the first visible page**. In the prototype these
+   are wired to the image `onLoad`/`onError` (for image pages) and to `onLayout` (for synthetic
+   pages). When you swap in the real PDF viewer you MUST call `onContentDisplayed` from the
+   viewer's **successful page-rendered callback** for the first page, and `onContentError` from its
+   render-failure callback. Do **not** call `onContentDisplayed` merely because the request metadata
+   or the PDF bytes downloaded — it must be the actual on-screen render of the first page. The
+   `mockRenderFirstPageFails` helper and the `debug.ts` dev counter are MOCK/DEV-only and should be
+   removed (they are no-ops outside mock mode).
 No change to the signing workflow, field definitions, adapter or submission is required.
 
 ## 9. Backend implementation checklist (build in the SEPARATE project — not here)
@@ -204,7 +213,7 @@ Open in Expo Go (scan the QR) or a dev build. For each step: note Pass/Fail and 
 Report failures as: **Scenario # → step # → device/OS version → expected vs actual → screen recording**.
 
 A. List & navigation
-  1. Open the app → Home → tap the **My Documents** card. **Expect:** list opens with the yellow "Demo signing" banner and 12 rows.
+  1. Open the app → Home → tap the **My Documents** card. **Expect:** list opens with the yellow "Demo signing" banner and 14 demo rows.
   2. Tap the **Needs signature** then **Completed** filter chips. **Expect:** list filters; chips highlight.
 
 B. View-only (must NOT record a signing event)
@@ -234,16 +243,38 @@ F. Terminal states
   18. "…(demo: not your document)". **Expect:** "Couldn't open document" + not-authorised + Try again.
   19. "Letter of Authority — Telecoms" (Expired) and "Supplier Contract — EDF (cancelled)". **Expect:** status screen explains expired/cancelled + Back.
 
-G. First-open behaviour (see §14.6 — no visible UI; confirm indirectly)
-  20. Open then leave and re-open the same review screen a few times. **Expect:** no crashes/duplicate dialogs (the dedup is internal).
-  21. Open the unauthorized doc. **Expect:** error screen only — a failed load must not be treated as an "open".
+G. First-open behaviour (now display-gated — observe the DEV badge `first-open (dev): …`)
+  20. Open "Letter of Authority — Electricity". **Expect:** once the page shows, dev badge → "recorded (1 first-open event)".
+  21. Zoom in/out and (for the 3-page contract) scroll pages. **Expect:** badge STAYS at "recorded (1 first-open event)" — no extra events.
+  22. Open "…Signage (demo: page fails to display)". **Expect:** "Couldn't display this page" + red banner; badge → "content failed to display — no first-open recorded". Tap **Reload** → page shows → badge → "recorded (1 first-open event)".
+  23. Open "…Parking (demo: first-open API fails once)". **Expect:** document stays usable; badge briefly "record failed → retrying safely…" then "recorded (1 first-open event)".
+  24. Open "…(demo: not your document)". **Expect:** error screen only — a failed load is NOT treated as an open (no first-open).
 
 ## 14.5 View-only must never record a signing event (intended behaviour)
-`app/documents/[id]/view.tsx` calls **only** `documentSigningService.getViewDocument(id)`. It does **not** call `recordFirstOpen` or any signing-request endpoint. A view-only quote/bill therefore **cannot** generate a first-open or signing event. When the real backend is built, `GET /documents/{id}/view` MUST be a plain read endpoint with no side effects (no event emission, no staff alert).
+`app/documents/[id]/view.tsx` calls **only** `documentSigningService.getViewDocument(id)`. It does **not** call `recordFirstOpen`, `onContentDisplayed`, or any signing-request endpoint — the view-only screen does not wire the first-page display callbacks at all. A view-only quote/bill therefore **cannot** generate a first-open or signing event. When the real backend is built, `GET /documents/{id}/view` MUST be a plain read endpoint with no side effects (no event emission, no staff alert).
 
-## 14.6 First-open tracking — what was and wasn't verified
-- **Design (enforced in code):** `review.tsx` calls `recordFirstOpen` **once**, inside a `useEffect` that runs **only** when the signing request has loaded successfully AND is not terminal AND there was no load error (`req && !terminal && !loadError`), guarded by a `firstOpenDone` ref. The mock adapter additionally de-dupes via an in-session `Set` and returns `{duplicate:true}` on repeats. A failed PDF/request load leaves `req === null`, so the effect never fires → **no first-open on failed load**. Terminal (expired/cancelled) loads also do not record.
-- **Verification status:** this is **verified by code logic / inspection**, NOT by an observable UI assertion — first-open has no on-screen output, so the automated web test could not count the events directly. If you want observable proof, I can add a temporary dev-only log or a debug badge. **Real staff emails and notifications remain backend work and were NOT tested.**
+## 14.6 First-open tracking — DISPLAY-GATED, and what was verified
+**Requirement (implemented):** first-open fires **only after the first document page actually
+DISPLAYS to the customer**, never merely because request metadata loaded.
+- **How it is gated:** `DocumentPageCanvas` fires `onContentDisplayed` for the **first page** from the
+  image `onLoad` (image pages) or `onLayout` (synthetic prototype pages); the real PDF viewer must
+  instead call it from its page-rendered callback (see §8.4). `review.tsx` records first-open only
+  from `onContentDisplayed`. It no longer records on metadata load.
+- **De-dup / re-render:** a `displayLogged` + `firstOpenDone` guard means zoom, re-layout and
+  multi-page documents record **exactly one** first-open per session; the mock also de-dupes
+  server-side via an in-session `Set` and returns `{duplicate:true}` on repeats.
+- **Failed display → no event:** if the first page fails to render (`onContentError`), first-open is
+  NOT recorded; the screen shows a "Couldn't display this page" fallback + Reload.
+- **Record failure → safe retry, not permanently marked:** if `recordFirstOpen` itself fails, the
+  guard is reset (not marked recorded) and it auto-retries; the document stays fully usable.
+- **Verified (web preview, testing agent iteration_27, observed via the DEV badge `dev-firstopen`):**
+  (1) image/page fails → no event; (2) displays → exactly one event; (3) zoom/re-render/multi-page →
+  no extra event; (4) first-open API fails once → doc usable + safe auto-retry → one event. The
+  badge and `src/features/documents/debug.ts` counters are **DEV-only** (`__DEV__`) — nothing is
+  logged or shown in a production build.
+- **Still backend's job (NOT tested here):** the real backend must enforce **one first-open record per
+  signing request across sessions and devices** (not just an in-session `Set`), and real staff emails /
+  notifications. These were NOT tested.
 
 ## 14.7 New API endpoints (request/response shapes)
 Types are the single source of truth in `src/features/documents/types.ts`.
@@ -252,3 +283,46 @@ Types are the single source of truth in `src/features/documents/types.ts`.
 
 ## 14.8 What was NOT verified (do not claim as proven)
 Production PDF signature placement, secure backend authorization, real server timestamps, real email/notification delivery, and closing-app / resume-after-kill recovery were **NOT** verified — the mock cannot prove any of these. They require the real backend and a security review.
+
+## 14.9 First-open test fixtures added (mock-only)
+- `sr_loa_imgfail` ("…Signage") — first page fails to display once (then reloads OK). Driven by `MOCK_RENDER_FIRST_PAGE_FAILS` + `svc.mockRenderFirstPageFails()`.
+- `sr_loa_fopen_fail` ("…Parking") — first `recordFirstOpen` call fails, auto-retry succeeds. Driven by `MOCK_FIRST_OPEN_FAILS_ONCE`.
+These and the DEV badge/`debug.ts` counter are MOCK/DEV-only; delete them when wiring the real backend.
+
+---
+# 15. Document ID vs Signing-request ID (routes & API calls — no ambiguity)
+
+There are TWO distinct identifiers. Do not conflate them.
+
+- **`documentId`** (e.g. `doc_loa_01`) — identifies a *document* in the customer's Documents list
+  (`DocumentSummary.id`). A document MAY be view-only (no signing) — then `signingRequestId` is `null`.
+- **`signingRequestId`** (e.g. `sr_loa_01`) — identifies a *signing request* against a specific,
+  immutable document version (`DocumentSummary.signingRequestId`, `SigningRequest.signingRequestId`).
+  One document version can have exactly one active signing request in this model.
+
+**Which ID each route/endpoint expects:**
+
+| Route / endpoint | ID to pass | Notes |
+|---|---|---|
+| `GET /documents` | — | returns `DocumentSummary[]` (each has both `id` and `signingRequestId|null`) |
+| App route `/documents/{documentId}/view` | **documentId** | view-only; no signing side effects |
+| `GET /documents/{documentId}/view` | **documentId** | read-only document content |
+| App route `/documents/{signingRequestId}/review` | **signingRequestId** | signing screen |
+| App route `/documents/{signingRequestId}/status` | **signingRequestId** | processing/completed/needs_attention |
+| `GET /signing-requests/{signingRequestId}` | **signingRequestId** | request + version + fields |
+| `POST /signing-requests/{signingRequestId}/first-open` | **signingRequestId** | after first page DISPLAYS |
+| `POST /signing-requests/{signingRequestId}/submit` | **signingRequestId** | idempotent |
+| `GET /signing-requests/{signingRequestId}/status` | **signingRequestId** | poll |
+| `POST /signing-requests/{signingRequestId}/retry-processing` | **signingRequestId** | existing submission only |
+| `GET /signing-requests/{signingRequestId}/audit` | **signingRequestId** | audit record |
+
+**Routing rule used by the prototype list (`openDoc` in `app/documents/index.tsx`):**
+- `status === "available"` → `/documents/{documentId}/view` (view-only; uses **documentId**).
+- `status === "completed" | "processing" | "needs_attention"` → `/documents/{signingRequestId}/status`.
+- `status === "awaiting_signature"` → `/documents/{signingRequestId}/review`.
+- `status === "expired" | "cancelled"` → `/documents/{signingRequestId}/status`.
+
+So: **the signing screens (`/review`, `/status`) and ALL `/signing-requests/*` endpoints take the
+signing-request ID. Only the view-only screen and `/documents/{id}/view` take the document ID.** Your
+developer can mount the signing screens from his own Documents section by passing the
+`signingRequestId` he holds on each document — he never needs the prototype's list hub.

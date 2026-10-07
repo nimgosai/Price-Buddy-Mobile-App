@@ -15,7 +15,9 @@ import {
   MOCK_AUDIT,
   MOCK_COMPLETED,
   MOCK_DOCUMENTS,
+  MOCK_FIRST_OPEN_FAILS_ONCE,
   MOCK_PROCESSING_BEHAVIOR,
+  MOCK_RENDER_FIRST_PAGE_FAILS,
   MOCK_REQUESTS,
   MOCK_SUBMIT_OVERRIDE,
   MOCK_VIEW_DOCS,
@@ -25,6 +27,8 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // In-memory session state (lost on reload — mirrors "not persisted on device").
 const firstOpened = new Set<string>();
+const firstOpenFailedOnce = new Set<string>(); // ids whose first recordFirstOpen was failed
+const renderFailedOnce = new Set<string>(); // ids whose first page-render was failed once
 type Submission = { idempotencyKey: string; at: number; recovered?: boolean; recoveredAt?: number };
 const submissions = new Map<string, Submission>();
 
@@ -63,12 +67,31 @@ export const mockAdapter = {
     return doc;
   },
 
-  /** Called only AFTER the exact PDF has rendered. Deduplicated server-side. */
+  /**
+   * Called ONLY after the exact first document page has successfully DISPLAYED
+   * (not when metadata loaded). Deduplicated server-side (in-session Set here).
+   * Some demo ids fail the first attempt to prove safe retry.
+   */
   async recordFirstOpen(id: string): Promise<{ recorded: boolean; duplicate: boolean }> {
     await delay(150);
+    if (MOCK_FIRST_OPEN_FAILS_ONCE[id] && !firstOpenFailedOnce.has(id)) {
+      firstOpenFailedOnce.add(id);
+      throw new MockDocError("network", "Couldn't record first-open (simulated). Safe to retry.");
+    }
     const duplicate = firstOpened.has(id);
     firstOpened.add(id);
     return { recorded: true, duplicate };
+  },
+
+  /**
+   * MOCK-ONLY: should the FIRST page fail to render this time? Fails once, then
+   * succeeds on reload (so recovery can be demonstrated). Returns false outside mock.
+   */
+  renderFirstPageFails(id: string): boolean {
+    if (!MOCK_RENDER_FIRST_PAGE_FAILS[id]) return false;
+    if (renderFailedOnce.has(id)) return false;
+    renderFailedOnce.add(id);
+    return true;
   },
 
   async submit(payload: SubmissionPayload): Promise<SubmissionAck> {

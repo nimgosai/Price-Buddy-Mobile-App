@@ -169,6 +169,26 @@ export const MOCK_DOCUMENTS: DocumentSummary[] = [
     dateIssued: "2026-09-27T09:00:00Z",
     status: "awaiting_signature",
   },
+  {
+    id: "doc_loa_imgfail",
+    signingRequestId: "sr_loa_imgfail",
+    title: "Letter of Authority — Signage (demo: page fails to display)",
+    type: "loa",
+    businessName: "Acme Bakery Ltd",
+    siteLabel: "Head Office — Manchester",
+    dateIssued: "2026-09-28T09:00:00Z",
+    status: "awaiting_signature",
+  },
+  {
+    id: "doc_loa_fopen_fail",
+    signingRequestId: "sr_loa_fopen_fail",
+    title: "Letter of Authority — Parking (demo: first-open API fails once)",
+    type: "loa",
+    businessName: "Acme Bakery Ltd",
+    siteLabel: "Head Office — Manchester",
+    dateIssued: "2026-09-29T09:00:00Z",
+    status: "awaiting_signature",
+  },
 ];
 
 /** Signing requests keyed by id. Synthetic field definitions. */
@@ -243,6 +263,8 @@ export const MOCK_REQUESTS: Record<string, SigningRequest> = {
   sr_loa_cancel_live: { ...loaRequest("sr_loa_cancel_live", "doc_loa_cancel_live", "v1-sha256:demo-loa-broadband"), title: "Letter of Authority — Broadband" },
   sr_loa_exp_live: { ...loaRequest("sr_loa_exp_live", "doc_loa_exp_live", "v1-sha256:demo-loa-waste"), title: "Letter of Authority — Waste" },
   sr_superseded: { ...loaRequest("sr_superseded", "doc_superseded", "v1-sha256:demo-loa-superseded"), title: "Letter of Authority — Electricity" },
+  sr_loa_imgfail: { ...loaRequest("sr_loa_imgfail", "doc_loa_imgfail", "v1-sha256:demo-loa-signage"), title: "Letter of Authority — Signage" },
+  sr_loa_fopen_fail: { ...loaRequest("sr_loa_fopen_fail", "doc_loa_fopen_fail", "v1-sha256:demo-loa-parking"), title: "Letter of Authority — Parking" },
 };
 
 /**
@@ -266,6 +288,24 @@ export const MOCK_SUBMIT_OVERRIDE: Record<string, "cancelled" | "expired" | "sup
  */
 export const MOCK_PROCESSING_BEHAVIOR: Record<string, "complete" | "fail_then_recover"> = {
   sr_loa_fail: "fail_then_recover",
+};
+
+/**
+ * MOCK-ONLY: force the FIRST visible page to FAIL to display on the first render,
+ * so first-open must NOT fire. Reloading succeeds (so recovery can be shown).
+ * In a real build this is governed by the actual image/PDF render callback.
+ */
+export const MOCK_RENDER_FIRST_PAGE_FAILS: Record<string, boolean> = {
+  sr_loa_imgfail: true,
+};
+
+/**
+ * MOCK-ONLY: make the FIRST recordFirstOpen call fail (then succeed on retry),
+ * to prove the document stays usable and the event retries safely without being
+ * permanently marked recorded locally.
+ */
+export const MOCK_FIRST_OPEN_FAILS_ONCE: Record<string, boolean> = {
+  sr_loa_fopen_fail: true,
 };
 
 export const MOCK_COMPLETED: Record<string, CompletionStatus["completion"]> = {

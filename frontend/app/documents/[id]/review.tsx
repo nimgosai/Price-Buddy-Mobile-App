@@ -11,6 +11,7 @@ import { Portal } from "@/src/components/portal";
 import { DocumentPageCanvas, pageDisplaySize } from "@/src/features/documents/DocumentPageCanvas";
 import { SignaturePad } from "@/src/features/documents/SignaturePad";
 import { documentSigningService as svc, generateIdempotencyKey } from "@/src/features/documents/service";
+import { docDebug } from "@/src/features/documents/debug";
 import type { FieldDefinition, SigningRequest } from "@/src/features/documents/types";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
@@ -30,12 +31,18 @@ export default function ReviewSign() {
   const [editing, setEditing] = useState<FieldDefinition | null>(null);
   const [declaration, setDeclaration] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pageError, setPageError] = useState(false); // first page failed to display
+  const [renderFail, setRenderFail] = useState(false); // MOCK/DEV: simulate first-page render failure
+  const [foStatus, setFoStatus] = useState("waiting for document to display"); // DEV badge only
   const idemKey = useRef<string>(generateIdempotencyKey()); // reused on every retry
-  const firstOpenDone = useRef(false);
+  const firstOpenDone = useRef(false); // success guard (in-session only)
+  const firstOpenInFlight = useRef(false);
+  const displayLogged = useRef(false);
 
   const load = useCallback(async () => {
     setLoadError(null); setTerminal(null); setSubmitError(null); setReq(null);
-    firstOpenDone.current = false;
+    setPageError(false); setRenderFail(false); setFoStatus("waiting for document to display");
+    firstOpenDone.current = false; firstOpenInFlight.current = false; displayLogged.current = false;
     try {
       const r = await svc.getSigningRequest(String(id));
       if (r.status === "completed" || r.status === "processing" || r.status === "needs_attention") {
@@ -47,6 +54,7 @@ export default function ReviewSign() {
       const init: Record<string, string> = {};
       r.fields.forEach((f) => { if (f.prefill) init[f.id] = f.prefill; });
       setValues(init);
+      setRenderFail(svc.mockRenderFirstPageFails(String(id))); // MOCK/DEV only
       setReq(r);
     } catch (e: any) {
       setLoadError(e?.message || "Couldn't load this document.");
@@ -55,14 +63,44 @@ export default function ReviewSign() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Record first-open ONLY after the request loaded successfully and is signable
-  // (not on load failure, not for a terminal/expired request). Deduped server-side.
-  useEffect(() => {
-    if (req && !terminal && !loadError && !firstOpenDone.current) {
-      firstOpenDone.current = true;
-      svc.recordFirstOpen(String(id)).catch(() => { firstOpenDone.current = false; });
-    }
-  }, [req, terminal, loadError, id]);
+  // Attempt to record first-open. Called ONLY from onContentDisplayed (i.e. after
+  // the first page actually renders). On failure, DO NOT permanently mark recorded
+  // locally — reset the guard and retry once so the document stays usable.
+  const attemptFirstOpen = useCallback(() => {
+    if (firstOpenDone.current || firstOpenInFlight.current) return;
+    firstOpenInFlight.current = true;
+    setFoStatus("displayed → recording first-open…");
+    svc.recordFirstOpen(String(id))
+      .then((r) => {
+        firstOpenInFlight.current = false;
+        firstOpenDone.current = true;
+        if (r.duplicate) { docDebug.firstOpenDuplicate++; setFoStatus("recorded (server dedup: duplicate)"); docDebug.log("first-open-duplicate", { id }); }
+        else { docDebug.firstOpenRecorded++; setFoStatus("recorded (1 first-open event)"); docDebug.log("first-open-recorded", { id }); }
+      })
+      .catch((e: any) => {
+        firstOpenInFlight.current = false;
+        firstOpenDone.current = false; // not recorded — allow safe retry
+        docDebug.firstOpenFailed++;
+        setFoStatus("record failed → retrying safely…");
+        docDebug.log("first-open-failed", { id, error: e?.message });
+        setTimeout(() => { if (!firstOpenDone.current) attemptFirstOpen(); }, 1500);
+      });
+  }, [id]);
+
+  // Fired when the FIRST page content has successfully displayed (image onLoad /
+  // synthetic onLayout). Zoom/re-layout may fire this repeatedly — guarded so only
+  // ONE first-open is ever recorded per session.
+  const onContentDisplayed = useCallback(() => {
+    if (!displayLogged.current) { displayLogged.current = true; docDebug.firstPageDisplayed++; docDebug.log("first-page-displayed", { id }); }
+    attemptFirstOpen();
+  }, [attemptFirstOpen, id]);
+
+  // Fired when the FIRST page failed to display — first-open must NOT be recorded.
+  const onContentError = useCallback(() => {
+    docDebug.firstPageError++; docDebug.log("first-page-error (no first-open)", { id });
+    setPageError(true);
+    setFoStatus("content failed to display — no first-open recorded");
+  }, [id]);
 
   if (!req && !loadError) return <Center><ActivityIndicator color={colors.brandPrimary} /></Center>;
 
@@ -142,12 +180,31 @@ export default function ReviewSign() {
       </View>
 
       <ScrollView contentContainerStyle={{ alignItems: "center", padding: spacing.lg, paddingBottom: insets.bottom + 180, gap: spacing.lg }}>
-        {r.pages.map((pg) => {
+        {pageError ? (
+          <View style={styles.pageErrorBox}>
+            <Icon name="warning" size={18} color="#B91C1C" />
+            <Text style={styles.pageErrorText}>We couldn&apos;t display this document. Your first-open hasn&apos;t been recorded.</Text>
+            <Pressable testID="page-reload" onPress={load} style={styles.pageReloadBtn}><Text style={styles.pageReloadText}>Reload</Text></Pressable>
+          </View>
+        ) : null}
+        {__DEV__ ? (
+          <View style={styles.devBadge}><Text style={styles.devBadgeText} testID="dev-firstopen">first-open (dev): {foStatus}</Text></View>
+        ) : null}
+        {r.pages.map((pg, idx) => {
           const size = pageDisplaySize(pg, pageW);
+          const first = idx === 0;
           return (
             <View key={pg.page}>
               <Text style={styles.pageLabel}>Page {pg.page} of {r.pageCount}</Text>
-              <DocumentPageCanvas pageSpec={pg} displayWidth={pageW} label={r.title}>
+              <DocumentPageCanvas
+                pageSpec={pg}
+                displayWidth={pageW}
+                label={r.title}
+                isFirstPage={first}
+                simulateRenderFailure={first && renderFail}
+                onContentDisplayed={first ? onContentDisplayed : undefined}
+                onContentError={first ? onContentError : undefined}
+              >
                 {r.fields.filter((f) => f.page === pg.page).map((f) => (
                   <FieldOverlay key={f.id} field={f} size={size} value={values[f.id]} onPress={() => setEditing(f)} />
                 ))}
@@ -266,6 +323,12 @@ const styles = StyleSheet.create({
   nextBtn: {},
   nextText: { fontFamily: font.semibold, fontSize: type.sm, color: colors.brandPrimary },
   pageLabel: { fontFamily: font.semibold, fontSize: type.kicker, color: colors.muted, marginBottom: 6 },
+  pageErrorBox: { alignSelf: "stretch", flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "#FEE2E2", borderRadius: radius.sm, padding: spacing.md },
+  pageErrorText: { flex: 1, fontFamily: font.semibold, fontSize: type.kicker, color: "#B91C1C" },
+  pageReloadBtn: { backgroundColor: "#B91C1C", paddingHorizontal: spacing.md, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  pageReloadText: { fontFamily: font.semibold, fontSize: type.kicker, color: "#FFF" },
+  devBadge: { alignSelf: "stretch", backgroundColor: "#111827", borderRadius: radius.sm, paddingVertical: 6, paddingHorizontal: spacing.md },
+  devBadgeText: { fontFamily: font.semibold, fontSize: type.kicker, color: "#A7F3D0" },
   overlay: { position: "absolute", borderWidth: 1.5, borderColor: colors.brandPrimary, borderStyle: "dashed", backgroundColor: "rgba(255,107,71,0.08)", borderRadius: 4, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   overlayDone: { borderStyle: "solid", borderColor: colors.success, backgroundColor: "rgba(16,185,129,0.08)" },
   overlayDate: { borderColor: colors.muted, backgroundColor: "rgba(100,116,139,0.06)" },

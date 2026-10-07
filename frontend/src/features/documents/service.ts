@@ -48,6 +48,15 @@ export const documentSigningService = {
     return apiRequest(`/signing-requests/${id}/first-open`, { method: "POST" });
   },
 
+  /**
+   * MOCK/DEV-ONLY helper: whether the first page should simulate a render failure.
+   * Always false when not in mock mode (then the real image/PDF render callback
+   * governs first-open). Not a backend call.
+   */
+  mockRenderFirstPageFails(id: string): boolean {
+    return DOC_SIGNING_MOCK ? mockAdapter.renderFirstPageFails(id) : false;
+  },
+
   async submit(payload: SubmissionPayload): Promise<SubmissionAck> {
     assertUsableConfig();
     if (DOC_SIGNING_MOCK) return mockAdapter.submit(payload);

@@ -1,0 +1,24 @@
+{
+  "summary": "Verified refined FIRST-OPEN behaviour (4 tests) + 2 regressions on web preview with mobile viewport (390x844). All 7 scenarios PASS. Test 2: /documents/sr_loa_01/review displays dev badge 'recorded (1 first-open event)' after content renders. Test 3: zoom in/out (3x each) and scrolling through sr_sc_01 (3-page) do NOT create additional first-open events; badge stays at 'recorded (1 first-open event)'. Test 1: /documents/sr_loa_imgfail/review shows 'Couldn't display this page' fallback + red banner 'We couldn't display this document. Your first-open hasn't been recorded.' + Reload button; dev badge reads 'content failed to display — no first-open recorded'. Test 1b: tapping Reload shows synthetic page and badge updates to 'recorded (1 first-open event)'. Test 4: /documents/sr_loa_fopen_fail/review transiently shows 'record failed → retrying safely…' (observed for ~1.3s) and auto-recovers to 'recorded (1 first-open event)' within ~1.4s; document remains fully usable (signature field visible throughout). Regression: happy-path signing on sr_loa_01 completed (name/title/email Save, signature draw + Apply, declaration, Sign and submit) → routed to /status with 'Document signed successfully'. Regression: multi-page gating on sr_sc_01 confirmed sign-submit aria-disabled=true even after ticking declaration (only 1 of 5 fields complete).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "First-open logic correctly guarded by firstOpenDone + firstOpenInFlight + displayLogged refs — no duplicate events on re-renders or multiple pages (review.tsx:38-96).",
+    "Failure path correctly resets firstOpenDone.current=false to allow safe retry (review.tsx:82-87); 1.5s backoff is acceptable.",
+    "DocumentPageCanvas correctly wires onContentDisplayed/onContentError only when isFirstPage=true (DocumentPageCanvas.tsx:82-83) — multi-page documents only fire for page 1."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A", "frontend": "100%" },
+  "seed_data_creation": "None — mock-mode fixtures used (sr_loa_01, sr_sc_01, sr_loa_imgfail, sr_loa_fopen_fail).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 first-open refinements verified on web preview. Dev badge testID='dev-firstopen' is the authoritative observable. Signature pad Apply button is reached via text 'Apply' (no testID). Multi-page scrolling does not re-trigger first-open because onContentDisplayed is wired only on the first page. Mock state resets on full reload.",
+  "rca_of_issue": "N/A — no issues found."
+}

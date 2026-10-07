@@ -654,3 +654,14 @@ Extended the signing prototype to cover the full brief. All frontend-only, mock-
 - Docs updated: /app/docs/DOCUMENT_SIGNING_PROTOTYPE.md (API table +/documents/{id}/view +/retry-processing; §13 tested-vs-simulated split web vs on-device).
 - Testing: testing_agent iteration_26 — 12/12 scenarios PASS on web, no bugs, no code changes by tester.
 - STILL NOT production-ready: real PDF viewer, real backend, file storage, server timestamps, notifications/emails, supplier acceptance, closing-app recovery, on-device testing, security review.
+
+### FEATURE UPDATE — First-open now DISPLAY-GATED (this session, follow-up)
+Per client's stricter requirement, first-open fires ONLY after the first document page actually displays, not on metadata load.
+- DocumentPageCanvas now emits onContentDisplayed/onContentError for the FIRST page only (image onLoad/onError; synthetic onLayout). Added failBox fallback UI.
+- review.tsx: removed metadata-based first-open effect; records via attemptFirstOpen() from onContentDisplayed. Guards (displayLogged, firstOpenDone, firstOpenInFlight) → exactly one event across zoom/re-layout/multi-page. onContentError → pageError banner + Reload, no first-open. recordFirstOpen failure → NOT permanently marked recorded; auto-retry after 1.5s; doc stays usable.
+- DEV-ONLY: src/features/documents/debug.ts (counters + __DEV__ log) and an on-screen dev badge (testID dev-firstopen) to observe state. Nothing renders/logs in production.
+- Mock test docs added: sr_loa_imgfail (first-page display fails once then reloads OK) + sr_loa_fopen_fail (first recordFirstOpen fails then auto-retry). Controls: MOCK_RENDER_FIRST_PAGE_FAILS, MOCK_FIRST_OPEN_FAILS_ONCE, svc.mockRenderFirstPageFails().
+- view-only screen does NOT wire display callbacks → cannot record any first-open/signing event (documented §14.5).
+- Testing: testing_agent iteration_27 — 4 first-open tests + 2 regressions PASS on WEB preview (observed via dev badge). Not yet device-tested.
+- Docs: DOCUMENT_SIGNING_PROTOTYPE.md updated §8 (real-PDF viewer must call display callback), §14.4 steps 20-24, §14.5, §14.6 (display-gated), §14.9, new §15 (documentId vs signingRequestId route/endpoint map). Backend must still enforce one first-open across sessions/devices + real notifications.
+- Login Autofill kept separate (unresolved, awaiting device result). No deploy.

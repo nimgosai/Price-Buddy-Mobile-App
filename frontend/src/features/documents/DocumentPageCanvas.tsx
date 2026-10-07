@@ -13,9 +13,11 @@
  * Prototype overlay alignment does NOT prove final PDF signature placement.
  */
 import { Image } from "expo-image";
+import { useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { DocumentPage } from "./types";
-import { colors, font, type } from "@/src/theme/theme";
+import { Icon } from "@/src/components/icon";
+import { colors, font, spacing, type } from "@/src/theme/theme";
 
 export function pageDisplaySize(pageSpec: DocumentPage, displayWidth: number) {
   const rotated = pageSpec.rotation === 90 || pageSpec.rotation === 270;
@@ -28,18 +30,58 @@ export function DocumentPageCanvas({
   pageSpec,
   displayWidth,
   label,
+  isFirstPage,
+  simulateRenderFailure,
+  onContentDisplayed,
+  onContentError,
   children,
 }: {
   pageSpec: DocumentPage;
   displayWidth: number;
   label?: string;
+  /** Wire first-open callbacks only for the FIRST visible page. */
+  isFirstPage?: boolean;
+  /** MOCK/DEV: force this page to fail to display once. */
+  simulateRenderFailure?: boolean;
+  /** Fired when the page CONTENT has successfully displayed (image onLoad / synthetic onLayout). */
+  onContentDisplayed?: () => void;
+  /** Fired when the page content FAILED to display (image onError / simulated). */
+  onContentError?: () => void;
   children?: React.ReactNode;
 }) {
   const { width, height } = pageDisplaySize(pageSpec, displayWidth);
+  const firedError = useRef(false);
+
+  useEffect(() => {
+    if (isFirstPage && simulateRenderFailure && !firedError.current) {
+      firedError.current = true;
+      onContentError?.();
+    }
+  }, [isFirstPage, simulateRenderFailure, onContentError]);
+
+  if (isFirstPage && simulateRenderFailure) {
+    return (
+      <View style={[styles.page, { width, height }, styles.failBox]}>
+        <Icon name="warning" size={30} color="#B45309" />
+        <Text style={styles.failTitle}>Couldn&apos;t display this page</Text>
+        <Text style={styles.failSub}>The document didn&apos;t load. First-open is not recorded.</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.page, { width, height }]}>
+    <View
+      style={[styles.page, { width, height }]}
+      onLayout={isFirstPage && !pageSpec.imageUri ? () => onContentDisplayed?.() : undefined}
+    >
       {pageSpec.imageUri ? (
-        <Image source={{ uri: pageSpec.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
+        <Image
+          source={{ uri: pageSpec.imageUri }}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          onLoad={isFirstPage ? () => onContentDisplayed?.() : undefined}
+          onError={isFirstPage ? () => onContentError?.() : undefined}
+        />
       ) : (
         <SyntheticPage page={pageSpec.page} label={label} />
       )}
@@ -66,6 +108,9 @@ function SyntheticPage({ page, label }: { page: number; label?: string }) {
 
 const styles = StyleSheet.create({
   page: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: colors.borderStrong, overflow: "hidden" },
+  failBox: { alignItems: "center", justifyContent: "center", gap: spacing.sm, padding: spacing.lg },
+  failTitle: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading, textAlign: "center" },
+  failSub: { fontFamily: font.regular, fontSize: type.sm, color: colors.muted, textAlign: "center" },
   synthetic: { flex: 1, padding: 18 },
   watermark: {
     position: "absolute",
