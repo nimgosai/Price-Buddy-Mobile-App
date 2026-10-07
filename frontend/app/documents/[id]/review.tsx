@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -34,6 +34,10 @@ export default function ReviewSign() {
   const [pageError, setPageError] = useState(false); // first page failed to display
   const [renderFail, setRenderFail] = useState(false); // MOCK/DEV: simulate first-page render failure
   const [foStatus, setFoStatus] = useState("waiting for document to display"); // DEV badge only
+  const [lockHint, setLockHint] = useState(false); // shown when tapping a locked (out-of-order) field
+  const scrollRef = useRef<ScrollView>(null);
+  const pageYOffset = useRef<Record<number, number>>({});
+  const lockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idemKey = useRef<string>(generateIdempotencyKey()); // reused on every retry
   const firstOpenDone = useRef(false); // success guard (in-session only)
   const firstOpenInFlight = useRef(false);
@@ -122,16 +126,63 @@ export default function ReviewSign() {
   );
 
   const r = req!;
-  const userFields = r.fields.filter(needsUser);
-  const doneCount = userFields.filter((f) => !!values[f.id]).length;
-  const allDone = doneCount === userFields.length;
-  const canSubmit = allDone && declaration;
+  // Required fields the customer must complete, in strict document order (page, then top→bottom).
+  const ordered = r.fields
+    .filter(needsUser)
+    .sort((a, b) => a.page - b.page || a.rect.y - b.rect.y);
+  const doneCount = ordered.filter((f) => !!values[f.id]).length;
+  const allDone = doneCount === ordered.length;
+  const canSubmit = allDone && declaration && !pageError;
+  const activeIndex = ordered.findIndex((f) => !values[f.id]);
+  const activeField = activeIndex >= 0 ? ordered[activeIndex] : null;
 
-  const nextIncomplete = () => userFields.find((f) => !values[f.id]);
   const screenW = Dimensions.get("window").width;
   const pageW = Math.min(screenW - spacing.lg * 2, 520) * zoom;
 
-  const setValue = (fid: string, v: string) => setValues((p) => ({ ...p, [fid]: v }));
+  const fieldState = (f: FieldDefinition): "completed" | "current" | "pending" | "neutral" => {
+    if (f.readOnly || f.type === "date_signed" || !needsUser(f)) return values[f.id] ? "completed" : "neutral";
+    if (values[f.id]) return "completed";
+    if (activeField && f.id === activeField.id) return "current";
+    return "pending";
+  };
+
+  const scrollToField = (f: FieldDefinition) => {
+    const pg = r.pages.find((p) => p.page === f.page);
+    if (!pg) return;
+    const h = pageDisplaySize(pg, pageW).height;
+    const base = pageYOffset.current[f.page] ?? 0;
+    const y = base + 22 + f.rect.y * h - 90; // 22 ≈ page label; 90 keeps it below the sticky bars
+    scrollRef.current?.scrollTo({ y: Math.max(0, y), animated: true });
+  };
+
+  const flashLock = () => {
+    setLockHint(true);
+    if (activeField) scrollToField(activeField);
+    if (lockTimer.current) clearTimeout(lockTimer.current);
+    lockTimer.current = setTimeout(() => setLockHint(false), 2400);
+  };
+
+  const onFieldPress = (f: FieldDefinition) => {
+    if (f.readOnly || f.type === "date_signed") return;
+    if (fieldState(f) === "pending") { flashLock(); return; } // locked until earlier fields done
+    setEditing(f); // current field, or re-editing a completed one
+  };
+
+  const openActiveField = () => {
+    if (!activeField) return;
+    scrollToField(activeField);
+    setEditing(activeField);
+  };
+
+  const handleDone = (fieldId: string, v: string) => {
+    setEditing(null);
+    setValues((prev) => {
+      const nv = { ...prev, [fieldId]: v };
+      const next = ordered.find((f) => !nv[f.id]); // next incomplete in order
+      setTimeout(() => { if (next) scrollToField(next); }, 300); // auto-flip/scroll to it
+      return nv;
+    });
+  };
 
   const submit = async () => {
     if (!canSubmit || submitting) return; // guards repeated taps
@@ -173,13 +224,20 @@ export default function ReviewSign() {
       {svc.isMock ? <View style={styles.demoBanner}><Text style={styles.demoText}>Demo signing — not a live signed document</Text></View> : null}
 
       <View style={styles.progressBar}>
-        <Text style={styles.progressText}>{doneCount} of {userFields.length} fields completed</Text>
-        <Pressable testID="next-field" onPress={() => { const n = nextIncomplete(); if (n) setEditing(n); }} style={styles.nextBtn} disabled={allDone}>
-          <Text style={[styles.nextText, allDone && { opacity: 0.4 }]}>{doneCount === 0 ? "Start signing" : "Next required field"}</Text>
+        <Text style={styles.progressText}>{doneCount} of {ordered.length} fields completed</Text>
+        <Pressable testID="next-field" onPress={openActiveField} style={styles.nextBtn} disabled={!activeField}>
+          <Text style={[styles.nextText, !activeField && { opacity: 0.4 }]}>{doneCount === 0 ? "Start signing" : "Next required field"}</Text>
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ alignItems: "center", padding: spacing.lg, paddingBottom: insets.bottom + 180, gap: spacing.lg }}>
+      {lockHint ? (
+        <View style={styles.lockHintBox} testID="lock-hint">
+          <Icon name="warning" size={15} color="#92400E" />
+          <Text style={styles.lockHintText}>Please complete the highlighted field first.</Text>
+        </View>
+      ) : null}
+
+      <ScrollView ref={scrollRef} contentContainerStyle={{ alignItems: "center", padding: spacing.lg, paddingBottom: insets.bottom + 180, gap: spacing.lg }}>
         {pageError ? (
           <View style={styles.pageErrorBox}>
             <Icon name="warning" size={18} color="#B91C1C" />
@@ -194,7 +252,7 @@ export default function ReviewSign() {
           const size = pageDisplaySize(pg, pageW);
           const first = idx === 0;
           return (
-            <View key={pg.page}>
+            <View key={pg.page} onLayout={(e) => { pageYOffset.current[pg.page] = e.nativeEvent.layout.y; }}>
               <Text style={styles.pageLabel}>Page {pg.page} of {r.pageCount}</Text>
               <DocumentPageCanvas
                 pageSpec={pg}
@@ -206,7 +264,7 @@ export default function ReviewSign() {
                 onContentError={first ? onContentError : undefined}
               >
                 {r.fields.filter((f) => f.page === pg.page).map((f) => (
-                  <FieldOverlay key={f.id} field={f} size={size} value={values[f.id]} onPress={() => setEditing(f)} />
+                  <FieldOverlay key={f.id} field={f} size={size} value={values[f.id]} state={fieldState(f)} onPress={() => onFieldPress(f)} />
                 ))}
               </DocumentPageCanvas>
             </View>
@@ -221,9 +279,9 @@ export default function ReviewSign() {
             <Text style={styles.submitErrText}>{submitError}</Text>
           </View>
         ) : null}
-        <Pressable testID="declaration" onPress={() => setDeclaration((d) => !d)} style={styles.declRow}>
+        <Pressable testID="declaration" onPress={() => allDone && setDeclaration((d) => !d)} disabled={!allDone} style={[styles.declRow, !allDone && { opacity: 0.5 }]}>
           <View style={[styles.checkbox, declaration && styles.checkboxOn]}>{declaration ? <Icon name="check" size={14} color="#FFF" /> : null}</View>
-          <Text style={styles.declText}>{r.declaration.text}</Text>
+          <Text style={styles.declText}>{allDone ? r.declaration.text : "Complete all required fields to confirm and sign."}</Text>
         </Pressable>
         <Text style={styles.signingFor}>Signing for <Text style={styles.bold}>{r.businessName}</Text> as <Text style={styles.bold}>{r.signer.name}</Text></Text>
         <Pressable testID="sign-submit" onPress={submit} disabled={!canSubmit || submitting} style={[styles.primaryBtn, (!canSubmit || submitting) && { opacity: 0.45 }]}>
@@ -240,7 +298,7 @@ export default function ReviewSign() {
                 field={editing}
                 value={values[editing.id]}
                 onCancel={() => setEditing(null)}
-                onDone={(v) => { setValue(editing.id, v); setEditing(null); }}
+                onDone={(v) => handleDone(editing.id, v)}
               />
             </View>
           </View>
@@ -250,26 +308,80 @@ export default function ReviewSign() {
   );
 }
 
-function FieldOverlay({ field, size, value, onPress }: { field: FieldDefinition; size: { width: number; height: number }; value?: string; onPress: () => void }) {
+function FieldOverlay({ field, size, value, state, onPress }: {
+  field: FieldDefinition;
+  size: { width: number; height: number };
+  value?: string;
+  state: "completed" | "current" | "pending" | "neutral";
+  onPress: () => void;
+}) {
   const box = { left: field.rect.x * size.width, top: field.rect.y * size.height, width: field.rect.w * size.width, height: field.rect.h * size.height };
-  const done = !!value;
   const isDate = field.type === "date_signed";
+  const done = state === "completed";
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (state !== "current") { pulse.setValue(0); return; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0, duration: 650, useNativeDriver: false }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [state, pulse]);
+
+  const stateStyle =
+    state === "completed" ? styles.overlayDone :
+    state === "current" ? styles.overlayCurrent :
+    state === "pending" ? styles.overlayPending :
+    styles.overlayDate;
+
+  const animStyle = state === "current" ? {
+    borderColor: pulse.interpolate({ inputRange: [0, 1], outputRange: [colors.brandPrimary, "#FF2D55"] }),
+    backgroundColor: pulse.interpolate({ inputRange: [0, 1], outputRange: ["rgba(255,107,71,0.10)", "rgba(255,45,85,0.20)"] }),
+  } : null;
+
+  const sig = field.type === "signature" || field.type === "initials";
+
   return (
-    <Pressable testID={`field-${field.id}`} onPress={onPress} disabled={isDate} style={[styles.overlay, box, done && styles.overlayDone, isDate && styles.overlayDate]}>
-      {field.type === "signature" && done ? (
-        <Svg width={box.width} height={box.height} viewBox="0 0 320 180"><Path d={extractPath(value!)} fill="none" stroke="#111" strokeWidth={2.5} /></Svg>
-      ) : (
-        <Text numberOfLines={1} style={[styles.overlayLabel, done && styles.overlayLabelDone]}>
-          {isDate ? "Filled automatically on submission" : done ? value : field.label}
-        </Text>
-      )}
-    </Pressable>
+    <Animated.View style={[styles.overlay, box, stateStyle, animStyle]} pointerEvents="box-none">
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {sig && done ? (
+          <SignatureThumb dataUri={value!} width={box.width} height={box.height} />
+        ) : (
+          <View style={styles.overlayCenter}>
+            <Text numberOfLines={1} style={[styles.overlayLabel, done && styles.overlayLabelDone, state === "current" && styles.overlayLabelCurrent]}>
+              {isDate ? "Filled automatically on submission" : done ? value : field.label}
+            </Text>
+          </View>
+        )}
+      </View>
+      {state === "current" ? (
+        <View style={styles.currentTag} pointerEvents="none"><Text style={styles.currentTagText}>{sig ? "Sign here" : "Fill now"}</Text></View>
+      ) : null}
+      <Pressable testID={`field-${field.id}`} onPress={onPress} disabled={isDate} style={StyleSheet.absoluteFill} />
+    </Animated.View>
   );
 }
 
-function extractPath(dataUri: string) {
-  const m = dataUri.match(/d="([^"]+)"/);
-  return m ? m[1] : "";
+function SignatureThumb({ dataUri, width, height }: { dataUri: string; width: number; height: number }) {
+  const { viewBox, ds } = extractSvg(dataUri);
+  return (
+    <Svg width={width} height={height} viewBox={viewBox}>
+      {ds.map((d, i) => (
+        <Path key={i} d={d} fill="none" stroke="#111" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      ))}
+    </Svg>
+  );
+}
+
+/** Extract the viewBox and ALL path `d` strings from a signature SVG data URI. */
+function extractSvg(dataUri: string): { viewBox: string; ds: string[] } {
+  const viewBox = dataUri.match(/viewBox="([^"]+)"/)?.[1] || "0 0 320 180";
+  const ds = Array.from(dataUri.matchAll(/d="([^"]+)"/g)).map((m) => m[1]);
+  return { viewBox, ds };
 }
 
 function FieldEditor({ field, value, onCancel, onDone }: { field: FieldDefinition; value?: string; onCancel: () => void; onDone: (v: string) => void }) {
@@ -329,11 +441,19 @@ const styles = StyleSheet.create({
   pageReloadText: { fontFamily: font.semibold, fontSize: type.kicker, color: "#FFF" },
   devBadge: { alignSelf: "stretch", backgroundColor: "#111827", borderRadius: radius.sm, paddingVertical: 6, paddingHorizontal: spacing.md },
   devBadgeText: { fontFamily: font.semibold, fontSize: type.kicker, color: "#A7F3D0" },
-  overlay: { position: "absolute", borderWidth: 1.5, borderColor: colors.brandPrimary, borderStyle: "dashed", backgroundColor: "rgba(255,107,71,0.08)", borderRadius: 4, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
-  overlayDone: { borderStyle: "solid", borderColor: colors.success, backgroundColor: "rgba(16,185,129,0.08)" },
-  overlayDate: { borderColor: colors.muted, backgroundColor: "rgba(100,116,139,0.06)" },
-  overlayLabel: { fontFamily: font.semibold, fontSize: 10, color: colors.brandPrimary, textAlign: "center" },
+  lockHintBox: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "#FEF3C7", paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  lockHintText: { fontFamily: font.semibold, fontSize: type.kicker, color: "#92400E" },
+  overlay: { position: "absolute", borderWidth: 1.5, borderStyle: "dashed", borderColor: colors.muted, borderRadius: 4 },
+  overlayCenter: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
+  overlayDone: { borderStyle: "solid", borderWidth: 1.5, borderColor: colors.success, backgroundColor: "rgba(16,185,129,0.10)" },
+  overlayCurrent: { borderStyle: "solid", borderWidth: 2.5, borderColor: colors.brandPrimary, backgroundColor: "rgba(255,107,71,0.12)" },
+  overlayPending: { borderStyle: "dashed", borderWidth: 1.5, borderColor: "#F59E0B", backgroundColor: "rgba(245,158,11,0.08)" },
+  overlayDate: { borderStyle: "dashed", borderColor: colors.muted, backgroundColor: "rgba(100,116,139,0.06)" },
+  overlayLabel: { fontFamily: font.semibold, fontSize: 10, color: "#B45309", textAlign: "center" },
   overlayLabelDone: { color: colors.onSurface },
+  overlayLabelCurrent: { color: colors.brandPrimary },
+  currentTag: { position: "absolute", top: -11, left: -1, backgroundColor: colors.brandPrimary, paddingHorizontal: 6, height: 16, borderRadius: 4, alignItems: "center", justifyContent: "center" },
+  currentTagText: { fontFamily: font.bold, fontSize: 9, color: "#FFFFFF" },
   footer: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.divider, padding: spacing.lg, gap: spacing.sm },
   submitErrBox: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "#FEE2E2", borderRadius: radius.sm, padding: spacing.sm },
   submitErrText: { flex: 1, fontFamily: font.semibold, fontSize: type.kicker, color: "#B91C1C" },

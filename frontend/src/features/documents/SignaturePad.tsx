@@ -2,7 +2,7 @@
  * SignaturePad — Expo-compatible signature capture.
  *
  * Dependencies: `react-native-svg` (already in the project) + React Native core
- * `PanResponder`. No WebView, works in Expo Go.
+ * `PanResponder`. No WebView, works in Expo Go and on physical devices.
  *
  * OUTPUT FORMAT (document for backend): an SVG data URI
  *   `data:image/svg+xml;utf8,<svg viewBox="0 0 W H">...<path d=.../></svg>`
@@ -12,14 +12,25 @@
  *
  * Signatures are kept in memory only (never localStorage) and must be applied
  * explicitly to each signature field by the caller.
+ *
+ * MOBILE ROBUSTNESS:
+ * - Strokes are accumulated in an array and persist across multiple touch
+ *   gestures until "Clear" is tapped.
+ * - `onPanResponderTerminate` commits the in-progress stroke, and the pad refuses
+ *   to yield the responder to a parent ScrollView, so strokes never vanish on a
+ *   finger-lift / second stroke on Android.
+ * - Only strokes with actual movement (real ink) count — a tap (no line) is
+ *   ignored, so an empty/dotted "signature" can never mark a field complete.
  */
 import { useRef, useState } from "react";
-import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 
-const BOX_W = 320;
-const BOX_H = 180;
+const ASPECT = 180 / 320; // height / width of the capture box
+const DEFAULT_W = Math.min(320, Dimensions.get("window").width - 72);
+
+const hasInk = (paths: string[]) => paths.some((d) => d.includes(" L "));
 
 export function SignaturePad({
   title = "Draw your signature",
@@ -33,11 +44,17 @@ export function SignaturePad({
   const [paths, setPaths] = useState<string[]>([]);
   const current = useRef<string>("");
   const [, force] = useState(0);
+  const [size, setSize] = useState({ w: DEFAULT_W, h: Math.round(DEFAULT_W * ASPECT) });
 
   const responder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      // Never let a parent ScrollView/modal steal the drawing gesture.
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: (e) => {
         const { locationX, locationY } = e.nativeEvent;
         current.current = `M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`;
@@ -48,15 +65,22 @@ export function SignaturePad({
         current.current += ` L ${locationX.toFixed(1)} ${locationY.toFixed(1)}`;
         force((n) => n + 1);
       },
-      onPanResponderRelease: () => {
-        if (current.current) setPaths((p) => [...p, current.current]);
-        current.current = "";
-      },
+      onPanResponderRelease: () => commitStroke(),
+      onPanResponderTerminate: () => commitStroke(),
     }),
   ).current;
 
-  const allPaths = current.current ? [...paths, current.current] : paths;
-  const isEmpty = allPaths.length === 0;
+  // Commit the in-progress stroke ONLY if it contains real movement (has a line
+  // segment). A pure tap is discarded so it can't be mistaken for a signature.
+  function commitStroke() {
+    const d = current.current;
+    current.current = "";
+    if (d && d.includes(" L ")) setPaths((p) => [...p, d]);
+    else force((n) => n + 1);
+  }
+
+  const live = current.current ? [...paths, current.current] : paths;
+  const inked = hasInk(live);
 
   const clear = () => {
     setPaths([]);
@@ -65,27 +89,39 @@ export function SignaturePad({
   };
 
   const apply = () => {
-    if (isEmpty) return;
-    const body = allPaths
+    const strokes = paths.filter((d) => d.includes(" L "));
+    if (strokes.length === 0) return; // never apply an empty signature
+    const body = strokes
       .map((d) => `<path d="${d}" fill="none" stroke="#111" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`)
       .join("");
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BOX_W} ${BOX_H}">${body}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size.w} ${size.h}">${body}</svg>`;
     const dataUri = `data:image/svg+xml;utf8,${svg}`;
-    onApply(dataUri, { width: BOX_W, height: BOX_H });
+    onApply(dataUri, { width: size.w, height: size.h });
   };
 
   return (
     <View style={styles.wrap} testID="signature-pad">
       <Text style={styles.title}>{title}</Text>
-      <View style={styles.canvas} {...responder.panHandlers}>
-        <Svg width={BOX_W} height={BOX_H}>
-          {allPaths.map((d, i) => (
+      <View
+        style={[styles.canvas, { width: size.w, height: size.h }]}
+        onLayout={(e) => {
+          const w = Math.round(e.nativeEvent.layout.width);
+          if (w > 0 && w !== size.w) setSize({ w, h: Math.round(w * ASPECT) });
+        }}
+        {...responder.panHandlers}
+      >
+        <Svg width={size.w} height={size.h}>
+          {live.map((d, i) => (
             <Path key={i} d={d} fill="none" stroke="#111" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
           ))}
         </Svg>
-        {isEmpty ? <Text style={styles.hint}>Sign here with your finger</Text> : null}
+        {!inked ? <Text style={styles.hint} pointerEvents="none">Sign here with your finger</Text> : null}
       </View>
-      {isEmpty ? <Text style={styles.err}>A signature is required.</Text> : null}
+      {!inked ? (
+        <Text style={styles.err}>Draw your signature above — a tap alone won&apos;t count.</Text>
+      ) : (
+        <Text style={styles.ok}>Looks good. Add more strokes if needed, or tap Apply.</Text>
+      )}
       <View style={styles.row}>
         <Pressable testID="sig-clear" onPress={clear} style={[styles.btn, styles.ghost]}>
           <Text style={styles.ghostText}>Clear</Text>
@@ -96,8 +132,8 @@ export function SignaturePad({
         <Pressable
           testID="sig-apply"
           onPress={apply}
-          disabled={isEmpty}
-          style={[styles.btn, styles.apply, isEmpty && { opacity: 0.45 }]}
+          disabled={!inked}
+          style={[styles.btn, styles.apply, !inked && { opacity: 0.45 }]}
         >
           <Text style={styles.applyText}>Apply signature</Text>
         </Pressable>
@@ -110,8 +146,6 @@ const styles = StyleSheet.create({
   wrap: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, gap: spacing.md },
   title: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   canvas: {
-    width: BOX_W,
-    height: BOX_H,
     alignSelf: "center",
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
@@ -119,9 +153,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   hint: { position: "absolute", fontFamily: font.regular, fontSize: type.sm, color: colors.muted },
   err: { fontFamily: font.regular, fontSize: type.sm, color: colors.error, textAlign: "center" },
+  ok: { fontFamily: font.regular, fontSize: type.sm, color: colors.success, textAlign: "center" },
   row: { flexDirection: "row", gap: spacing.sm, justifyContent: "flex-end" },
   btn: { height: 44, paddingHorizontal: spacing.lg, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
   ghost: { backgroundColor: colors.surfaceTertiary },

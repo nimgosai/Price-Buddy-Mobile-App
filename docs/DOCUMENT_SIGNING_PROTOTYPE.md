@@ -326,3 +326,48 @@ So: **the signing screens (`/review`, `/status`) and ALL `/signing-requests/*` e
 signing-request ID. Only the view-only screen and `/documents/{id}/view` take the document ID.** Your
 developer can mount the signing screens from his own Documents section by passing the
 `signingRequestId` he holds on each document — he never needs the prototype's list hub.
+
+---
+# 16. Signature-pad fixes & strict guided signing flow (device-bug follow-up)
+
+## 16.1 Signature pad (`SignaturePad.tsx`) — fixed
+- **Multi-stroke persistence:** strokes accumulate in an array and persist across multiple
+  finger gestures until **Clear**. Added `onPanResponderTerminate` (commits the in-progress stroke)
+  plus `onPanResponderTerminationRequest => false` and `onShouldBlockNativeResponder => true` so a
+  parent ScrollView/modal can no longer steal the gesture and make strokes vanish on finger-lift or a
+  second stroke (the Android bug reported).
+- **No empty signature:** only strokes containing real movement (a line segment) count. A pure tap is
+  discarded. **Apply is disabled** until there is real ink; an empty/tapped canvas can NEVER mark a
+  field complete. Helper text switches between "Draw your signature above — a tap alone won't count."
+  and "Looks good…".
+- **Visible thumbnail:** the review overlay now renders **all** strokes (and uses the signature's own
+  `viewBox`), so the drawn signature visibly appears inside the solid-green completed box.
+- **Responsive canvas:** the pad sizes to the container width (keeps the 320×180 aspect), so it fits
+  small phones; the output SVG `viewBox` matches the capture size.
+- **Verification:** multi-stroke persistence, empty rejection, clear, and the green thumbnail were
+  verified on the **web preview with mouse-drag** (testing agent iteration_28). **True finger
+  multi-stroke on a physical Android/iOS device should still be re-checked by you on-device** — that
+  was the originally reported environment.
+
+## 16.2 Strict guided sequential signing (`review.tsx`) — added
+- Required fields are ordered by **page, then top→bottom**. The **first incomplete** required field is
+  the CURRENT field.
+- **Sequential lock:** tapping a later PENDING required field does NOT open it — a lock-hint bar
+  ("Please complete the highlighted field first.") appears and the view scrolls back to the CURRENT
+  field. Completed fields can be re-opened to edit.
+- **"Next required field"** (labelled "Start signing" at the start) scrolls to AND opens the current
+  field's editor.
+- **Auto-advance across pages:** after completing a field, the view auto-scrolls/flips to the page of
+  the next incomplete required field.
+- **Visual states:** CURRENT = solid brand-coloured **pulsing** border + a small tag ("Sign here" /
+  "Fill now"); PENDING required = **dashed amber** border; COMPLETED = **solid green** border (with
+  the value/signature shown); read-only date = muted grey.
+- **Final step gated:** the declaration checkbox is disabled (greyed, "Complete all required fields to
+  confirm and sign.") until every required field is done; **Sign and submit** stays disabled until all
+  fields + declaration are complete.
+- **Prefilled fields** (full name / job title / email) start as COMPLETED, so the first CURRENT field is
+  the first genuinely empty one.
+- **Verification:** sequential lock, Next-field focus, auto-advance across pages, declaration gating,
+  the three visual states, and end-to-end submit were verified on the web preview (iteration_28).
+  Backend still owns authoritative field placement/validation (frontend ordering/locking is UX, **not**
+  authorization).
