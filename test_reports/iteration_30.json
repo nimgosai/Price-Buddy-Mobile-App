@@ -1,0 +1,29 @@
+{
+  "summary": "Phase 1-2 desktop portal shell (sidebar + top header) + Dashboard verified end-to-end on desktop (1440x900) and mobile regression (390x844). All 28 required testIDs render on the signed-in desktop dashboard; sidebar nav items route correctly with hidden back-arrows on Sites/Reports/Support/Profile; Settings opens /profile?section=settings and the profile-settings-section anchor is visible; top-bar scan/quote/notifications/profile all route correctly; /documents and /documents/sr_loa_01/review render inside the shell (desktop-sign-panel visible, no horizontal overflow sw==cw==1440, next-field CTA present); sign-out returns to /signin with sidebar removed. Mobile regression confirms no desktop sidebar/topbar leak, bottom tab bar height=53, Sites header back-arrow present on mobile, and the review screen does NOT render the desktop sign panel. The sign-in page remains a centred column on a tinted backdrop with no sidebar. No functional bugs found. Note: login via /api/login succeeded on the first attempt — no CORS flake observed this run.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "React Native Web deprecation warnings", "issue": "Console warns: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Non-blocking but should be cleaned up for future RN Web/SDK upgrades. Reference: multiple components use shadow.card from theme and <View pointerEvents> (e.g. app/documents/[id]/review.tsx:475,476)."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional cleanup: migrate 'shadow*' style props to boxShadow and move pointerEvents to style.pointerEvents in affected components to silence RN Web deprecation warnings (purely cosmetic — no runtime issue)."
+  ],
+  "critical_code_review_comments": [
+    "desktop-frame.tsx cleanly keeps a stable element tree across shell/column/page states so the navigator doesn't remount — good.",
+    "portal-shell.tsx activeKey() correctly maps /dashboard|/renewals|/documents to Home, /sites|/contracts to Sites, and distinguishes Settings vs Profile via section=settings param.",
+    "documents/[id]/review.tsx desktop panel width calc uses useShellInset() so the signing panel never clips beneath the sidebar — verified no horizontal overflow at 1440px.",
+    "(tabs)/_layout.tsx hides the bottom tab bar on desktop via tabBarStyle={display:'none'} — verified tablist height=0 on desktop and 53 on mobile."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only review)", "frontend": "100%"},
+  "seed_data_creation": "None. Reused the live e2e test account only; no businesses/quotes/scans were submitted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login button in signin screen is a Pressable (not a <button>) — select it with page.get_by_text('Sign in', exact=True).first.click(force=True). The 'div[role=\"button\"]' selector will NOT match. Live backend occasionally throws a transient CORS on /api/login; retry once. Spotlight tour replay (profile-tour) was NOT re-verified in this run because the dashboard spec/testIDs were already extensively confirmed and the measurement path (sidebarSitesRef) is unchanged from the component code — recommend a focused spot check on the tour step 1 rectangle if the sidebar layout is modified further.",
+  "rca_of_issue": "No bugs to RCA — Phases 1-2 (shell + dashboard) match the problem statement."
+}

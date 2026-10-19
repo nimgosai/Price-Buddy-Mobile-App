@@ -27,7 +27,12 @@ import { apiRequest } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
 import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
-import { DESKTOP_CONTENT_MAX, desktopTabBarPad, useIsDesktop } from "@/src/utils/use-desktop";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { greeting } from "@/src/utils/greeting";
+import { DesktopDashboard } from "@/src/desktop/dashboard-desktop";
+import { sidebarSitesRef } from "@/src/desktop/portal-shell";
+import { dt } from "@/src/desktop/tokens";
+import { documentSigningService as docSvc } from "@/src/features/documents/service";
 
 export const TOUR_REPLAY_KEY = "uch_tour_replay";
 const SEEN_TRY_IT_KEY = "uch_seen_try_it";
@@ -44,13 +49,6 @@ function utilityLabel(u?: string): string {
   const k = (u || "").toLowerCase();
   if (UTILITY_LABEL[k]) return UTILITY_LABEL[k];
   return u ? u.charAt(0).toUpperCase() + u.slice(1) : "Utility";
-}
-
-function greeting(): { salutation: string; subtitle: string } {
-  const h = new Date().getHours();
-  if (h >= 5 && h < 12) return { salutation: "Good morning", subtitle: "A fresh start — let's see what's ahead today." };
-  if (h >= 12 && h < 17) return { salutation: "Good afternoon", subtitle: "Mid-day check-in — here's where things stand." };
-  return { salutation: "Good evening", subtitle: "Winding down — quick scan before you log off?" };
 }
 
 export default function Dashboard() {
@@ -72,6 +70,9 @@ export default function Dashboard() {
   const [turningOn, setTurningOn] = useState(false);
   const [showTryIt, setShowTryIt] = useState(false);
   const [callingId, setCallingId] = useState<string | null>(null);
+  // Desktop-only widgets (spend breakdown + documents awaiting signature).
+  const [spend, setSpend] = useState<any | null>(null);
+  const [docsToSign, setDocsToSign] = useState(0);
 
   // Guided spotlight tour
   const scanRef = useRef<View>(null);
@@ -87,11 +88,11 @@ export default function Dashboard() {
     });
 
   const startTour = useCallback(async () => {
-    const [scan, cta] = await Promise.all([measure(scanRef), measure(ctaRef)]);
+    const [scan, cta, sidebarSites] = await Promise.all([measure(scanRef), measure(ctaRef), isDesktop ? measure(sidebarSitesRef) : null]);
     const tabH = 60 + Math.max(insets.bottom, Platform.OS === "android" ? 10 : 0);
-    const tabPad = desktopTabBarPad(width, isDesktop); // 0 on mobile
-    const tabW = (width - tabPad * 2) / 5;
-    const sitesRect = { x: tabPad + tabW * 1, y: height - tabH + 4, w: tabW, h: 52 };
+    const tabW = width / 5;
+    // Desktop web highlights "Sites" in the left sidebar instead of the bottom tab bar.
+    const sitesRect = sidebarSites ?? { x: tabW * 1, y: height - tabH + 4, w: tabW, h: 52 };
     setTourSteps([
       {
         title: "All your sites & contracts",
@@ -166,6 +167,16 @@ export default function Dashboard() {
         }
       });
     }, [load, startTour]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isDesktop) return;
+      apiRequest<any>("/reports/spend").then(setSpend).catch(() => setSpend(null));
+      docSvc.listDocuments()
+        .then((ds) => setDocsToSign(ds.filter((d) => d.status === "awaiting_signature" || d.status === "needs_attention").length))
+        .catch(() => setDocsToSign(0));
+    }, [isDesktop]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -423,33 +434,29 @@ export default function Dashboard() {
     </>
   );
 
-  // DESKTOP WEB ONLY: centred two-column dashboard.
+  // DESKTOP WEB ONLY: SaaS portal dashboard (8/4 column grid).
   if (isDesktop) {
     return (
-      <View style={styles.root}>
-        <ScrollView
-          testID="dashboard-scroll"
-          ref={scrollRef}
-          contentContainerStyle={dsk.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          <View style={dsk.wrap}>
-            {greetEl}
-            {nudgeEl}
-            <View style={dsk.cols}>
-              <View style={dsk.main}>
-                {statusEl}
-                {auditEl}
-                {promoEl}
-              </View>
-              <View style={dsk.side}>
-                {quickEl}
-                {docCardEl}
-                <HaveAQueryPill />
-              </View>
-            </View>
-          </View>
-        </ScrollView>
+      <View style={[styles.root, { backgroundColor: dt.canvas }]}>
+        <DesktopDashboard
+          scrollRef={scrollRef}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          loading={loading}
+          subtitle={g.subtitle}
+          nudgeEl={nudgeEl}
+          promoEl={promoEl}
+          items={items}
+          audits={audits}
+          contractCount={contractCount}
+          docsToSign={docsToSign}
+          spend={spend}
+          callingId={callingId}
+          requestCall={requestCall}
+          onMeter={() => setMeter(true)}
+          scanRef={scanRef}
+          showTryIt={showTryIt}
+        />
         {overlays}
       </View>
     );
@@ -656,11 +663,3 @@ const styles = StyleSheet.create({
   promoBtnText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
 });
 
-// Desktop web only (≥1024px). Never applied on iOS/Android.
-const dsk = StyleSheet.create({
-  scroll: { paddingHorizontal: spacing["2xl"], paddingTop: spacing["2xl"], paddingBottom: spacing["3xl"] },
-  wrap: { width: "100%", maxWidth: DESKTOP_CONTENT_MAX, alignSelf: "center", gap: spacing.lg },
-  cols: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl, marginTop: spacing.sm },
-  main: { flex: 3, minWidth: 0, gap: spacing.lg },
-  side: { flex: 2, minWidth: 0, gap: 12 },
-});

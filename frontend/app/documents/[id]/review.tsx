@@ -15,6 +15,7 @@ import { docDebug } from "@/src/features/documents/debug";
 import type { FieldDefinition, SigningRequest } from "@/src/features/documents/types";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 import { useIsDesktop } from "@/src/utils/use-desktop";
+import { useShellInset } from "@/src/components/desktop-frame";
 
 const DESKTOP_PANEL_W = 380; // right-hand signing panel (desktop web only)
 const DESKTOP_BODY_MAX = 1440;
@@ -27,6 +28,7 @@ export default function ReviewSign() {
   const router = useRouter();
   const { width: winW } = useWindowDimensions();
   const isDesktop = useIsDesktop();
+  const shellInset = useShellInset(); // desktop sidebar width (0 on mobile)
 
   const [req, setReq] = useState<SigningRequest | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -144,7 +146,7 @@ export default function ReviewSign() {
 
   const screenW = Dimensions.get("window").width;
   // Desktop web: the document fills the left column (panel on the right).
-  const docColW = Math.min(winW, DESKTOP_BODY_MAX) - DESKTOP_PANEL_W - spacing.xl * 2;
+  const docColW = Math.min(winW - shellInset, DESKTOP_BODY_MAX) - DESKTOP_PANEL_W - spacing.xl * 2;
   const pageW = isDesktop
     ? Math.min(docColW, 760) * zoom
     : Math.min(screenW - spacing.lg * 2, 520) * zoom;

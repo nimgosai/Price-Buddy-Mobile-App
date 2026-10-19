@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
@@ -25,6 +25,7 @@ import { storage } from "@/src/utils/storage";
 import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { DEMO_MODE_KEY, isDemoEnabled, setDemoEnabled } from "@/src/demo/demo-data";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
 
 export default function Profile() {
   const insets = useSafeAreaInsets();
@@ -33,6 +34,16 @@ export default function Profile() {
   const { user, signOut, refreshUser } = useAuth();
   const { refreshBusinesses } = useBusiness();
   const scrollRef = useTabScrollToTop();
+
+  // Desktop sidebar "Settings" opens Profile at the settings/preferences section.
+  const isDesktop = useIsDesktop();
+  const { section } = useLocalSearchParams<{ section?: string }>();
+  const settingsY = useRef<number | null>(null);
+  const scrollToSettings = () => {
+    if (section === "settings" && settingsY.current != null) scrollRef.current?.scrollTo({ y: Math.max(0, settingsY.current - 8), animated: true });
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { scrollToSettings(); }, [section]);
 
   const [showDelete, setShowDelete] = useState(false);
   const [addBiz, setAddBiz] = useState(false);
@@ -123,6 +134,16 @@ export default function Profile() {
             {!!user?.company_name && <Text style={styles.userCompany} numberOfLines={1}>{user.company_name}</Text>}
           </View>
         </View>
+
+        {isDesktop ? (
+          <Text
+            testID="profile-settings-section"
+            style={styles.settingsLabel}
+            onLayout={(e) => { settingsY.current = e.nativeEvent.layout.y; scrollToSettings(); }}
+          >
+            Settings &amp; notifications
+          </Text>
+        ) : null}
 
         <ToggleRow
           icon="mail" bg={colors.pastel.yellow} fg={colors.pastel.yellowIcon}
@@ -249,6 +270,7 @@ function LinkRow({ icon, bg, fg, label, onPress, testID }: { icon: IconName; bg:
 }
 
 const styles = StyleSheet.create({
+  settingsLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase", color: colors.muted, marginTop: spacing.sm, marginLeft: 4 },
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   scroll: { padding: spacing.lg, gap: 10 },
   userCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.card },

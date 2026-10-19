@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePathname } from "expo-router";
 import Ionicons from "@react-native-vector-icons/ionicons";
 
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -21,13 +23,17 @@ export function ScreenHeader({
   testID?: string;
 }) {
   const insets = useSafeAreaInsets();
+  // Desktop portal: tab-root pages are reached from the sidebar, so no back arrow.
+  const isDesktop = useIsDesktop();
+  const pathname = usePathname();
+  const showBack = !!onBack && !(isDesktop && /^\/(sites|reports|support|profile)\/?$/.test(pathname));
   return (
     <View
       testID={testID}
-      style={[styles.header, { paddingTop: insets.top + spacing.sm }]}
+      style={[styles.header, { paddingTop: insets.top + spacing.sm }, isDesktop && styles.headerDesktop]}
     >
       <View style={styles.row}>
-        {onBack ? (
+        {showBack ? (
           <Pressable
             testID="header-back-button"
             onPress={onBack}
@@ -87,6 +93,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 14 },
+  headerDesktop: { paddingHorizontal: spacing["2xl"], paddingTop: spacing.xl, paddingBottom: spacing.lg, borderBottomColor: "#E2E8F0" },
   iconBtn: {
     width: 40,
     height: 40,

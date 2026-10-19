@@ -685,3 +685,13 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 - My Documents: centred max-width, 2-column equal-height card grid.
 - Dashboard: centred 2-column layout; tab bar items centred; non-dashboard tabs in centred column.
 - Spotlight tour: desktop card 400px wide; web `?notour=1` bypass for automated tests.
+
+## Desktop SaaS Portal — Phases 1–2 DONE (iteration_30)
+- Signed-in desktop web (≥1024px): persistent left sidebar (PriceBuddy mark, Home/Sites/Reports/Support/Profile/Settings, help box, user + sign out) and top header (greeting, Scan bill, Get a quote, notifications, profile). Bottom tab bar hidden on desktop only.
+- Canvas #F8FAFC, white cards, 1px #E2E8F0 borders, subtle shadow (`src/desktop/tokens.ts`).
+- Dashboard (`src/desktop/dashboard-desktop.tsx`): 8/4 grid — Active tasks, Upcoming renewals table, Spend breakdown | Quick actions, Add-site CTA, Account team widget.
+- Settings = Profile scrolled to "Settings & notifications". Tour step 1 highlights the sidebar Sites item on desktop.
+- Pages without dedicated desktop layout yet are shown in a framed 960px panel.
+## Pending — Phases 3–4
+- Phase 3: forms/overlays as desktop dialogs (max 600–720px, 2-col field pairs, close X), Renewals + contract rate cards as right slide-over drawers.
+- Phase 4: data tables / horizontal metric cards on Sites, Reports, Renewals, site detail rates.
