@@ -27,6 +27,7 @@ import { apiRequest } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
 import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
+import { DESKTOP_CONTENT_MAX, desktopTabBarPad, useIsDesktop } from "@/src/utils/use-desktop";
 
 export const TOUR_REPLAY_KEY = "uch_tour_replay";
 const SEEN_TRY_IT_KEY = "uch_seen_try_it";
@@ -59,6 +60,7 @@ export default function Dashboard() {
   const { user, refreshUser } = useAuth();
   const { width, height } = useWindowDimensions();
   const scrollRef = useTabScrollToTop();
+  const isDesktop = useIsDesktop();
 
   const [items, setItems] = useState<any[]>([]);
   const [contractCount, setContractCount] = useState<number | null>(null);
@@ -87,8 +89,9 @@ export default function Dashboard() {
   const startTour = useCallback(async () => {
     const [scan, cta] = await Promise.all([measure(scanRef), measure(ctaRef)]);
     const tabH = 60 + Math.max(insets.bottom, Platform.OS === "android" ? 10 : 0);
-    const tabW = width / 5;
-    const sitesRect = { x: tabW * 1, y: height - tabH + 4, w: tabW, h: 52 };
+    const tabPad = desktopTabBarPad(width, isDesktop); // 0 on mobile
+    const tabW = (width - tabPad * 2) / 5;
+    const sitesRect = { x: tabPad + tabW * 1, y: height - tabH + 4, w: tabW, h: 52 };
     setTourSteps([
       {
         title: "All your sites & contracts",
@@ -107,7 +110,7 @@ export default function Dashboard() {
       },
     ]);
     setTourOpen(true);
-  }, [insets.bottom, width, height]);
+  }, [insets.bottom, width, height, isDesktop]);
 
   const closeTour = useCallback(
     async () => {
@@ -254,16 +257,7 @@ export default function Dashboard() {
     }
   };
 
-  return (
-    <View style={styles.root}>
-      <ScrollView
-        testID="dashboard-scroll"
-        ref={scrollRef}
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 28 }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-          {/* Greeting */}
+  const greetEl = (
           <View style={styles.greetRow}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initials}</Text>
@@ -280,9 +274,10 @@ export default function Dashboard() {
               <Icon name="bell" size={20} color={colors.heading} />
             </Pressable>
           </View>
+  );
 
-          {/* Alerts nudge */}
-          {showNudge && (
+  // Alerts nudge
+  const nudgeEl = showNudge && (
             <View style={styles.nudge} testID="notif-nudge">
               <View style={styles.nudgeIcon}>
                 <Icon name="bell" size={16} color={colors.brandPrimary} />
@@ -295,12 +290,12 @@ export default function Dashboard() {
                 <Ionicons name="close" size={16} color={colors.muted} />
               </Pressable>
             </View>
-          )}
+          );
 
-          {/* Status card — only for users WITH contracts. Brand-new users
-              (contractCount === 0) see no status card; the green "Add a site
-              or business" banner below becomes their single primary action. */}
-          {!loading && (contractCount ?? 0) > 0 && (items.length === 0 ? (
+  // Status card — only for users WITH contracts. Brand-new users
+  // (contractCount === 0) see no status card; the green "Add a site
+  // or business" banner below becomes their single primary action.
+  const statusEl = !loading && (contractCount ?? 0) > 0 && (items.length === 0 ? (
             <View style={styles.trustBanner} testID="trust-banner">
               <View style={styles.trustIcon}>
                 <Icon name="shield" size={26} color="#FFFFFF" />
@@ -338,10 +333,10 @@ export default function Dashboard() {
                 <Text style={styles.alertBtnText}>Review &amp; Lock In Rates ({items.length}) →</Text>
               </Pressable>
             </View>
-          ))}
+          ));
 
-          {/* Bill verification — compact status card */}
-          {!loading && audits.length > 0 && (
+  // Bill verification — compact status card
+  const auditEl = !loading && audits.length > 0 && (
             <View style={styles.audit} testID="audit-in-progress-card">
               <View style={styles.auditHead}>
                 <View style={styles.auditIcon}>
@@ -367,9 +362,10 @@ export default function Dashboard() {
                 </Pressable>
               )}
             </View>
-          )}
+          );
 
-          {/* Primary CTA — green "compare tariffs" banner (above Quick actions) */}
+  // Primary CTA — green "compare tariffs" banner (above Quick actions)
+  const promoEl = (
           <View ref={ctaRef} collapsable={false} testID="lower-bills-cta" style={styles.promo}>
             <View style={styles.promoHead}>
               <View style={styles.promoIcon}>
@@ -386,8 +382,11 @@ export default function Dashboard() {
               <CtaShimmer width={340} />
             </Pressable>
           </View>
+  );
 
-          {/* Quick actions — two core tiles side-by-side */}
+  // Quick actions — two core tiles side-by-side
+  const quickEl = (
+    <>
           <Text style={styles.quickLabel}>Quick actions</Text>
           <View style={styles.quickGrid}>
             <QuickAction testID="quick-action-scan" innerRef={scanRef} icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon}
@@ -395,8 +394,11 @@ export default function Dashboard() {
             <QuickAction testID="action-meter" icon="meter" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon}
               title="Meter Installation" onPress={() => setMeter(true)} />
           </View>
+    </>
+  );
 
-          {/* My Documents — full-width card linking to the Documents hub */}
+  // My Documents — full-width card linking to the Documents hub
+  const docCardEl = (
           <Pressable
             testID="home-my-documents"
             onPress={() => router.push("/documents")}
@@ -411,14 +413,70 @@ export default function Dashboard() {
             </View>
             <Icon name="chevronRight" size={20} color={colors.muted} />
           </Pressable>
+  );
+
+  const overlays = (
+    <>
+      <MeterInstallModal visible={meter} onClose={() => setMeter(false)} />
+
+      <SpotlightTour open={tourOpen} steps={tourSteps} onClose={closeTour} />
+    </>
+  );
+
+  // DESKTOP WEB ONLY: centred two-column dashboard.
+  if (isDesktop) {
+    return (
+      <View style={styles.root}>
+        <ScrollView
+          testID="dashboard-scroll"
+          ref={scrollRef}
+          contentContainerStyle={dsk.scroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          <View style={dsk.wrap}>
+            {greetEl}
+            {nudgeEl}
+            <View style={dsk.cols}>
+              <View style={dsk.main}>
+                {statusEl}
+                {auditEl}
+                {promoEl}
+              </View>
+              <View style={dsk.side}>
+                {quickEl}
+                {docCardEl}
+                <HaveAQueryPill />
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+        {overlays}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.root}>
+      <ScrollView
+        testID="dashboard-scroll"
+        ref={scrollRef}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 28 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+          {greetEl}
+          {nudgeEl}
+          {statusEl}
+          {auditEl}
+          {promoEl}
+          {quickEl}
+          {docCardEl}
 
           {/* Support / chat — subtle banner near the bottom */}
           <HaveAQueryPill />
         </ScrollView>
 
-      <MeterInstallModal visible={meter} onClose={() => setMeter(false)} />
-
-      <SpotlightTour open={tourOpen} steps={tourSteps} onClose={closeTour} />
+      {overlays}
     </View>
   );
 }
@@ -596,4 +654,13 @@ const styles = StyleSheet.create({
   promoSub: { fontFamily: font.regular, fontSize: type.sm, lineHeight: 18, color: "#065F46", marginTop: 4 },
   promoBtn: { minHeight: 42, borderRadius: 10, backgroundColor: "#065F46", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 6, overflow: "hidden" },
   promoBtnText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
+});
+
+// Desktop web only (≥1024px). Never applied on iOS/Android.
+const dsk = StyleSheet.create({
+  scroll: { paddingHorizontal: spacing["2xl"], paddingTop: spacing["2xl"], paddingBottom: spacing["3xl"] },
+  wrap: { width: "100%", maxWidth: DESKTOP_CONTENT_MAX, alignSelf: "center", gap: spacing.lg },
+  cols: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl, marginTop: spacing.sm },
+  main: { flex: 3, minWidth: 0, gap: spacing.lg },
+  side: { flex: 2, minWidth: 0, gap: 12 },
 });

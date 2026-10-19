@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -14,6 +14,10 @@ import { documentSigningService as svc, generateIdempotencyKey } from "@/src/fea
 import { docDebug } from "@/src/features/documents/debug";
 import type { FieldDefinition, SigningRequest } from "@/src/features/documents/types";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+
+const DESKTOP_PANEL_W = 380; // right-hand signing panel (desktop web only)
+const DESKTOP_BODY_MAX = 1440;
 
 const needsUser = (f: FieldDefinition) => f.required && !f.readOnly && f.type !== "date_signed";
 
@@ -21,6 +25,8 @@ export default function ReviewSign() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width: winW } = useWindowDimensions();
+  const isDesktop = useIsDesktop();
 
   const [req, setReq] = useState<SigningRequest | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -137,7 +143,12 @@ export default function ReviewSign() {
   const activeField = activeIndex >= 0 ? ordered[activeIndex] : null;
 
   const screenW = Dimensions.get("window").width;
-  const pageW = Math.min(screenW - spacing.lg * 2, 520) * zoom;
+  // Desktop web: the document fills the left column (panel on the right).
+  const docColW = Math.min(winW, DESKTOP_BODY_MAX) - DESKTOP_PANEL_W - spacing.xl * 2;
+  const pageW = isDesktop
+    ? Math.min(docColW, 760) * zoom
+    : Math.min(screenW - spacing.lg * 2, 520) * zoom;
+  const pageFits = pageW <= docColW;
 
   const fieldState = (f: FieldDefinition): "completed" | "current" | "pending" | "neutral" => {
     if (f.readOnly || f.type === "date_signed" || !needsUser(f)) return values[f.id] ? "completed" : "neutral";
@@ -207,104 +218,217 @@ export default function ReviewSign() {
     }
   };
 
-  return (
-    <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable testID="review-back" onPress={() => router.back()} hitSlop={10} style={{ width: 24 }}><Icon name="arrowLeft" size={24} color={colors.heading} /></Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{r.title}</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>{r.businessName}</Text>
-        </View>
-        <View style={styles.zoomRow}>
-          <Pressable testID="zoom-out" onPress={() => setZoom((z) => Math.max(0.75, z - 0.25))} hitSlop={8}><Text style={styles.zoomBtn}>−</Text></Pressable>
-          <Pressable testID="zoom-in" onPress={() => setZoom((z) => Math.min(2, z + 0.25))} hitSlop={8}><Text style={styles.zoomBtn}>+</Text></Pressable>
+  const onStepPress = (f: FieldDefinition) => {
+    if (fieldState(f) !== "pending") scrollToField(f);
+    onFieldPress(f);
+  };
+
+  const header = (
+    <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+      <Pressable testID="review-back" onPress={() => router.back()} hitSlop={10} style={{ width: 24 }}><Icon name="arrowLeft" size={24} color={colors.heading} /></Pressable>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.headerTitle} numberOfLines={1}>{r.title}</Text>
+        <Text style={styles.headerSub} numberOfLines={1}>{r.businessName}</Text>
+      </View>
+      <View style={styles.zoomRow}>
+        <Pressable testID="zoom-out" onPress={() => setZoom((z) => Math.max(0.75, z - 0.25))} hitSlop={8}><Text style={styles.zoomBtn}>−</Text></Pressable>
+        <Pressable testID="zoom-in" onPress={() => setZoom((z) => Math.min(2, z + 0.25))} hitSlop={8}><Text style={styles.zoomBtn}>+</Text></Pressable>
+      </View>
+    </View>
+  );
+
+  const demoBanner = svc.isMock ? <View style={styles.demoBanner}><Text style={styles.demoText}>Demo signing — not a live signed document</Text></View> : null;
+
+  const lockHintEl = lockHint ? (
+    <View style={[styles.lockHintBox, isDesktop && dsk.lockHint]} testID="lock-hint">
+      <Icon name="warning" size={15} color="#92400E" />
+      <Text style={styles.lockHintText}>Please complete the highlighted field first.</Text>
+    </View>
+  ) : null;
+
+  const pageErrorEl = pageError ? (
+    <View style={styles.pageErrorBox}>
+      <Icon name="warning" size={18} color="#B91C1C" />
+      <Text style={styles.pageErrorText}>We couldn&apos;t display this document. Your first-open hasn&apos;t been recorded.</Text>
+      <Pressable testID="page-reload" onPress={load} style={styles.pageReloadBtn}><Text style={styles.pageReloadText}>Reload</Text></Pressable>
+    </View>
+  ) : null;
+
+  const devBadgeEl = __DEV__ ? (
+    <View style={styles.devBadge}><Text style={styles.devBadgeText} testID="dev-firstopen">first-open (dev): {foStatus}</Text></View>
+  ) : null;
+
+  const pagesEl = r.pages.map((pg, idx) => {
+    const size = pageDisplaySize(pg, pageW);
+    const first = idx === 0;
+    return (
+      <View key={pg.page} onLayout={(e) => { pageYOffset.current[pg.page] = e.nativeEvent.layout.y; }}>
+        <Text style={styles.pageLabel}>Page {pg.page} of {r.pageCount}</Text>
+        <DocumentPageCanvas
+          pageSpec={pg}
+          displayWidth={pageW}
+          label={r.title}
+          isFirstPage={first}
+          simulateRenderFailure={first && renderFail}
+          onContentDisplayed={first ? onContentDisplayed : undefined}
+          onContentError={first ? onContentError : undefined}
+        >
+          {r.fields.filter((f) => f.page === pg.page).map((f) => (
+            <FieldOverlay key={f.id} field={f} size={size} value={values[f.id]} state={fieldState(f)} onPress={() => onFieldPress(f)} />
+          ))}
+        </DocumentPageCanvas>
+      </View>
+    );
+  });
+
+  const submitErrorEl = submitError ? (
+    <View style={styles.submitErrBox}>
+      <Icon name="warning" size={16} color="#B91C1C" />
+      <Text style={styles.submitErrText}>{submitError}</Text>
+    </View>
+  ) : null;
+
+  const declarationEl = (
+    <Pressable testID="declaration" onPress={() => allDone && setDeclaration((d) => !d)} disabled={!allDone} style={[styles.declRow, !allDone && { opacity: 0.5 }]}>
+      <View style={[styles.checkbox, declaration && styles.checkboxOn]}>{declaration ? <Icon name="check" size={14} color="#FFF" /> : null}</View>
+      <Text style={styles.declText}>{allDone ? r.declaration.text : "Complete all required fields to confirm and sign."}</Text>
+    </Pressable>
+  );
+
+  const signingForEl = (
+    <Text style={styles.signingFor}>Signing for <Text style={styles.bold}>{r.businessName}</Text> as <Text style={styles.bold}>{r.signer.name}</Text></Text>
+  );
+
+  const submitEl = (
+    <Pressable testID="sign-submit" onPress={submit} disabled={!canSubmit || submitting} style={[styles.primaryBtn, (!canSubmit || submitting) && { opacity: 0.45 }]}>
+      {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>{submitError ? "Try again" : "Sign and submit"}</Text>}
+    </Pressable>
+  );
+
+  const editorEl = editing ? (
+    <Portal>
+      <View style={styles.modalWrap}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditing(null)} />
+        <View style={styles.modalCard}>
+          <FieldEditor
+            field={editing}
+            value={values[editing.id]}
+            onCancel={() => setEditing(null)}
+            onDone={(v) => handleDone(editing.id, v)}
+          />
         </View>
       </View>
+    </Portal>
+  ) : null;
 
-      {svc.isMock ? <View style={styles.demoBanner}><Text style={styles.demoText}>Demo signing — not a live signed document</Text></View> : null}
+  const nextLabel = doneCount === 0 ? "Start signing" : "Next required field";
+
+  // DESKTOP WEB ONLY: document on the left, sticky signing panel on the right.
+  if (isDesktop) {
+    const pct = ordered.length ? Math.round((doneCount / ordered.length) * 100) : 100;
+    return (
+      <View style={styles.root}>
+        {header}
+        {demoBanner}
+        <View style={dsk.body}>
+          <ScrollView
+            ref={scrollRef}
+            style={[dsk.docScroll, { overflowX: "auto" } as any]}
+            contentContainerStyle={[dsk.docContent, !pageFits && { alignItems: "flex-start" }]}
+          >
+            {pageErrorEl}
+            {devBadgeEl}
+            {pagesEl}
+          </ScrollView>
+          <View style={dsk.panel} testID="desktop-sign-panel">
+            <ScrollView contentContainerStyle={dsk.panelScroll}>
+              <Text style={dsk.kicker}>Signing progress</Text>
+              <Text style={dsk.progressTitle}>{doneCount} of {ordered.length} fields completed</Text>
+              <View style={dsk.track}><View style={[dsk.trackFill, { width: `${pct}%` }]} /></View>
+              {activeField ? (
+                <Pressable testID="next-field" onPress={openActiveField} style={styles.primaryBtn}>
+                  <Text style={styles.primaryText}>{nextLabel}</Text>
+                </Pressable>
+              ) : (
+                <View style={dsk.allDone} testID="all-fields-done">
+                  <Icon name="check" size={16} color="#047857" />
+                  <Text style={dsk.allDoneText}>All required fields completed</Text>
+                </View>
+              )}
+              {lockHintEl}
+              <Text style={[dsk.kicker, { marginTop: spacing.md }]}>Fields to complete</Text>
+              {ordered.map((f, i) => (
+                <StepRow key={f.id} index={i + 1} field={f} state={fieldState(f)} onPress={() => onStepPress(f)} />
+              ))}
+            </ScrollView>
+            <View style={dsk.panelFooter}>
+              {submitErrorEl}
+              {declarationEl}
+              {signingForEl}
+              {submitEl}
+            </View>
+          </View>
+        </View>
+        {editorEl}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.root}>
+      {header}
+
+      {demoBanner}
 
       <View style={styles.progressBar}>
         <Text style={styles.progressText}>{doneCount} of {ordered.length} fields completed</Text>
         <Pressable testID="next-field" onPress={openActiveField} style={styles.nextBtn} disabled={!activeField}>
-          <Text style={[styles.nextText, !activeField && { opacity: 0.4 }]}>{doneCount === 0 ? "Start signing" : "Next required field"}</Text>
+          <Text style={[styles.nextText, !activeField && { opacity: 0.4 }]}>{nextLabel}</Text>
         </Pressable>
       </View>
 
-      {lockHint ? (
-        <View style={styles.lockHintBox} testID="lock-hint">
-          <Icon name="warning" size={15} color="#92400E" />
-          <Text style={styles.lockHintText}>Please complete the highlighted field first.</Text>
-        </View>
-      ) : null}
+      {lockHintEl}
 
       <ScrollView ref={scrollRef} contentContainerStyle={{ alignItems: "center", padding: spacing.lg, paddingBottom: insets.bottom + 180, gap: spacing.lg }}>
-        {pageError ? (
-          <View style={styles.pageErrorBox}>
-            <Icon name="warning" size={18} color="#B91C1C" />
-            <Text style={styles.pageErrorText}>We couldn&apos;t display this document. Your first-open hasn&apos;t been recorded.</Text>
-            <Pressable testID="page-reload" onPress={load} style={styles.pageReloadBtn}><Text style={styles.pageReloadText}>Reload</Text></Pressable>
-          </View>
-        ) : null}
-        {__DEV__ ? (
-          <View style={styles.devBadge}><Text style={styles.devBadgeText} testID="dev-firstopen">first-open (dev): {foStatus}</Text></View>
-        ) : null}
-        {r.pages.map((pg, idx) => {
-          const size = pageDisplaySize(pg, pageW);
-          const first = idx === 0;
-          return (
-            <View key={pg.page} onLayout={(e) => { pageYOffset.current[pg.page] = e.nativeEvent.layout.y; }}>
-              <Text style={styles.pageLabel}>Page {pg.page} of {r.pageCount}</Text>
-              <DocumentPageCanvas
-                pageSpec={pg}
-                displayWidth={pageW}
-                label={r.title}
-                isFirstPage={first}
-                simulateRenderFailure={first && renderFail}
-                onContentDisplayed={first ? onContentDisplayed : undefined}
-                onContentError={first ? onContentError : undefined}
-              >
-                {r.fields.filter((f) => f.page === pg.page).map((f) => (
-                  <FieldOverlay key={f.id} field={f} size={size} value={values[f.id]} state={fieldState(f)} onPress={() => onFieldPress(f)} />
-                ))}
-              </DocumentPageCanvas>
-            </View>
-          );
-        })}
+        {pageErrorEl}
+        {devBadgeEl}
+        {pagesEl}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        {submitError ? (
-          <View style={styles.submitErrBox}>
-            <Icon name="warning" size={16} color="#B91C1C" />
-            <Text style={styles.submitErrText}>{submitError}</Text>
-          </View>
-        ) : null}
-        <Pressable testID="declaration" onPress={() => allDone && setDeclaration((d) => !d)} disabled={!allDone} style={[styles.declRow, !allDone && { opacity: 0.5 }]}>
-          <View style={[styles.checkbox, declaration && styles.checkboxOn]}>{declaration ? <Icon name="check" size={14} color="#FFF" /> : null}</View>
-          <Text style={styles.declText}>{allDone ? r.declaration.text : "Complete all required fields to confirm and sign."}</Text>
-        </Pressable>
-        <Text style={styles.signingFor}>Signing for <Text style={styles.bold}>{r.businessName}</Text> as <Text style={styles.bold}>{r.signer.name}</Text></Text>
-        <Pressable testID="sign-submit" onPress={submit} disabled={!canSubmit || submitting} style={[styles.primaryBtn, (!canSubmit || submitting) && { opacity: 0.45 }]}>
-          {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>{submitError ? "Try again" : "Sign and submit"}</Text>}
-        </Pressable>
+        {submitErrorEl}
+        {declarationEl}
+        {signingForEl}
+        {submitEl}
       </View>
 
-      {editing ? (
-        <Portal>
-          <View style={styles.modalWrap}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditing(null)} />
-            <View style={styles.modalCard}>
-              <FieldEditor
-                field={editing}
-                value={values[editing.id]}
-                onCancel={() => setEditing(null)}
-                onDone={(v) => handleDone(editing.id, v)}
-              />
-            </View>
-          </View>
-        </Portal>
-      ) : null}
+      {editorEl}
     </View>
+  );
+}
+
+/** Desktop-only step list row in the right-hand signing panel. */
+function StepRow({ index, field, state, onPress }: {
+  index: number;
+  field: FieldDefinition;
+  state: "completed" | "current" | "pending" | "neutral";
+  onPress: () => void;
+}) {
+  const done = state === "completed";
+  const cur = state === "current";
+  const sig = field.type === "signature" || field.type === "initials";
+  const status = done ? "Completed" : cur ? (sig ? "Sign now" : "Fill now") : "Complete earlier fields first";
+  return (
+    <Pressable testID={`step-${field.id}`} onPress={onPress} style={({ pressed }) => [dsk.step, cur && dsk.stepCurrent, pressed && { opacity: 0.85 }]}>
+      <View style={[dsk.stepNum, done && dsk.stepNumDone, cur && dsk.stepNumCurrent]}>
+        {done ? <Icon name="check" size={13} color="#FFFFFF" /> : <Text style={[dsk.stepNumText, cur && { color: "#FFFFFF" }]}>{index}</Text>}
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={dsk.stepLabel} numberOfLines={1}>{field.label}</Text>
+        <Text style={[dsk.stepMeta, cur && { color: colors.brandPrimary }]}>Page {field.page} · {status}</Text>
+      </View>
+      <Icon name={state === "pending" ? "lock" : "chevronRight"} size={15} color={colors.muted} />
+    </Pressable>
   );
 }
 
@@ -474,4 +598,29 @@ const styles = StyleSheet.create({
   modalCard: { width: "100%", maxWidth: 380, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg },
   editTitle: { fontFamily: font.semibold, fontSize: type.title, color: colors.heading },
   input: { height: 50, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: 12, paddingHorizontal: spacing.md, fontFamily: font.regular, fontSize: type.base, color: colors.onSurface },
+});
+
+// Desktop web only (≥1024px). Never applied on iOS/Android.
+const dsk = StyleSheet.create({
+  body: { flex: 1, flexDirection: "row", width: "100%", maxWidth: DESKTOP_BODY_MAX, alignSelf: "center" },
+  docScroll: { flex: 1 },
+  docContent: { alignItems: "center", padding: spacing.xl, paddingBottom: spacing["3xl"], gap: spacing.xl },
+  panel: { width: DESKTOP_PANEL_W, backgroundColor: colors.surface, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.divider },
+  panelScroll: { padding: spacing.xl, gap: spacing.sm },
+  panelFooter: { padding: spacing.xl, paddingTop: spacing.lg, gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider },
+  kicker: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase", color: colors.muted },
+  progressTitle: { fontFamily: font.bold, fontSize: type.xl, color: colors.heading, letterSpacing: -0.3 },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceTertiary, overflow: "hidden", marginBottom: spacing.sm },
+  trackFill: { height: 8, borderRadius: 4, backgroundColor: colors.success },
+  allDone: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "#D1FAE5", borderRadius: radius.sm, paddingHorizontal: spacing.md, height: 50 },
+  allDoneText: { fontFamily: font.semibold, fontSize: type.base, color: "#047857" },
+  lockHint: { borderRadius: radius.sm, paddingHorizontal: spacing.md },
+  step: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.md, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  stepCurrent: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  stepNum: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: "center", justifyContent: "center" },
+  stepNumDone: { backgroundColor: colors.success, borderColor: colors.success },
+  stepNumCurrent: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  stepNumText: { fontFamily: font.bold, fontSize: type.kicker, color: colors.muted },
+  stepLabel: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  stepMeta: { fontFamily: font.regular, fontSize: type.kicker, color: colors.muted, marginTop: 2 },
 });

@@ -1,8 +1,21 @@
 import { useEffect, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+
+/**
+ * Web-only test/QA bypass: open the app with `?notour=1` in the URL and the
+ * guided tour will never render (so automated browser tests aren't blocked).
+ * Evaluated once at bundle load, so it survives in-app navigation.
+ */
+export const TOUR_DISABLED =
+  Platform.OS === "web" &&
+  typeof window !== "undefined" &&
+  /[?&]notour=1(&|$)/.test(window.location?.search || "");
+
+const DESKTOP_CARD_W = 400;
 
 export type TourStep = {
   title: string;
@@ -28,13 +41,14 @@ export function SpotlightTour({
 }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
   const [i, setI] = useState(0);
 
   useEffect(() => {
     if (open) setI(0);
   }, [open]);
 
-  if (!open || steps.length === 0) return null;
+  if (!open || steps.length === 0 || TOUR_DISABLED) return null;
   const step = steps[Math.min(i, steps.length - 1)];
   const last = i === steps.length - 1;
 
@@ -63,6 +77,14 @@ export function SpotlightTour({
       : Math.max(insets.top + 8, hole.y - CARD_EST - 14)
     : height / 2 - CARD_EST / 2;
 
+  // Desktop web: a fixed-width card aligned with the highlight instead of full width.
+  const cardX = isDesktop
+    ? {
+        left: Math.max(spacing.lg, Math.min(hole ? hole.x : (width - DESKTOP_CARD_W) / 2, width - DESKTOP_CARD_W - spacing.lg)),
+        width: DESKTOP_CARD_W,
+      }
+    : { left: spacing.lg, right: spacing.lg };
+
   return (
     <Modal visible transparent animationType="fade" onRequestClose={skip}>
       <View style={StyleSheet.absoluteFill} testID="spotlight-tour">
@@ -84,7 +106,7 @@ export function SpotlightTour({
         )}
 
         {/* Tooltip card */}
-        <View style={[styles.card, { top: cardTop, left: spacing.lg, right: spacing.lg }]} testID="spotlight-card">
+        <View style={[styles.card, { top: cardTop }, cardX]} testID="spotlight-card">
           <View style={styles.dots}>
             {steps.map((_, k) => (
               <View key={k} style={[styles.dot, k === i && styles.dotActive]} />

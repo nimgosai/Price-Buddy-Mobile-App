@@ -677,3 +677,11 @@ Reported from physical Android test. Fixed in SignaturePad.tsx + review.tsx.
 User confirmed physical-Android testing passed (multi-stroke touch, sequential gating, auto-scroll across pages, first-open, recovery). No further UI/feature changes on this frontend.
 - Finalised /app/docs/DOCUMENT_SIGNING_PROTOTYPE.md with authoritative §17 (Final Developer Handover Package): §17.1 screens/components list, §17.2 normalized percent coordinate convention (page_number/x_percent/y_percent/width_percent/height_percent ↔ rect{x,y,w,h}), §17.3 field-type table incl checkbox(=acknowledgement) + bank details sort_code/account_number (flagged contract-defined, not yet rendered in prototype — developer to add input+validation), §17.4 complete API contract (JSON schemas, payloads, error-code table + HTTP mapping) for all 8 endpoints incl file-access URLs, §17.5 clean code export steps, §17.6 mock-off/live-backend (EXPO_PUBLIC_DOC_SIGNING_MOCK=false), §17.7 production PDF viewer swap. Added approval/code-freeze status banner at top.
 - Documentation-only change; no code modified. No deploy. Login Autofill remains separate/unresolved.
+
+## Desktop Web Layouts (Option 2) — DONE (iteration_29)
+- Active only on web at window width >= 1024px (`src/utils/use-desktop.ts`); iOS/Android & narrow web untouched (mobile code freeze respected).
+- `src/components/desktop-frame.tsx`: centred 640px column on tinted backdrop for screens without a wide layout.
+- Document Review/Sign: document on the left, sticky right signing panel (progress bar, Next field, step list with lock states, declaration, Sign and submit). Signature pad = centred pop-up.
+- My Documents: centred max-width, 2-column equal-height card grid.
+- Dashboard: centred 2-column layout; tab bar items centred; non-dashboard tabs in centred column.
+- Spotlight tour: desktop card 400px wide; web `?notour=1` bypass for automated tests.

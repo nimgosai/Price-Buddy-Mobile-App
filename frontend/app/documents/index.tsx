@@ -7,6 +7,7 @@ import { Icon } from "@/src/components/icon";
 import { documentSigningService as svc } from "@/src/features/documents/service";
 import type { DocumentFilter, DocumentStatus, DocumentSummary } from "@/src/features/documents/types";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { DESKTOP_CONTENT_MAX, useIsDesktop } from "@/src/utils/use-desktop";
 
 const FILTERS: { key: DocumentFilter; label: string }[] = [
   { key: "all", label: "All documents" },
@@ -29,6 +30,7 @@ const TYPE_LABEL = { loa: "LOA", supplier_contract: "Supplier contract", quote: 
 export default function MyDocuments() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const isDesktop = useIsDesktop();
   const [docs, setDocs] = useState<DocumentSummary[] | null>(null);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<DocumentFilter>("all");
@@ -68,7 +70,7 @@ export default function MyDocuments() {
         </View>
       ) : null}
 
-      <View style={styles.filters}>
+      <View style={[styles.filters, isDesktop && dsk.filters]}>
         {FILTERS.map((f) => (
           <Pressable
             key={f.key}
@@ -97,8 +99,16 @@ export default function MyDocuments() {
           <Text style={styles.emptySub}>Documents your account manager sends will appear here.</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + spacing.xl, gap: spacing.md }}>
-          {filtered.map((d) => (
+        <ScrollView contentContainerStyle={isDesktop ? dsk.list : { padding: spacing.lg, paddingBottom: insets.bottom + spacing.xl, gap: spacing.md }}>
+          {isDesktop ? (
+            <View style={dsk.grid}>
+              {filtered.map((d) => (
+                <View key={d.id} style={dsk.cell}>
+                  <DocRow doc={d} fill onPress={() => openDoc(router, d)} />
+                </View>
+              ))}
+            </View>
+          ) : filtered.map((d) => (
             <DocRow key={d.id} doc={d} onPress={() => openDoc(router, d)} />
           ))}
         </ScrollView>
@@ -130,10 +140,10 @@ function actionLabel(s: DocumentStatus): string {
   }
 }
 
-function DocRow({ doc, onPress }: { doc: DocumentSummary; onPress: () => void }) {
+function DocRow({ doc, onPress, fill }: { doc: DocumentSummary; onPress: () => void; fill?: boolean }) {
   const sm = STATUS_META[doc.status];
   return (
-    <Pressable testID={`doc-${doc.id}`} onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.95 }]}>
+    <Pressable testID={`doc-${doc.id}`} onPress={onPress} style={({ pressed }) => [styles.card, fill && dsk.cardFill, pressed && { opacity: 0.95 }]}>
       <View style={styles.cardHead}>
         <View style={styles.docIcon}><Icon name="document" size={20} color="#7C3AED" /></View>
         <View style={{ flex: 1 }}>
@@ -181,4 +191,13 @@ const styles = StyleSheet.create({
   badgeText: { fontFamily: font.semibold, fontSize: type.kicker },
   actionRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
   actionText: { fontFamily: font.semibold, fontSize: type.base, color: colors.brandPrimary },
+});
+
+// Desktop web only (≥1024px). Never applied on iOS/Android.
+const dsk = StyleSheet.create({
+  filters: { width: "100%", maxWidth: DESKTOP_CONTENT_MAX, alignSelf: "center", paddingHorizontal: spacing["2xl"], paddingTop: spacing.xl },
+  list: { paddingHorizontal: spacing["2xl"], paddingTop: spacing.md, paddingBottom: spacing["3xl"] },
+  grid: { width: "100%", maxWidth: DESKTOP_CONTENT_MAX - spacing["2xl"] * 2, alignSelf: "center", flexDirection: "row", flexWrap: "wrap", gap: spacing.lg },
+  cell: { flexBasis: "45%", flexGrow: 1, maxWidth: "50%" },
+  cardFill: { flex: 1, justifyContent: "space-between", padding: spacing.lg },
 });

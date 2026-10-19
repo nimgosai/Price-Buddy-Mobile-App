@@ -1,0 +1,137 @@
+<analysis>**original_problem_statement**: 
+Build a React Native (Expo) mobile frontend for Utility Contract Hub (PriceBuddy) matching the original web build exactly. **In this specific fork, the user requests building responsive desktop web layouts (Option 2) for the existing Expo app**, starting with the document review/signing flow, so it looks polished on wide desktop screens (e.g., side-by-side layouts) instead of stretching the mobile view edge-to-edge. PRODUCT REQUIREMENTS: The mobile layout is strictly CODE FROZEN and APPROVED; all desktop UI changes must be additive and not break the mobile application.
+
+**User's preferred language**: INSTRUCT next agent to respond in English.
+
+**what currently exists?** 
+A highly polished Expo SDK 57 React Native app. The My Documents and In-App Document Signing Prototype is completely finished, featuring a multi-stroke signature pad, strict guided sequential signing flow, exact first-open tracking, and comprehensive edge-case handling (expired, cancelled, safe recovery). The mobile prototype is heavily documented with API contracts and developer export instructions ( & ). 
+
+**Last working item**: 
+    - Last item agent was working: Implementing Option 2 Responsive Desktop Layouts for key screens (Document Review/Sign, Dashboard, My Documents list). This fork was created specifically to isolate this desktop web UI work from the approved mobile app.
+    - Status: NOT STARTED
+    - Agent Testing Done: N
+    - Which testing method agent to use? screenshot tool (for wide viewport / web testing)
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**: 
+  Issue 1: Verify Login Autofill Fix (P1)
+     - Attempted fixes: Assistant fixed a web-autofill quirk reading values directly from refs/DOM on submit.
+     - Next debug checklist: Await user confirmation on whether the autofill fix resolves their login issue on physical devices. (User requested keeping this separate from the signing work). Apply similar fixes to Sign-Up if requested.
+     - Why fix this issue and what will be achieved with the fix? Allows password managers to work seamlessly.
+     - Status: USER VERIFICATION PENDING
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? frontend
+     - Blocked on other issue: None
+
+  Issue 2: Spotlight Tour Overlay Blocking Automated Testing (P2)
+     - Attempted fixes: None in this session.
+     - Next debug checklist: Find where the Spotlight Tour triggers on fresh loads and ensure it can be bypassed or doesn't block headless interaction.
+     - Why fix this issue and what will be achieved with the fix? Will unblock the testing tools from taking accurate end-to-end screenshots.
+     - Status: NOT STARTED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? frontend
+     - Blocked on other issue: None
+
+**In progress Task List**: 
+  None. The previous prototype task was completely finished and frozen.
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - Responsive Desktop Layouts (Option 2): Start with the document review/sign screen (). Make it look great on wide screens (e.g., document large on the left, fields/steps panel on the right). Then apply to My Documents list and Dashboard. (P0 - Immediate priority of this fork)
+    - Default Business: Remember the last business viewed so it's pre-selected instead of All businesses (P1)
+    - Quote History: Add a My quote requests list showing submitted quotes (P2)
+    - Scan-to-Site Autofill: Make Upload / Scan Bill onboarding return to the new-site form pre-filled with the scanned supplier/meter/address (P2)
+    - Add First Meter: Allow adding an initial contract/meter right after creating a site (P2)
+    - Skeleton Cards: Show subtle skeleton placeholders for status/report cards while data loads (P3)
+    - Refetch Throttle: Add a short stale-time so returning to a tab doesn't trigger redundant background refetch (P3)
+
+    Future Tasks:
+    - Seed Spec Handoff: Write a precise demo-data spec for the user's backend team (P3)
+
+**Completed work in this session**
+- Added remaining document prototype mock scenarios (View-only, cancelled, multi-page, processing failure recovery, expired, etc.) (DONE)
+- Fixed Signature Pad bugs (multi-stroke touch persistence, empty-signature rejection) (DONE)
+- Implemented strict guided sequential signing flow (auto-scroll to fields/pages, sequential gating, visual highlights) (DONE)
+- Implemented exact first-open tracking gated on actual image render  (DONE)
+- Finalized complete API contract and export instructions in  (DONE)
+- Created  as a root entry guide (DONE)
+
+**Earlier issues found/mentioned but not fixed**
+   Issue 1: Password reset emails not arriving 
+   - Debug checklist: Backend configuration issue.
+   - Why to solve this issue and what will be achieved with this? End users can reset passwords.
+   - Should Test frontend/backend/both after fix: NA (Backend team handling)
+   - Is recurring issue? Y
+
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: None
+  - Recurrence count: 0
+  - Status: RESOLVED
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+React Native Expo 57, Expo Router, Fabric (New Architecture), Responsive Web Design in React Native (e.g. , Platform specific layouts),  (Multi-stroke SignaturePad). Mock-driven development.
+
+**key DB schema**
+  - N/A
+
+**changes in tech stack**
+  - No changes in stack.
+
+**All files of reference** 
+  -  (Contains the signing flow. Needs responsive desktop layout).
+  -  (Multi-stroke gesture handler)
+  -  (Authoritative handover documentation)
+  -  (Entry instructions for the external backend developer)
+
+**Areas that need refactoring**: 
+  - : Remains heavily bloated. 
+
+**key api endpoints**
+  - All documented thoroughly in .
+
+**Critical Info for New Agent** 
+- **CODE FREEZE ON MOBILE:** The user explicitly approved the mobile signing prototype and issued a Code Freeze. The sole reason this fork was created is to add **Responsive Desktop UI (Option 2)** for web users (Netlify) without touching or risking the mobile UI. 
+- **Responsive Strategy:** You must use React Native's layout constraints (e.g., , max-widths, ) to apply side-by-side or centered desktop layouts *only* on large screens. Do NOT break the existing mobile flex layouts. Start with the document review/signing screen.
+- Do NOT attempt to connect to a real backend for documents. Keep  and rely on the existing mock adapter.
+- The  relies on touch terminators specific to Android . Ensure any web wrapper adjustments don't accidentally swallow pointer events.
+
+**documents and test reports created in this job** 
+  - 
+  - 
+  - , , 
+
+**Last 10 User Messages and any pending HUMAN messages** 
+ 1. (User): Reported physical device bugs: Signature pad clears on multi-touch; requested strict guided sequential signing flow with auto-scroll.
+ 2. (Assistant): Rewrote SignaturePad to persist strokes; rewrote review.tsx for sequential gating and auto-scrolling across pages.
+ 3. (Assistant): Ran testing agent on web; passed all 10 scenarios. Sent to user for device check.
+ 4. (User): **FRONTEND PROTOTYPE APPROVED — CODE FREEZE**. Requested final developer handover package with API contracts and export instructions.
+ 5. (Assistant): Finalized  with complete details. 
+ 6. (User): Was confused about how to share code with developer. 
+ 7. (Assistant): Explained Save to GitHub button and created a simple  file.
+ 8. (User): Asked if a desktop version can be made to look better (currently stretched full-width on web).
+ 9. (Assistant): Suggested 3 options. Recommended Option 1 (centered max-width) or Option 2 (responsive side-by-side layouts for key screens). 
+ 10. **(User - PENDING)**: Chose Option 2, but asked how to do it safely without messing up the current frozen chat. Assistant instructed user to use Fork Chat to start the Option 2 desktop layout task safely. (This fork is the result of that action).
+
+**Project Health Check:**
+Healthy. Mobile signing prototype is extremely robust and code frozen.
+
+**3rd Party Integrations** 
+	 •	
+	 •	
+     •  
+     •   
+
+**Testing status**
+  - Testing agent used after significant changes: YES
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions: None
+
+**Credentials to test flow:**
+  -  
+
+**What agent forgot to execute**
+The agent did not start the desktop layout work because the user was instructed to fork the chat first. The new agent must immediately begin implementing the Option 2 Desktop Web Layouts (starting with the document review/signing screen) while ensuring the mobile layout remains completely unchanged.</analysis>
