@@ -721,3 +721,7 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 - Sidebar: scrollable menu + docked bottom help/user card.
 - Sites: unified header filter row (business switcher, search, Export CSV, Add site); 10/page pagination inside tables (Sites, Renewals, Quotes).
 - Compact "VIEWING FOR" business switcher in header on Dashboard, Sites, Reports; dashboard widgets filter by business.
+
+## Desktop sheets + Profile/Settings split — DONE (iteration_36)
+- `src/desktop/sheet.ts` useDesktopSheet(): bottom sheets become centred cards on desktop (delete account, add business, site actions, select pickers, onboarding callback).
+- Desktop Profile vs Settings are separate views (/profile?section=profile | settings). Mobile unchanged.

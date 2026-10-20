@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "@/src/components/icon";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useDesktopSheet } from "@/src/desktop/sheet";
 
 export type SelectOption = { value: string; label: string; sublabel?: string };
 
@@ -28,6 +29,7 @@ export function SelectField({
   testID?: string;
 }) {
   const insets = useSafeAreaInsets();
+  const dsheet = useDesktopSheet(480);
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
 
@@ -41,8 +43,8 @@ export function SelectField({
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]} onPress={() => {}}>
+        <Pressable style={[styles.backdrop, dsheet.backdrop]} onPress={() => setOpen(false)}>
+          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }, dsheet.sheet]} onPress={() => {}}>
             <View style={styles.grabber} />
             {sheetTitle ? <Text style={styles.sheetTitle}>{sheetTitle}</Text> : null}
             <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>

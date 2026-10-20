@@ -21,7 +21,7 @@ const NAV: { key: NavKey; label: string; icon: IconName; href: Href }[] = [
   { key: "reports", label: "Reports", icon: "bolt", href: "/reports" },
   { key: "quotes", label: "Quotes", icon: "document", href: "/quotes" },
   { key: "support", label: "Support", icon: "phone", href: "/support" },
-  { key: "profile", label: "Profile", icon: "user", href: "/profile" },
+  { key: "profile", label: "Profile", icon: "user", href: { pathname: "/profile", params: { section: "profile" } } },
   { key: "settings", label: "Settings", icon: "lock", href: { pathname: "/profile", params: { section: "settings" } } },
 ];
 
@@ -139,7 +139,7 @@ export function PortalTopBar() {
       >
         <Icon name="bell" size={18} color={dt.body} />
       </Pressable>
-      <Pressable testID="topbar-profile" onPress={() => router.navigate("/profile")} style={(s: any) => [styles.profileBtn, s.hovered && styles.navHover]}>
+      <Pressable testID="topbar-profile" onPress={() => router.navigate({ pathname: "/profile", params: { section: "profile" } })} style={(s: any) => [styles.profileBtn, s.hovered && styles.navHover]}>
         <View style={styles.userAvatar}><Text style={styles.userAvatarText}>{initialsOf(user?.full_name || user?.email)}</Text></View>
         <Icon name="chevronDown" size={14} color={dt.muted} />
       </Pressable>

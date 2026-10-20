@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 
 import { Icon, IconName } from "@/src/components/icon";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useDesktopSheet } from "@/src/desktop/sheet";
 
 type Action = {
   key: string;
@@ -50,6 +51,7 @@ export function SiteActionsSheet({
   cancelLabel?: string;
 }) {
   const insets = useSafeAreaInsets();
+  const dsheet = useDesktopSheet();
   const router = useRouter();
 
   const go = (to: string) => {
@@ -61,9 +63,9 @@ export function SiteActionsSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} testID="site-actions-backdrop">
+      <Pressable style={[styles.backdrop, dsheet.backdrop]} onPress={onClose} testID="site-actions-backdrop">
         <Pressable
-          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
+          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }, dsheet.sheet]}
           onPress={() => {}}
           testID="site-actions-sheet"
         >

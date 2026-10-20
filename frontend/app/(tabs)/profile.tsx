@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -26,6 +26,7 @@ import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { DEMO_MODE_KEY, isDemoEnabled, setDemoEnabled } from "@/src/demo/demo-data";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 import { useIsDesktop } from "@/src/utils/use-desktop";
+import { useDesktopSheet } from "@/src/desktop/sheet";
 
 export default function Profile() {
   const insets = useSafeAreaInsets();
@@ -35,15 +36,14 @@ export default function Profile() {
   const { refreshBusinesses } = useBusiness();
   const scrollRef = useTabScrollToTop();
 
-  // Desktop sidebar "Settings" opens Profile at the settings/preferences section.
+  // Desktop: sidebar "Profile" and "Settings" are separate views of this screen.
+  // Mobile always shows everything (unchanged).
   const isDesktop = useIsDesktop();
+  const dsheet = useDesktopSheet();
   const { section } = useLocalSearchParams<{ section?: string }>();
-  const settingsY = useRef<number | null>(null);
-  const scrollToSettings = () => {
-    if (section === "settings" && settingsY.current != null) scrollRef.current?.scrollTo({ y: Math.max(0, settingsY.current - 8), animated: true });
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { scrollToSettings(); }, [section]);
+  const settingsView = isDesktop && section === "settings";
+  const showProfile = !settingsView;
+  const showSettings = !isDesktop || settingsView;
 
   const [showDelete, setShowDelete] = useState(false);
   const [addBiz, setAddBiz] = useState(false);
@@ -119,13 +119,14 @@ export default function Profile() {
 
   return (
     <View style={styles.root}>
-      <ScreenHeader testID="profile-header" title="Profile" onBack={() => router.push("/dashboard")} />
+      <ScreenHeader testID="profile-header" title={settingsView ? "Settings" : "Profile"} subtitle={settingsView ? "Notifications, demo data and account" : undefined} onBack={() => router.push("/dashboard")} />
       <ScrollView
         ref={scrollRef}
         testID="profile-screen"
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing["2xl"] }]}
         showsVerticalScrollIndicator={false}
       >
+        {showProfile ? (
         <View style={styles.userCard}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -135,16 +136,10 @@ export default function Profile() {
           </View>
         </View>
 
-        {isDesktop ? (
-          <Text
-            testID="profile-settings-section"
-            style={styles.settingsLabel}
-            onLayout={(e) => { settingsY.current = e.nativeEvent.layout.y; scrollToSettings(); }}
-          >
-            Settings &amp; notifications
-          </Text>
         ) : null}
 
+        {showSettings ? (
+          <>
         <ToggleRow
           icon="mail" bg={colors.pastel.yellow} fg={colors.pastel.yellowIcon}
           label="Email alerts"
@@ -161,13 +156,20 @@ export default function Profile() {
           onChange={onTogglePush}
           testID="profile-push-toggle"
         />
+          </>
+        ) : null}
 
+        {showProfile ? (
+          <>
         <LinkRow icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon} label="My sites" onPress={() => router.push("/sites")} testID="profile-sites" />
         <LinkRow icon="plus" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="Add a business" onPress={() => setAddBiz(true)} testID="profile-add-business" />
         <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My quote requests" onPress={() => router.push("/quotes")} testID="profile-quotes" />
         <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={async () => { await storage.setItem("uch_tour_replay", true); router.push("/dashboard"); }} testID="profile-tour" />
         <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
+          </>
+        ) : null}
 
+        {showSettings ? (
         <ToggleRow
           icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon}
           label="Demo data"
@@ -176,12 +178,14 @@ export default function Profile() {
           onChange={onToggleDemo}
           testID="profile-demo-toggle"
         />
+        ) : null}
 
         <Pressable testID="profile-logout" onPress={() => { signOut(); router.replace("/signin"); }} style={({ pressed }) => [styles.logout, pressed && { opacity: 0.9 }]}>
           <Icon name="logout" size={16} color={colors.onSurfaceSecondary} />
           <Text style={styles.logoutText}>Sign out</Text>
         </Pressable>
 
+        {showSettings ? (
         <Pressable testID="profile-delete-open" onPress={() => setShowDelete(true)} style={({ pressed }) => [styles.danger, pressed && { opacity: 0.9 }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.dangerTitle}>Request account deletion</Text>
@@ -189,13 +193,14 @@ export default function Profile() {
           </View>
           <Icon name="chevronRight" size={16} color={colors.muted} />
         </Pressable>
+        ) : null}
       </ScrollView>
 
       <AddBusinessModal visible={addBiz} onClose={() => setAddBiz(false)} onCreated={() => { setAddBiz(false); toast("Business added.", "success"); refreshBusinesses(); }} />
 
       <Modal visible={showDelete} transparent animationType="slide" onRequestClose={() => setShowDelete(false)}>
-        <Pressable style={styles.backdrop} onPress={() => !deleting && setShowDelete(false)}>
-          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}} testID="delete-account-sheet">
+        <Pressable style={[styles.backdrop, dsheet.backdrop]} onPress={() => !deleting && setShowDelete(false)}>
+          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }, dsheet.sheet]} onPress={() => {}} testID="delete-account-sheet">
             <View style={styles.grabber} />
             {deleteDone ? (
               <View style={styles.doneWrap}>
@@ -270,7 +275,6 @@ function LinkRow({ icon, bg, fg, label, onPress, testID }: { icon: IconName; bg:
 }
 
 const styles = StyleSheet.create({
-  settingsLabel: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase", color: colors.muted, marginTop: spacing.sm, marginLeft: 4 },
   root: { flex: 1, backgroundColor: colors.surfaceSecondary },
   scroll: { padding: spacing.lg, gap: 10 },
   userCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.sm, ...shadow.card },

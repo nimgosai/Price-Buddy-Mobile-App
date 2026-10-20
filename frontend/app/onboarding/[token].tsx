@@ -19,9 +19,11 @@ import { Button, Card } from "@/src/components/ui";
 import { useToast } from "@/src/components/toast";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useDesktopSheet } from "@/src/desktop/sheet";
 
 export default function ClientOnboarding() {
   const insets = useSafeAreaInsets();
+  const dsheet = useDesktopSheet();
   const router = useRouter();
   const toast = useToast();
   const { token } = useLocalSearchParams<{ token: string }>();
@@ -159,8 +161,8 @@ export default function ClientOnboarding() {
       </ScrollView>
 
       <Modal visible={callbackOpen} transparent animationType="fade" onRequestClose={() => setCallbackOpen(false)}>
-        <View style={styles.backdrop}>
-          <View style={styles.sheet} testID="callback-sheet">
+        <View style={[styles.backdrop, dsheet.backdrop]}>
+          <View style={[styles.sheet, dsheet.sheet]} testID="callback-sheet">
             <Text style={styles.sheetTitle}>Request a callback</Text>
             <TextInput testID="callback-name" value={cbName} onChangeText={setCbName} placeholder="Your name" placeholderTextColor={colors.muted} style={styles.input} />
             <TextInput testID="callback-phone" value={cbPhone} onChangeText={setCbPhone} placeholder="Phone number" placeholderTextColor={colors.muted} keyboardType="phone-pad" style={styles.input} />

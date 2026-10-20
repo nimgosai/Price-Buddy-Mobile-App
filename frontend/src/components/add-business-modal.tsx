@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, IconName } from "@/src/components/icon";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useDesktopSheet } from "@/src/desktop/sheet";
 
 type BizType = {
   key: string;
@@ -43,6 +44,7 @@ export function AddBusinessModal({
   onCreated: (biz: any) => void;
 }) {
   const insets = useSafeAreaInsets();
+  const dsheet = useDesktopSheet(620);
   const [businessType, setBusinessType] = useState("limited_company");
   const [companyName, setCompanyName] = useState("");
   const [companyNumber, setCompanyNumber] = useState("");
@@ -99,13 +101,13 @@ export function AddBusinessModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close}>
+      <Pressable style={[styles.backdrop, dsheet.backdrop]} onPress={close}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.kav}
+          style={[styles.kav, dsheet.kav]}
         >
           <Pressable
-            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
+            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }, dsheet.sheet]}
             onPress={() => {}}
             testID="new-biz-modal"
           >

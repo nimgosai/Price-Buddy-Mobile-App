@@ -1,0 +1,26 @@
+{
+  "summary": "Verified desktop (1440x900) and mobile (390x844) behaviour of the Profile/Settings split and the desktop-centred-dialog treatment for bottom sheets. All 6 requested scenarios pass: sidebar-settings shows Settings header + toggles (no add-business), sidebar-profile shows Profile header + add-business/quotes (no toggles), toggling back and forth across 3 iterations switches content every time and the sidebar active highlight follows. Delete-account sheet renders centred on desktop (560px wide, 452px tall), AddBusinessModal renders centred (620px wide, 629px tall), Site actions sheet renders centred (560px wide, 311px tall). Topbar avatar routes to Profile section, bell icon routes to Settings section. On mobile, Profile tab shows the user card, both toggles, demo toggle, all link rows, sign out and delete button in one screen; add-business and delete sheets open as full-width bottom-anchored sheets (width=390, bottom-anchored). No console errors in the flows exercised; two pre-existing deprecation warnings seen (`shadow*` style props, `props.pointerEvents`).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_36.json"],
+  "action_items": [
+    "Optional polish: sidebar nav items set accessibilityState.selected but it does not render as aria-selected on web (reads None in DOM). Visual active state still works via navActive style, so this is cosmetic for a11y only.",
+    "Optional cleanup: two console deprecation warnings appear on every page — `\"shadow*\" style props are deprecated. Use \"boxShadow\"` and `props.pointerEvents is deprecated. Use style.pointerEvents`. Not related to this change but worth tracking."
+  ],
+  "critical_code_review_comments": [
+    "useDesktopSheet() in src/desktop/sheet.ts cleanly layers desktop styles over mobile styles by returning `false` on mobile, so the mobile bottom-sheet behaviour is untouched — verified by actual bounding boxes at 390x844.",
+    "profile.tsx computes showProfile/showSettings from (isDesktop && section==='settings'); fallback for unknown section values correctly defaults to showing Profile view on desktop and the full page on mobile.",
+    "AddBusinessModal uses maxWidth=620 and SiteActionsSheet uses default 560 which satisfy the <=640 and <=600 requirements respectively."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None. No businesses created, no deletions submitted (per instructions).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Desktop login testIDs: signin-email-input, signin-password-input, signin-submit-button. Desktop sidebar testIDs: sidebar-{home|sites|reports|quotes|support|profile|settings}. Profile screen testIDs are unchanged (profile-header, profile-add-business, profile-quotes, profile-alerts-toggle, profile-push-toggle, profile-demo-toggle, profile-delete-open, delete-account-sheet, new-biz-modal, site-actions-sheet). Live account e2e_test_1786703401@example.com has 0 contracts/sites — Sites page shows the empty state but sites-add-new button is still present and opens the SiteActionsSheet."
+}
