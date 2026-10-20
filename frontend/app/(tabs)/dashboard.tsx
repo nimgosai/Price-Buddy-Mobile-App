@@ -31,6 +31,7 @@ import { useIsDesktop } from "@/src/utils/use-desktop";
 import { greeting } from "@/src/utils/greeting";
 import { DesktopDashboard } from "@/src/desktop/dashboard-desktop";
 import { RenewalsDrawer } from "@/src/desktop/renewals-desktop";
+import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
 import { sidebarSitesRef } from "@/src/desktop/portal-shell";
 import { dt } from "@/src/desktop/tokens";
 import { documentSigningService as docSvc } from "@/src/features/documents/service";
@@ -75,6 +76,9 @@ export default function Dashboard() {
   const [spend, setSpend] = useState<any | null>(null);
   const [docsToSign, setDocsToSign] = useState(0);
   const [renewalsOpen, setRenewalsOpen] = useState(false);
+  // Desktop: header business switcher filters the dashboard widgets.
+  const { activeBizId, bizQuery } = useBusiness();
+  const deskItems = activeBizId === ALL_BUSINESSES ? items : items.filter((c: any) => c.business_id === activeBizId);
 
   // Guided spotlight tour
   const scanRef = useRef<View>(null);
@@ -174,11 +178,11 @@ export default function Dashboard() {
   useFocusEffect(
     useCallback(() => {
       if (!isDesktop) return;
-      apiRequest<any>("/reports/spend").then(setSpend).catch(() => setSpend(null));
+      apiRequest<any>(`/reports/spend${bizQuery()}`).then(setSpend).catch(() => setSpend(null));
       docSvc.listDocuments()
         .then((ds) => setDocsToSign(ds.filter((d) => d.status === "awaiting_signature" || d.status === "needs_attention").length))
         .catch(() => setDocsToSign(0));
-    }, [isDesktop]),
+    }, [isDesktop, bizQuery]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -448,7 +452,7 @@ export default function Dashboard() {
           subtitle={g.subtitle}
           nudgeEl={nudgeEl}
           promoEl={promoEl}
-          items={items}
+          items={deskItems}
           audits={audits}
           contractCount={contractCount}
           docsToSign={docsToSign}
@@ -460,7 +464,7 @@ export default function Dashboard() {
           showTryIt={showTryIt}
           onOpenRenewals={() => setRenewalsOpen(true)}
         />
-        {renewalsOpen ? <RenewalsDrawer items={items} onClose={() => setRenewalsOpen(false)} /> : null}
+        {renewalsOpen ? <RenewalsDrawer items={deskItems} onClose={() => setRenewalsOpen(false)} /> : null}
         {overlays}
       </View>
     );

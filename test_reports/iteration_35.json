@@ -1,0 +1,62 @@
+{
+  "summary": "Verified all 5 desktop/mobile UI fixes requested. (1) Duplicate rendering on Support/Profile — FIXED: switching between every sidebar tab (Home, Sites, Reports, Support, Profile) shows ONLY the active screen's root testID visible; dashboard-scroll/sites-desktop/reports-desktop/support-header/profile-header are mutually exclusive on desktop (verified across 8 tab switches + scroll-to-bottom on Support and Profile). (2) Sidebar docking at 1440x700 and 1280x620 — PASS: sidebar-bottom bounding box docks within 12px of sidebar bottom (688/700 and 608/620), does not overlap sidebar-settings nav row, fully visible within viewport, user email truncated by numberOfLines=1. (3) Quotes pager — PASS: quotes-pager shows 'Showing 1–10 of 15' with 10 rows on page 1; quotes-pager-next shows 'Showing 11–15 of 15' with 5 rows on page 2; quotes-pager-prev returns to page 1; pager.bottom (971) sits inside table.bottom (972) — 1px rounding, inside the table border. (4) Sites filter row — PASS visually and via code review: sites-filter-row contains BusinessSwitcherChip (hidden when businesses<=1), sites-search and sites-add-new on the same top (0px diff). Note: the test account actually has 2 businesses on the live backend (chip renders 'All businesses (2)'); 0 sites so sites-export is correctly hidden (DOM absent). (5) Mobile 390x844 — PASS: desktop-sidebar absent, bottom tab bar renders [Home, Sites, Reports, Support, Profile] with role=tab, tapping Support navigates to /support and renders Support screen, tapping Profile navigates to /profile and renders Profile screen (Email alerts list present). Minor React Native-Web warnings only (shadow* deprecated, pointerEvents deprecated, useNativeDriver fallback) — pre-existing, not blocking.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Global (RN-Web)", "issue": "Deprecation warnings in console: 'shadow*' style props deprecated (use boxShadow); props.pointerEvents deprecated (use style.pointerEvents); useNativeDriver falling back to JS animation. Pre-existing, not caused by this iteration. Reference: console logs across all screens."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional cleanup: migrate remaining shadow* style props to boxShadow and move pointerEvents into style={} to silence RN-Web deprecation warnings.",
+    "No functional issues from this iteration — all 4 reported desktop bugs plus mobile regression are resolved."
+  ],
+  "critical_code_review_comments": [
+    "portal-shell.tsx sidebar: flex container with ScrollView (sideTop flex:1 minHeight:0) + sideBottom flexShrink:0 is the correct pattern for docking at short heights — verified at 620px.",
+    "ui.tsx Pager is rendered as the last child of <Table>, so the bottom border of the table encloses the pager row (verified visually: pager.bottom==table.bottom within 1px rounding).",
+    "(tabs)/_layout.tsx uses screenOptions callback with navigation.isFocused() to apply sceneStyle:{display:'none'} only on desktop — correct scoping; mobile is unaffected and tabs still animate normally."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100% (5/5 flows pass)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Live backend: https://wide-doc-signing.preview.emergentagent.com. Test account e2e_test_1786703401@example.com now has 2 businesses (chip visible as 'All businesses (2)'), 0 sites, 15 quotes. Signin selectors: signin-email-input / signin-password-input / signin-submit-button. Append ?notour=1 to /signin to disable spotlight tour. Desktop sidebar nav testIDs: sidebar-home, sidebar-sites, sidebar-reports, sidebar-quotes, sidebar-support, sidebar-profile, sidebar-settings. Pager testIDs follow pattern <name>-pager / -pager-prev / -pager-next (quotes-pager, sites-pager, renewals-pager).",
+  "detailed_results": {
+    "duplicate_screens_fix": {
+      "tested_tabs": ["sidebar-home", "sidebar-sites", "sidebar-reports", "sidebar-support", "sidebar-profile"],
+      "mutual_exclusion_verified_switches": 8,
+      "support_scroll_bottom_check": "only support-header visible after wheel 4000px",
+      "profile_scroll_bottom_check": "only profile-header visible after wheel 4000px",
+      "result": "PASS — no duplicate rendering"
+    },
+    "sidebar_docking": {
+      "1440x700": {"sidebar_h": 700, "bottom_bbox": "top=518,bottom=688,h=170", "overlaps_settings_nav": false, "signout_in_viewport": true},
+      "1280x620": {"sidebar_h": 620, "bottom_bbox": "top=438,bottom=608,h=170", "overlaps_settings_nav": false, "signout_in_viewport": true}
+    },
+    "quotes_pager": {
+      "page1_text": "Showing 1–10 of 15 | Previous | Page 1 of 2 | Next",
+      "page1_rows": 10,
+      "page2_text": "Showing 11–15 of 15 | Previous | Page 2 of 2 | Next",
+      "page2_rows": 5,
+      "prev_returns_to_page1": true,
+      "pager_inside_table_border": true
+    },
+    "sites_filter_row": {
+      "search_add_same_top_diff_px": 0,
+      "export_hidden_when_zero_sites": true,
+      "chip_visible": "yes (account has 2 businesses on live backend — not 1 as stated in request)",
+      "code_review": "sites-desktop.tsx:46-66 wraps chip+search+export+add in filterRow with testID=sites-filter-row; export gated by p.sites.length>0 (line 64); chip gated inside BusinessSwitcherChip when businesses.length>1."
+    },
+    "mobile_390x844": {
+      "desktop_sidebar_absent": true,
+      "bottom_tabs": ["Home", "Sites", "Reports", "Support", "Profile"],
+      "support_navigates": true,
+      "profile_navigates": true,
+      "no_duplicate_content": true
+    }
+  }
+}

@@ -12,6 +12,7 @@ import dayjs from "dayjs";
 import { Icon, IconName } from "@/src/components/icon";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
 import { CtaShimmer } from "@/src/components/cta-shimmer";
+import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
 import { dCard, dt } from "@/src/desktop/tokens";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 import { DESKTOP_CONTENT_MAX } from "@/src/utils/use-desktop";
@@ -49,9 +50,12 @@ export function DesktopDashboard(p: Props) {
       refreshControl={<RefreshControl refreshing={p.refreshing} onRefresh={p.onRefresh} />}
     >
       <View style={s.wrap}>
-        <View>
-          <Text style={s.h1}>Overview</Text>
-          <Text style={s.h1Sub}>{p.subtitle}</Text>
+        <View style={s.pageHead}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={s.h1}>Overview</Text>
+            <Text style={s.h1Sub}>{p.subtitle}</Text>
+          </View>
+          <BusinessSwitcherChip variant="desktop" testID="dashboard-business-chip" />
         </View>
         {p.nudgeEl}
         <View style={s.grid}>
@@ -420,6 +424,7 @@ function AccountManagerCard() {
 const s = StyleSheet.create({
   scroll: { padding: spacing["2xl"], paddingBottom: spacing["3xl"] },
   wrap: { width: "100%", maxWidth: DESKTOP_CONTENT_MAX + 160, alignSelf: "center", gap: spacing.xl },
+  pageHead: { flexDirection: "row", alignItems: "flex-end", gap: spacing.lg },
   h1: { fontFamily: font.bold, fontSize: type["2xl"], color: dt.text, letterSpacing: -0.5 },
   h1Sub: { fontFamily: font.regular, fontSize: type.base, color: dt.muted, marginTop: 4 },
   grid: { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl },

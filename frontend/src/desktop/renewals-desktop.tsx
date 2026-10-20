@@ -7,7 +7,7 @@ import { Icon } from "@/src/components/icon";
 import { DialogButton, SlideOver } from "@/src/desktop/overlays";
 import { dt } from "@/src/desktop/tokens";
 import {
-  Cell, DesktopPage, EmptyPanel, HeaderButton, Metric, StatusPill, TRow, Table, UtilCell, ds, util,
+  Cell, DesktopPage, EmptyPanel, HeaderButton, Metric, Pager, StatusPill, TRow, Table, UtilCell, ds, usePaged, util,
 } from "@/src/desktop/ui";
 import { colors, font, spacing, type } from "@/src/theme/theme";
 import { useBillCapture } from "@/src/desktop/upload-bill";
@@ -35,6 +35,7 @@ export function RenewalsTable({ items, testID = "renewals-table" }: { items: any
     e: (c) => daysLeft(c),
     st: (c) => daysLeft(c),
   });
+  const pg = usePaged(sorted, 10);
   return (
     <Table
       testID={testID}
@@ -50,7 +51,7 @@ export function RenewalsTable({ items, testID = "renewals-table" }: { items: any
         { key: "a", label: "", flex: 1, align: "right" },
       ]}
     >
-      {sorted.map((c, i) => (
+      {pg.rows.map((c, i) => (
         <TRow key={c.contract_id || c.id || i} testID={`renewal-row-${i}`} onPress={() => c.property_id && router.push(`/sites/${c.property_id}`)}>
           <Cell flex={1.2}><UtilCell utility={c.utility_type} /></Cell>
           <Cell flex={1.4} strong>{c.supplier_name || "Supplier TBC"}</Cell>
@@ -69,6 +70,7 @@ export function RenewalsTable({ items, testID = "renewals-table" }: { items: any
           </Cell>
         </TRow>
       ))}
+      <Pager {...pg} testID="renewals-pager" />
     </Table>
   );
 }

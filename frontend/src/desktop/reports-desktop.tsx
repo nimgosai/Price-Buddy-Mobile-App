@@ -48,9 +48,13 @@ export function ReportsDesktop({ data, loading, error, refreshing, onRefresh }: 
       subtitle="Annual estimate based on your current tariffs and usage."
       refreshing={refreshing}
       onRefresh={onRefresh}
-      actions={<HeaderButton label="Upload a bill" icon="document" onPress={() => bill.open()} testID="reports-scan-header" />}
+      actions={
+        <>
+          <BusinessSwitcherChip variant="desktop" testID="reports-business-chip" />
+          <HeaderButton label="Upload a bill" icon="document" onPress={() => bill.open()} testID="reports-scan-header" />
+        </>
+      }
     >
-      <View style={{ zIndex: 5, alignSelf: "flex-start", minWidth: 240 }}><BusinessSwitcherChip variant="reports" /></View>
       {loading && !data ? (
         <View style={s.loading} testID="reports-loading"><ActivityIndicator size="large" color={colors.brandPrimary} /></View>
       ) : error ? (

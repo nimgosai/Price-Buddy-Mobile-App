@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { useGlobalSearchParams, usePathname, useRouter, type Href } from "expo-router";
 
@@ -47,6 +47,7 @@ export function PortalSidebar() {
 
   return (
     <View style={styles.sidebar} testID="desktop-sidebar">
+      <ScrollView style={styles.sideTop} contentContainerStyle={{ paddingBottom: spacing.md }} showsVerticalScrollIndicator={false}>
       <Pressable testID="sidebar-brand" onPress={() => router.navigate("/dashboard")} style={styles.brand}>
         <Image source={require("../../assets/images/pricebuddy-mark.png")} style={styles.mark} contentFit="contain" />
         <Text style={styles.brandText}>PriceBuddy</Text>
@@ -75,8 +76,9 @@ export function PortalSidebar() {
         })}
       </View>
 
-      <View style={{ flex: 1 }} />
+      </ScrollView>
 
+      <View style={styles.sideBottom} testID="sidebar-bottom">
       <View style={styles.helpBox}>
         <Text style={styles.helpTitle}>Need a hand?</Text>
         <Text style={styles.helpSub}>Mon–Fri · 9am – 4pm UK</Text>
@@ -100,6 +102,7 @@ export function PortalSidebar() {
         >
           <Icon name="logout" size={16} color={dt.muted} />
         </Pressable>
+      </View>
       </View>
     </View>
   );
@@ -145,7 +148,9 @@ export function PortalTopBar() {
 }
 
 const styles = StyleSheet.create({
-  sidebar: { width: SIDEBAR_W, backgroundColor: dt.card, borderRightWidth: 1, borderRightColor: dt.border, paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.md },
+  sidebar: { width: SIDEBAR_W, flexDirection: "column", justifyContent: "space-between", backgroundColor: dt.card, borderRightWidth: 1, borderRightColor: dt.border, paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.md },
+  sideTop: { flex: 1, minHeight: 0, marginHorizontal: -spacing.md, paddingHorizontal: spacing.md },
+  sideBottom: { flexShrink: 0, paddingTop: spacing.md },
   brand: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: spacing.sm, height: 44, marginBottom: spacing.xl },
   mark: { width: 32, height: 32 },
   brandText: { fontFamily: font.bold, fontSize: 19, color: dt.text, letterSpacing: -0.4 },
@@ -156,7 +161,7 @@ const styles = StyleSheet.create({
   navBar: { position: "absolute", left: -spacing.md, top: 8, bottom: 8, width: 3, borderTopRightRadius: 3, borderBottomRightRadius: 3, backgroundColor: colors.brandPrimary },
   navText: { fontFamily: font.medium, fontSize: type.base, color: dt.body },
   navTextActive: { fontFamily: font.semibold, color: colors.brandPrimary },
-  helpBox: { backgroundColor: dt.canvas, borderWidth: 1, borderColor: dt.border, borderRadius: 10, padding: spacing.md, gap: 4, marginBottom: spacing.md },
+  helpBox: { backgroundColor: dt.canvas, borderWidth: 1, borderColor: dt.border, borderRadius: 10, padding: spacing.md, gap: 4, marginBottom: spacing.md, overflow: "hidden" },
   helpTitle: { fontFamily: font.semibold, fontSize: type.sm, color: dt.text },
   helpSub: { fontFamily: font.regular, fontSize: type.kicker, color: dt.muted },
   helpBtn: { flexDirection: "row", alignItems: "center", gap: 6, height: 32, marginTop: 6, borderRadius: 8, borderWidth: 1, borderColor: dt.border, justifyContent: "center", backgroundColor: dt.card },

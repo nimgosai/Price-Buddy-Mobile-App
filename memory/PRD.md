@@ -715,3 +715,9 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 - Desktop /quote/new: wizard card left + live "Your request" summary panel right (`src/desktop/quote-desktop.tsx`).
 - Upload autofill: existing flow already opens prefilled review form (/scan/review/:id) that creates the site — no change.
 - Backlog: split app/quote/new.tsx (1100 lines).
+
+## Desktop polish fixes — DONE (iteration_35)
+- Duplicate Support/Profile: inactive tab scenes hidden on desktop (sceneStyle display:none when unfocused).
+- Sidebar: scrollable menu + docked bottom help/user card.
+- Sites: unified header filter row (business switcher, search, Export CSV, Add site); 10/page pagination inside tables (Sites, Renewals, Quotes).
+- Compact "VIEWING FOR" business switcher in header on Dashboard, Sites, Reports; dashboard widgets filter by business.

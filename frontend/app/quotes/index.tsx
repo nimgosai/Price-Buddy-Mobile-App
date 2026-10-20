@@ -10,7 +10,7 @@ import { Button } from "@/src/components/ui";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { DialogButton } from "@/src/desktop/overlays";
 import { downloadCsv, today, useSort } from "@/src/desktop/table-tools";
-import { Cell, DesktopPage, EmptyPanel, HeaderButton, Metric, Panel, TRow, Table, ds } from "@/src/desktop/ui";
+import { Cell, DesktopPage, EmptyPanel, HeaderButton, Metric, Pager, Panel, TRow, Table, ds, usePaged } from "@/src/desktop/ui";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 import { useIsDesktop } from "@/src/utils/use-desktop";
 
@@ -72,6 +72,7 @@ export default function MyQuotes() {
     st: (q) => statusOf(q.status).label,
   }, { key: "d", dir: "desc" });
 
+  const pg = usePaged(sorted, 10);
   const newQuote = () => router.push("/quote/new");
 
   if (isDesktop) {
@@ -120,7 +121,7 @@ export default function MyQuotes() {
                   { key: "st", label: "Status", flex: 1.1, sortable: true },
                 ]}
               >
-                {sorted.map((q, i) => (
+                {pg.rows.map((q, i) => (
                   <TRow key={q.id || i} testID={`quote-row-${i}`}>
                     <Cell flex={1.1} muted>{fmt(q.created_at)}</Cell>
                     <Cell flex={2} strong>{siteOf(q)}</Cell>
@@ -129,6 +130,7 @@ export default function MyQuotes() {
                     <Cell flex={1.1}><StatusPill status={q.status} /></Cell>
                   </TRow>
                 ))}
+                <Pager {...pg} testID="quotes-pager" />
               </Table>
             </Panel>
           </>

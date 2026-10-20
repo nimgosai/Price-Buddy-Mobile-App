@@ -5,7 +5,7 @@ import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
 import { Icon } from "@/src/components/icon";
 import { DialogButton } from "@/src/desktop/overlays";
 import { dCard, dt } from "@/src/desktop/tokens";
-import { Cell, DesktopPage, EmptyPanel, HeaderButton, TRow, Table } from "@/src/desktop/ui";
+import { Cell, DesktopPage, EmptyPanel, HeaderButton, Pager, TRow, Table, usePaged } from "@/src/desktop/ui";
 import { colors, font, spacing, type } from "@/src/theme/theme";
 import { downloadCsv, today, useSort } from "@/src/desktop/table-tools";
 
@@ -31,6 +31,7 @@ export function SitesDesktop(p: Props) {
     p: (x) => x.postcode,
     b: (x) => p.bizName(x),
   }, { key: "n", dir: "asc" });
+  const pg = usePaged(sorted, 10);
   const exportCsv = () =>
     downloadCsv(`sites-${today()}.csv`, ["Site", "Address", "Postcode", "Business"],
       sorted.map((x) => [x.property_name || x.address || "Site", x.address || "", x.postcode || "", p.bizName(x)]));
@@ -42,33 +43,29 @@ export function SitesDesktop(p: Props) {
       refreshing={p.refreshing}
       onRefresh={p.onRefresh}
       actions={
-        <>
+        <View style={s.filterRow} testID="sites-filter-row">
+          <BusinessSwitcherChip variant="desktop" testID="sites-business-chip" />
+          <View style={s.search}>
+            <Icon name="search" size={15} color={dt.muted} />
+            <TextInput
+              testID="sites-search"
+              value={p.query}
+              onChangeText={p.setQuery}
+              placeholder="Search sites or postcodes…"
+              placeholderTextColor={dt.muted}
+              style={s.searchInput}
+            />
+            {p.query.length > 0 ? (
+              <Pressable testID="sites-search-clear" onPress={() => p.setQuery("")} hitSlop={8}>
+                <Icon name="close" size={14} color={dt.muted} />
+              </Pressable>
+            ) : null}
+          </View>
           {p.sites.length > 0 ? <HeaderButton testID="sites-export" label="Export CSV" icon="document" onPress={exportCsv} /> : null}
           <HeaderButton testID="sites-add-new" label="Add site" icon="plus" primary onPress={p.onAdd} />
-        </>
+        </View>
       }
     >
-      <View style={s.toolbar}>
-        <View style={{ minWidth: 220 }}><BusinessSwitcherChip variant="sites" /></View>
-        <View style={{ flex: 1 }} />
-        <View style={s.search}>
-          <Icon name="search" size={15} color={dt.muted} />
-          <TextInput
-            testID="sites-search"
-            value={p.query}
-            onChangeText={p.setQuery}
-            placeholder="Search sites or postcodes…"
-            placeholderTextColor={dt.muted}
-            style={s.searchInput}
-          />
-          {p.query.length > 0 ? (
-            <Pressable testID="sites-search-clear" onPress={() => p.setQuery("")} hitSlop={8}>
-              <Icon name="close" size={14} color={dt.muted} />
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
-
       {p.loading && p.sites.length === 0 ? (
         <View style={s.loading} testID="sites-loading"><ActivityIndicator size="large" color={colors.brandPrimary} /></View>
       ) : p.error ? (
@@ -103,7 +100,7 @@ export function SitesDesktop(p: Props) {
               { key: "x", label: "", flex: 0.4, align: "right" as const },
             ]}
           >
-            {sorted.map((site) => (
+            {pg.rows.map((site) => (
               <TRow key={site.id || site._id} testID={`site-card-${site.id || site._id}`} onPress={() => p.openSite(site)}>
                 <Cell flex={2}>
                   <View style={s.nameCell}>
@@ -117,6 +114,7 @@ export function SitesDesktop(p: Props) {
                 <Cell flex={0.4} align="right"><Icon name="chevronRight" size={16} color="#94A3B8" /></Cell>
               </TRow>
             ))}
+            <Pager {...pg} testID="sites-pager" />
           </Table>
         </View>
       )}
@@ -125,8 +123,8 @@ export function SitesDesktop(p: Props) {
 }
 
 const s = StyleSheet.create({
-  toolbar: { flexDirection: "row", alignItems: "center", gap: spacing.md, zIndex: 5 },
-  search: { ...dCard, flexDirection: "row", alignItems: "center", gap: spacing.sm, height: 40, width: 360, paddingHorizontal: spacing.md, borderRadius: 8 },
+  filterRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap", justifyContent: "flex-end" },
+  search: { ...dCard, flexDirection: "row", alignItems: "center", gap: spacing.sm, height: 40, width: 280, paddingHorizontal: spacing.md, borderRadius: 8 },
   searchInput: { flex: 1, minWidth: 0, height: "100%", fontFamily: font.regular, fontSize: type.sm, color: dt.text },
   loading: { height: 240, alignItems: "center", justifyContent: "center" },
   card: { ...dCard, overflow: "hidden" },

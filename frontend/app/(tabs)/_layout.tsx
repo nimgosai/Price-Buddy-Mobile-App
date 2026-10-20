@@ -28,7 +28,9 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
+        // Desktop web: fully hide inactive tab scenes so they can't show through the active page.
+        ...(isDesktop && !navigation.isFocused() ? { sceneStyle: { display: "none" as const } } : null),
         headerShown: false,
         lazy: false,
         tabBarActiveTintColor: colors.brandPrimary,
@@ -45,7 +47,7 @@ export default function TabsLayout() {
           fontFamily: font.medium,
           fontSize: 11,
         },
-      }}
+      })}
     >
       <Tabs.Screen name="dashboard" options={{ title: "Home", tabBarIcon: renderTabIcon("home") }} />
       <Tabs.Screen name="sites" options={{ title: "Sites", tabBarIcon: renderTabIcon("building") }} />

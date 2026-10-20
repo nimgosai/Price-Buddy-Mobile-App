@@ -11,7 +11,7 @@ import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 import { useIsDesktop } from "@/src/utils/use-desktop";
 import { DesktopDialog } from "@/src/desktop/overlays";
 
-type Variant = "sites" | "reports";
+type Variant = "sites" | "reports" | "desktop";
 
 const VARIANT_STYLE: Record<Variant, { bg: string; border: string; iconBg: string; iconFg: string; kicker: string }> = {
   sites: {
@@ -27,6 +27,14 @@ const VARIANT_STYLE: Record<Variant, { bg: string; border: string; iconBg: strin
     iconBg: "#1A1F36",
     iconFg: "#FFFFFF",
     kicker: "#1A1F36",
+  },
+  // Desktop portal header action area (compact, neutral).
+  desktop: {
+    bg: "#FFFFFF",
+    border: "#E2E8F0",
+    iconBg: colors.brandTertiary,
+    iconFg: colors.brandPrimary,
+    kicker: "#64748B",
   },
 };
 
@@ -106,16 +114,17 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
   );
 
   const vs = VARIANT_STYLE[variant];
-  const kicker = variant === "reports" ? "VIEWING REPORTS FOR" : "VIEWING SITES FOR";
+  const kicker = variant === "desktop" ? "VIEWING FOR" : variant === "reports" ? "VIEWING REPORTS FOR" : "VIEWING SITES FOR";
+  const compact = variant === "desktop";
 
   return (
     <>
       <Pressable
         testID={testID || `${variant}-business-chip`}
         onPress={() => setOpen(true)}
-        style={[styles.chip, { backgroundColor: vs.bg, borderColor: vs.border }]}
+        style={[styles.chip, { backgroundColor: vs.bg, borderColor: vs.border }, compact && styles.chipCompact]}
       >
-        <View style={[styles.chipIcon, { backgroundColor: vs.iconBg }]}>
+        <View style={[styles.chipIcon, { backgroundColor: vs.iconBg }, compact && styles.chipIconCompact]}>
           <Icon name="building" size={16} color={vs.iconFg} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -123,7 +132,7 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
           <Text style={styles.chipName} numberOfLines={1}>{name}</Text>
         </View>
         <View style={styles.switchWrap}>
-          <Text style={[styles.switch, { color: vs.kicker }]}>Switch</Text>
+          {compact ? null : <Text style={[styles.switch, { color: vs.kicker }]}>Switch</Text>}
           <Icon name="chevronDown" size={16} color={vs.kicker} />
         </View>
       </Pressable>
@@ -165,6 +174,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   chipIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  chipCompact: { height: 44, minWidth: 220, maxWidth: 300, paddingVertical: 0, paddingHorizontal: 10, borderRadius: 8, gap: 10 },
+  chipIconCompact: { width: 26, height: 26, borderRadius: 7 },
   chipKicker: { fontFamily: font.bold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase" },
   chipName: { fontFamily: font.bold, fontSize: type.base, color: colors.heading, marginTop: 1 },
   switch: { fontFamily: font.semibold, fontSize: type.sm },

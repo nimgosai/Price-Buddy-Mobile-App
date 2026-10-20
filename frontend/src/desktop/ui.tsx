@@ -1,4 +1,5 @@
 /** Shared desktop-web page primitives (≥1024px only). */
+import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Icon, IconName } from "@/src/components/icon";
@@ -138,6 +139,36 @@ export function UtilCell({ utility }: { utility?: string }) {
   );
 }
 
+/** Client-side pagination for desktop tables. */
+export function usePaged<T>(rows: T[], size = 10) {
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(rows.length / size));
+  const cur = Math.min(page, pages - 1);
+  return { rows: rows.slice(cur * size, cur * size + size), page: cur, pages, total: rows.length, size, setPage };
+}
+
+/** Table footer: "Showing 1–10 of 24" + Prev / Next. Rendered inside <Table> so its border closes cleanly. */
+export function Pager({ page, pages, total, size, setPage, testID = "table-pager" }: {
+  page: number; pages: number; total: number; size: number; setPage: (n: number) => void; testID?: string;
+}) {
+  const from = total === 0 ? 0 : page * size + 1;
+  const to = Math.min(total, (page + 1) * size);
+  const btn = (label: string, disabled: boolean, onPress: () => void, id: string) => (
+    <Pressable testID={`${testID}-${id}`} disabled={disabled} onPress={onPress} style={(st: any) => [s.pageBtn, disabled && { opacity: 0.4 }, st.hovered && !disabled && { backgroundColor: dt.hover }]}>
+      <Text style={s.pageBtnText}>{label}</Text>
+    </Pressable>
+  );
+  return (
+    <View style={s.pager} testID={testID}>
+      <Text style={s.pagerText}>Showing {from}–{to} of {total}</Text>
+      <View style={{ flex: 1 }} />
+      {btn("Previous", page === 0, () => setPage(page - 1), "prev")}
+      <Text style={s.pagerText}>Page {page + 1} of {pages}</Text>
+      {btn("Next", page >= pages - 1, () => setPage(page + 1), "next")}
+    </View>
+  );
+}
+
 export function StatusPill({ days }: { days: number }) {
   const t = tier(days);
   return (
@@ -205,6 +236,10 @@ const s = StyleSheet.create({
   th: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase", color: dt.muted },
   thBtn: { flexDirection: "row", alignItems: "center", gap: 4, minWidth: 0, height: 40 },
   sortArrow: { fontSize: 10, color: "#94A3B8" },
+  pager: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.lg, borderTopWidth: 1, borderTopColor: dt.border, backgroundColor: dt.canvas },
+  pagerText: { fontFamily: font.regular, fontSize: type.sm, color: dt.muted },
+  pageBtn: { height: 32, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: dt.border, backgroundColor: dt.card, alignItems: "center", justifyContent: "center" },
+  pageBtnText: { fontFamily: font.semibold, fontSize: type.sm, color: dt.text },
   td: { fontFamily: font.medium, fontSize: type.sm, color: dt.text },
   tdMuted: { fontFamily: font.regular, color: dt.muted },
   tdStrong: { fontFamily: font.semibold },
