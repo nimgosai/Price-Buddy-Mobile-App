@@ -1,6 +1,6 @@
 /** Desktop-web Reports page: metric cards, side-by-side breakdowns and contracts table (≥1024px only). */
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+
 
 import { BusinessSwitcherChip } from "@/src/components/business-switcher-chip";
 import { DialogButton } from "@/src/desktop/overlays";
@@ -9,6 +9,7 @@ import {
   Cell, DesktopPage, EmptyPanel, HeaderButton, Metric, Panel, TRow, Table, UtilCell, ds, gbp, spendOf, util,
 } from "@/src/desktop/ui";
 import { colors, font, spacing, type } from "@/src/theme/theme";
+import { useBillCapture } from "@/src/desktop/upload-bill";
 
 function Bars({ items, kind, total, testID }: { items: any[]; kind: "utility" | "site"; total: number; testID: string }) {
   const max = Math.max(1, ...items.map(spendOf));
@@ -32,7 +33,7 @@ function Bars({ items, kind, total, testID }: { items: any[]; kind: "utility" | 
 }
 
 export function ReportsDesktop({ data, loading, error, refreshing, onRefresh }: { data: any | null; loading: boolean; error: string | null; refreshing: boolean; onRefresh: () => void }) {
-  const router = useRouter();
+  const bill = useBillCapture();
   const total = Number(data?.total_annual_spend ?? 0);
   const byUtility: any[] = data?.by_utility ?? [];
   const bySite: any[] = data?.by_site ?? [];
@@ -47,7 +48,7 @@ export function ReportsDesktop({ data, loading, error, refreshing, onRefresh }: 
       subtitle="Annual estimate based on your current tariffs and usage."
       refreshing={refreshing}
       onRefresh={onRefresh}
-      actions={<HeaderButton label="Scan a bill" icon="scan" onPress={() => router.push("/scan")} testID="reports-scan-header" />}
+      actions={<HeaderButton label="Upload a bill" icon="document" onPress={() => bill.open()} testID="reports-scan-header" />}
     >
       <View style={{ zIndex: 5, alignSelf: "flex-start", minWidth: 240 }}><BusinessSwitcherChip variant="reports" /></View>
       {loading && !data ? (
@@ -60,7 +61,7 @@ export function ReportsDesktop({ data, loading, error, refreshing, onRefresh }: 
           icon="bolt"
           title="No data yet"
           sub="Once a contract is confirmed with rates, your annual spend will appear here."
-          action={<DialogButton testID="reports-scan-button" label="Scan a bill to get started" onPress={() => router.push("/scan")} />}
+          action={<DialogButton testID="reports-scan-button" label="Upload a bill to get started" onPress={() => bill.open()} />}
         />
       ) : (
         <>

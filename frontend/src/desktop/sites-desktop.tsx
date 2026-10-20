@@ -42,7 +42,7 @@ export function SitesDesktop(p: Props) {
             testID="sites-search"
             value={p.query}
             onChangeText={p.setQuery}
-            placeholder="Search sites, postcodes or meter numbers…"
+            placeholder="Search sites or postcodes…"
             placeholderTextColor={dt.muted}
             style={s.searchInput}
           />
@@ -83,7 +83,6 @@ export function SitesDesktop(p: Props) {
               { key: "a", label: "Address", flex: 2.6 },
               { key: "p", label: "Postcode", flex: 1 },
               ...(p.showBusiness ? [{ key: "b", label: "Business", flex: 1.6 }] : []),
-              { key: "m", label: "Meter / MPAN", flex: 1.6 },
               { key: "x", label: "", flex: 0.4, align: "right" as const },
             ]}
           >
@@ -98,7 +97,6 @@ export function SitesDesktop(p: Props) {
                 <Cell flex={2.6} muted>{site.address || "Address on file"}</Cell>
                 <Cell flex={1} muted>{site.postcode || "—"}</Cell>
                 {p.showBusiness ? <Cell flex={1.6} muted>{p.bizName(site)}</Cell> : null}
-                <Cell flex={1.6} muted>{site.meter_point_number || site.mpan || site.mprn || "—"}</Cell>
                 <Cell flex={0.4} align="right"><Icon name="chevronRight" size={16} color="#94A3B8" /></Cell>
               </TRow>
             ))}

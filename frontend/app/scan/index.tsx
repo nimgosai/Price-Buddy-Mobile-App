@@ -19,6 +19,9 @@ import { ScreenHeader } from "@/src/components/screen";
 import { useToast } from "@/src/components/toast";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { BillUploader } from "@/src/desktop/upload-bill";
+import { DesktopPage, Panel } from "@/src/desktop/ui";
 
 const MAX_PAGES = 4;
 const MAX_BYTES = 12 * 1024 * 1024;
@@ -29,6 +32,7 @@ export default function Scan() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
+  const isDesktop = useIsDesktop();
 
   const [pages, setPages] = useState<Page[]>([]);
   const [pdf, setPdf] = useState<Page | null>(null);
@@ -146,6 +150,17 @@ export default function Scan() {
       setPhase("idle");
     }
   }, [count, busy, pdf, pages, router]);
+
+  // DESKTOP WEB ONLY: drag-and-drop upload instead of the camera scanner.
+  if (isDesktop) {
+    return (
+      <DesktopPage testID="upload-bill-page" title="Upload a bill" subtitle="We'll extract the supplier, rates, meter numbers and renewal date automatically." maxWidth={720}>
+        <Panel>
+          <BillUploader onCancel={goBack} onUploaded={(id) => router.replace(`/scan/review/${id}`)} />
+        </Panel>
+      </DesktopPage>
+    );
+  }
 
   const heading = busy
     ? phase === "uploading"

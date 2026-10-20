@@ -1,0 +1,24 @@
+{
+  "summary": "Frontend-only testing of Desktop 'Upload bill' flow and mobile scan regression. All 7 testing requirements PASS. Desktop (1440x900) topbar-scan reads 'Upload bill' and opens bill-upload-modal with bill-dropzone ('Drag & drop your bill here · PDF, JPG or PNG · up to 12MB'), bill-browse, Cancel, bill-upload-submit disabled until a file is chosen, bill-upload-modal-close works. quick-action-scan reads 'Upload Bill' and desk-spend-scan reads 'Upload a bill' - both open the same modal. Playwright file chooser was intercepted after clicking bill-browse: selecting a generated PDF ('%PDF-1.4 test', MIME application/pdf) populated bill-file-list -> bill-file-0 shows 'test-bill.pdf 1 KB', bill-upload-submit became enabled (aria-disabled absent/false), and bill-file-remove-0 removed the file. Supplying a bad.txt file produced bill-upload-error \"'bad.txt' isn't supported. Please upload a PDF, JPG or PNG.\". Direct /scan on desktop renders upload-bill-page with bill-dropzone and NO scan-take-photo. /reports shows reports-scan-header='Upload a bill' (opens modal) and reports-scan-button='Upload a bill to get started'. /renewals shows renewals-scan-button='Upload a bill'. Code review confirmed site-detail-desktop.tsx shows 'Upload new bill' header and 'No contract on file' chips with 'Upload <utility> bill' calling bill.open(label) (not reachable at runtime - account has no sites), and dashboard-desktop.tsx has UrgentRenewalBanner (testID desk-urgent-renewals, red styling with CtaShimmer + PulseDot and desk-urgent-review button opening the renewals drawer) gated behind items.length > 0 at top of main column (not reachable at runtime - account has no renewals). Mobile (390x844) regression PASS: quick-action-scan still reads 'Scan Bill' and navigates to /scan showing the original camera flow (scan-take-photo + scan-upload-file) with NO bill-upload-modal.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_33.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "UrgentRenewalBanner and site-detail 'No contract on file' upload chips are only verifiable via code review on this test account (empty renewals/sites). Code at /app/frontend/src/desktop/dashboard-desktop.tsx:59 + lines 102-135 and /app/frontend/src/desktop/site-detail-desktop.tsx:61 + lines 111-126 looks correct.",
+    "upload-bill.tsx uses `boxShadow` and desktop sees deprecated 'shadow*' / 'pointerEvents' props warnings in console (pre-existing, not from this feature) - noise only, no action required.",
+    "No regressions detected; all testIDs documented in the request are present and functioning."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None - used existing test account e2e_test_1786703401@example.com.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Signin uses testIDs signin-email-input, signin-password-input, signin-submit-button (NOT signin-email/password/submit). Use ?notour=1 to disable spotlight tour. Desktop >=1024px, mobile <1024px. UrgentRenewalBanner and site-detail-desktop upload chips need a seeded account with renewals/sites to runtime-test; code-review only on current account.",
+  "rca_of_issue": "N/A - no bugs found"
+}

@@ -4,16 +4,19 @@
  *   side (4 cols): quick actions, add-site CTA, account manager / support
  * Mobile renders the original dashboard in app/(tabs)/dashboard.tsx.
  */
-import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { ActivityIndicator, Animated, Easing, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import dayjs from "dayjs";
 
 import { Icon, IconName } from "@/src/components/icon";
 import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
+import { CtaShimmer } from "@/src/components/cta-shimmer";
 import { dCard, dt } from "@/src/desktop/tokens";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 import { DESKTOP_CONTENT_MAX } from "@/src/utils/use-desktop";
 import { gbp, spendOf, tier, util } from "@/src/desktop/ui";
+import { useBillCapture } from "@/src/desktop/upload-bill";
 
 type Props = {
   scrollRef: React.RefObject<ScrollView | null>;
@@ -53,6 +56,7 @@ export function DesktopDashboard(p: Props) {
         {p.nudgeEl}
         <View style={s.grid}>
           <View style={s.main}>
+            {p.items.length > 0 ? <UrgentRenewalBanner items={p.items} onOpen={p.onOpenRenewals} /> : null}
             <TasksCard {...p} />
             <RenewalsCard items={p.items} loading={p.loading} contractCount={p.contractCount} onViewAll={p.onOpenRenewals} />
             <SpendCard spend={p.spend} />
@@ -65,6 +69,68 @@ export function DesktopDashboard(p: Props) {
         </View>
       </View>
     </ScrollView>
+  );
+}
+
+function PulseDot({ color }: { color: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.6)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(scale, { toValue: 2.4, duration: 1200, easing: Easing.out(Easing.ease), useNativeDriver: false }),
+          Animated.timing(scale, { toValue: 1, duration: 0, useNativeDriver: false }),
+        ]),
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 0, duration: 1200, easing: Easing.out(Easing.ease), useNativeDriver: false }),
+          Animated.timing(opacity, { toValue: 0.6, duration: 0, useNativeDriver: false }),
+        ]),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scale, opacity]);
+  return (
+    <View style={{ width: 10, height: 10, alignItems: "center", justifyContent: "center" }}>
+      <Animated.View style={{ position: "absolute", width: 10, height: 10, borderRadius: 5, backgroundColor: color, opacity, transform: [{ scale }] }} />
+      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** Red, gently shimmering call-to-action so urgent renewals can't be missed. */
+function UrgentRenewalBanner({ items, onOpen }: { items: any[]; onOpen: () => void }) {
+  const first = items[0];
+  const days = typeof first?.days_until_expiry === "number" ? first.days_until_expiry : null;
+  const counts = new Map<string, number>();
+  items.forEach((c) => { const l = util(c.utility_type).label; counts.set(l, (counts.get(l) || 0) + 1); });
+  return (
+    <View style={s.urgent} testID="desk-urgent-renewals">
+      <CtaShimmer width={900} />
+      <View style={s.urgentIcon}><Icon name="warning" size={22} color="#FFFFFF" /></View>
+      <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+          <Text style={s.urgentTitle}>{items.length} contract{items.length === 1 ? "" : "s"} ending soon</Text>
+          {days != null ? (
+            <View style={s.urgentBadge} testID="desk-urgent-days">
+              <PulseDot color="#DC2626" />
+              <Text style={s.urgentBadgeText}>{days < 0 ? `${Math.abs(days)}d overdue` : `${days} days left`}</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text style={s.urgentSub}>Lock in new rates now to avoid out-of-contract price increases.</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+          {Array.from(counts.entries()).map(([l, n]) => (
+            <View key={l} style={s.urgentChip}><Text style={s.urgentChipText}>{l} ({n})</Text></View>
+          ))}
+        </View>
+      </View>
+      <Pressable testID="desk-urgent-review" onPress={onOpen} style={(st: any) => [s.urgentBtn, st.hovered && { backgroundColor: "#991B1B" }]}>
+        <Text style={s.urgentBtnText}>Review &amp; lock in rates</Text>
+        <Icon name="chevronRight" size={16} color="#FFFFFF" />
+      </Pressable>
+    </View>
   );
 }
 
@@ -121,7 +187,7 @@ function TasksCard(p: Props) {
     tasks.push({
       key: "first-site", icon: "building", tint: colors.pastel.mintIcon, bg: "#ECFDF5",
       title: "Add your first site",
-      sub: "Scan a bill or request a quote and we'll start monitoring your renewals.",
+      sub: "Upload a bill or request a quote and we'll start monitoring your renewals.",
       cta: "Get started", onPress: () => router.push("/quote/new"),
     });
   }
@@ -184,7 +250,7 @@ function RenewalsCard({ items, loading, contractCount, onViewAll }: { items: any
             <Text style={s.taskSub}>
               {(contractCount ?? 0) > 0
                 ? "All contracts are actively monitored — we'll alert you up to 18 months before renewal."
-                : "Add a site or scan a bill and we'll track every renewal date for you."}
+                : "Add a site or upload a bill and we'll track every renewal date for you."}
             </Text>
           </View>
         </View>
@@ -230,6 +296,7 @@ function RenewalsCard({ items, loading, contractCount, onViewAll }: { items: any
 
 function SpendCard({ spend }: { spend: any | null }) {
   const router = useRouter();
+  const bill = useBillCapture();
   const total = Number(spend?.total_annual_spend ?? 0);
   const byUtil: any[] = spend?.by_utility ?? [];
   const contracts: any[] = spend?.contracts ?? [];
@@ -246,8 +313,8 @@ function SpendCard({ spend }: { spend: any | null }) {
             <Text style={s.taskTitle}>No spend data yet</Text>
             <Text style={s.taskSub}>Once a contract is confirmed with rates, your annual spend appears here.</Text>
           </View>
-          <Pressable testID="desk-spend-scan" onPress={() => router.push("/scan")} style={(st: any) => [s.taskBtn, st.hovered && { backgroundColor: dt.hover }]}>
-            <Text style={s.taskBtnText}>Scan a bill</Text>
+          <Pressable testID="desk-spend-scan" onPress={() => bill.open()} style={(st: any) => [s.taskBtn, st.hovered && { backgroundColor: dt.hover }]}>
+            <Text style={s.taskBtnText}>Upload a bill</Text>
           </Pressable>
         </View>
       ) : (
@@ -289,8 +356,9 @@ function Metric({ label, value, strong }: { label: string; value: string; strong
 
 function QuickActionsCard({ onMeter, scanRef, showTryIt, docsToSign }: { onMeter: () => void; scanRef: React.RefObject<View | null>; showTryIt: boolean; docsToSign: number }) {
   const router = useRouter();
+  const bill = useBillCapture();
   const actions: { key: string; icon: IconName; bg: string; fg: string; title: string; sub: string; badge?: string; onPress: () => void; ref?: React.RefObject<View | null> }[] = [
-    { key: "scan", icon: "scan", bg: colors.pastel.peach, fg: colors.pastel.peachIcon, title: "Scan Bill", sub: "Auto-extract rates & renewal date", badge: showTryIt ? "Try it" : undefined, onPress: () => router.push("/scan"), ref: scanRef },
+    { key: "scan", icon: "document", bg: colors.pastel.peach, fg: colors.pastel.peachIcon, title: "Upload Bill", sub: "PDF, JPG or PNG — details extracted for you", badge: showTryIt ? "Try it" : undefined, onPress: () => bill.open(), ref: scanRef },
     { key: "meter", icon: "meter", bg: colors.pastel.lavender, fg: colors.pastel.lavenderIcon, title: "Meter Installation", sub: "Book a new or smart meter", onPress: onMeter },
     { key: "docs", icon: "document", bg: "#EDE9FE", fg: "#7C3AED", title: "My Documents", sub: "Contracts, LOAs and quotes", badge: docsToSign ? `${docsToSign} to sign` : undefined, onPress: () => router.push("/documents") },
   ];
@@ -359,6 +427,19 @@ const s = StyleSheet.create({
   side: { flex: 4, minWidth: 300, gap: spacing.xl },
 
   card: { ...dCard, padding: spacing.xl, gap: spacing.lg },
+  urgent: {
+    flexDirection: "row", alignItems: "center", gap: spacing.lg, padding: spacing.xl, borderRadius: dt.radius, overflow: "hidden",
+    backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FCA5A5", boxShadow: "0 0 0 4px rgba(220,38,38,0.06), 0 6px 20px rgba(220,38,38,0.12)",
+  } as object,
+  urgentIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: "#DC2626", alignItems: "center", justifyContent: "center" },
+  urgentTitle: { fontFamily: font.bold, fontSize: type.xl, color: "#7F1D1D", letterSpacing: -0.3 },
+  urgentBadge: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#FECACA" },
+  urgentBadgeText: { fontFamily: font.semibold, fontSize: type.kicker, color: "#B91C1C" },
+  urgentSub: { fontFamily: font.regular, fontSize: type.sm, color: "#991B1B" },
+  urgentChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: "rgba(220,38,38,0.08)" },
+  urgentChipText: { fontFamily: font.medium, fontSize: type.kicker, color: "#991B1B" },
+  urgentBtn: { flexDirection: "row", alignItems: "center", gap: 6, height: 42, paddingHorizontal: 18, borderRadius: 8, backgroundColor: "#DC2626" },
+  urgentBtnText: { fontFamily: font.semibold, fontSize: type.sm, color: "#FFFFFF" },
   cardHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   cardTitle: { fontFamily: font.semibold, fontSize: type.lg, color: dt.text, letterSpacing: -0.2 },
   countPill: { minWidth: 22, height: 22, paddingHorizontal: 7, borderRadius: 11, backgroundColor: dt.subtle, alignItems: "center", justifyContent: "center" },

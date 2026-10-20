@@ -703,3 +703,8 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 - Sign-in / Sign-up: two-panel brand + form layout on desktop.
 - Remember business: saved per user and restored only if it still exists.
 - Forms/support/profile pages framed at max 760px. Mobile unchanged.
+
+## Desktop Upload Bill + Urgent Renewals banner + Sites column — DONE (iteration_32–33)
+- Desktop Sites table: Meter/MPAN column removed (details shown on site page).
+- Desktop: "Upload bill" everywhere (top bar, quick actions, reports/renewals headers, site "No contract on file" chips) opens drag-and-drop uploader (PDF/JPG/PNG, 1 PDF or up to 4 images, 12MB) → same /scans extraction → /scan/review/:id. /scan on desktop renders uploader page. Mobile keeps "Scan Bill" camera flow. (`src/desktop/upload-bill.tsx`, provider in desktop-frame)
+- Desktop home: red shimmering UrgentRenewalBanner with pulse dot when renewals exist; button opens renewals drawer.

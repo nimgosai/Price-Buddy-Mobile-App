@@ -11,6 +11,7 @@ import {
   Cell, DesktopPage, EmptyPanel, HeaderButton, Metric, Panel, StatusPill, TRow, Table, UtilCell, ds, gbp, util,
 } from "@/src/desktop/ui";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useBillCapture } from "@/src/desktop/upload-bill";
 
 const fmt = (d?: string) => (d && dayjs(d).isValid() ? dayjs(d).format("D MMM YYYY") : "—");
 const p2 = (v: any, suffix: string) => (v != null ? `${Number(v).toFixed(2)}p ${suffix}` : "—");
@@ -38,6 +39,7 @@ type Props = {
 
 export function SiteDetailDesktop(p: Props) {
   const router = useRouter();
+  const bill = useBillCapture();
   const [open, setOpen] = useState<string | null>(null);
   const withContract = p.order.filter((u) => p.utilities[u]);
   const missing = p.order.filter((u) => !p.utilities[u]);
@@ -56,7 +58,7 @@ export function SiteDetailDesktop(p: Props) {
         actions={
           <>
             <HeaderButton testID="site-detail-back" label="All sites" icon="arrowLeft" onPress={p.onBack} />
-            <HeaderButton testID="site-scan-bill" label="Scan new bill" icon="scan" primary onPress={() => router.push("/scan")} />
+            <HeaderButton testID="site-scan-bill" label="Upload new bill" icon="document" primary onPress={() => bill.open()} />
           </>
         }
       >
@@ -74,7 +76,7 @@ export function SiteDetailDesktop(p: Props) {
 
             <Panel title="Contracts & rates" testID="site-contracts-panel">
               {withContract.length === 0 ? (
-                <Text style={s.muted}>No contracts on file for this site yet — scan a bill and we&apos;ll add it once reviewed.</Text>
+                <Text style={s.muted}>No contracts on file for this site yet — upload a bill and we&apos;ll add it once reviewed.</Text>
               ) : (
                 <Table
                   testID="site-contracts-table"
@@ -115,7 +117,7 @@ export function SiteDetailDesktop(p: Props) {
                       <View key={u} style={s.chip} testID={`utility-section-${u}`}>
                         <Icon name={m.icon} size={14} color={m.color} />
                         <Text style={s.chipText}>{m.label}</Text>
-                        <DialogButton testID={`utility-add-${u}`} label={`Scan ${m.label.toLowerCase()} bill`} variant="ghost" onPress={() => router.push("/scan")} />
+                        <DialogButton testID={`utility-add-${u}`} label={`Upload ${m.label.toLowerCase()} bill`} variant="ghost" onPress={() => bill.open(m.label)} />
                       </View>
                     );
                   })}

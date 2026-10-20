@@ -9,6 +9,7 @@ import { dt } from "@/src/desktop/tokens";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 import { greeting } from "@/src/utils/greeting";
 import { SIDEBAR_W } from "@/src/utils/use-desktop";
+import { useBillCapture } from "@/src/desktop/upload-bill";
 
 /** Measured by the dashboard spotlight tour to highlight "Sites" on desktop. */
 export const sidebarSitesRef = createRef<View>();
@@ -104,6 +105,7 @@ export function PortalSidebar() {
 
 export function PortalTopBar() {
   const router = useRouter();
+  const bill = useBillCapture();
   const { user } = useAuth();
   const g = greeting();
   const name = user?.full_name?.trim()?.split(/\s+/)[0] || user?.email?.split("@")[0] || "there";
@@ -115,9 +117,9 @@ export function PortalTopBar() {
         <Text style={styles.greet} numberOfLines={1} testID="topbar-greeting">{g.salutation}, {name}</Text>
         <Text style={styles.date}>{today}</Text>
       </View>
-      <Pressable testID="topbar-scan" onPress={() => router.push("/scan")} style={(s: any) => [styles.btnOutline, s.hovered && styles.btnOutlineHover]}>
-        <Icon name="scan" size={16} color={dt.text} />
-        <Text style={styles.btnOutlineText}>Scan bill</Text>
+      <Pressable testID="topbar-scan" onPress={() => bill.open()} style={(s: any) => [styles.btnOutline, s.hovered && styles.btnOutlineHover]}>
+        <Icon name="document" size={16} color={dt.text} />
+        <Text style={styles.btnOutlineText}>Upload bill</Text>
       </Pressable>
       <Pressable testID="topbar-quote" onPress={() => router.push("/quote/new")} style={(s: any) => [styles.btnPrimary, s.hovered && { backgroundColor: colors.brandPrimaryPressed }]}>
         <Icon name="plus" size={16} color="#FFFFFF" />

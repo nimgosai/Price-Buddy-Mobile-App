@@ -10,6 +10,7 @@ import {
   Cell, DesktopPage, EmptyPanel, HeaderButton, Metric, StatusPill, TRow, Table, UtilCell, ds, util,
 } from "@/src/desktop/ui";
 import { colors, font, spacing, type } from "@/src/theme/theme";
+import { useBillCapture } from "@/src/desktop/upload-bill";
 
 const endOf = (c: any) => c.end_date || c.contract_end_date || c.renewal_date;
 export function daysLeft(c: any): number {
@@ -71,7 +72,7 @@ function Summary({ items }: { items: any[] }) {
 }
 
 export function RenewalsDesktopPage({ items, loading, error, refreshing, onRefresh }: { items: any[]; loading: boolean; error: string | null; refreshing: boolean; onRefresh: () => void }) {
-  const router = useRouter();
+  const bill = useBillCapture();
   return (
     <DesktopPage
       testID="renewals-desktop"
@@ -79,7 +80,7 @@ export function RenewalsDesktopPage({ items, loading, error, refreshing, onRefre
       subtitle="Contracts ending in the next 90 days, soonest first."
       refreshing={refreshing}
       onRefresh={onRefresh}
-      actions={<HeaderButton label="Scan a bill" icon="scan" onPress={() => router.push("/scan")} testID="renewals-scan-button" />}
+      actions={<HeaderButton label="Upload a bill" icon="document" onPress={() => bill.open()} testID="renewals-scan-button" />}
     >
       {loading ? (
         <View style={s.loading}><ActivityIndicator size="large" color={colors.brandPrimary} /></View>

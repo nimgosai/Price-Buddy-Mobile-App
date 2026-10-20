@@ -1,0 +1,23 @@
+{
+  "summary": "Frontend-only verification of Sites page after removal of METER/MPAN column from the desktop table. Desktop 1440x900: login successful, sidebar->sites navigates to sites-desktop. Column headers inside the sites-desktop subtree contain no 'Meter', 'MPAN' or 'MPRN' text (verified via scoped innerText scan of the [data-testid=\"sites-desktop\"] subtree -> hasMeter/hasMPAN/hasMPRN all False). Search input placeholder is exactly 'Search sites or postcodes…'. Account has 0 sites -> sites-empty is shown and sites-add-first is visible. sites-business-chip opens biz-switcher-dialog successfully. sites-add-new opens the Site Actions sheet. Mobile 390x844 regression: sites-desktop NOT rendered, mobile sites-header rendered -> original mobile layout preserved. Note: 'Meter' tokens were found elsewhere in the DOM but originate from unrelated mounted screens (dashboard action-meter quick action 'Meter Installation' and support screen help card 'From meter installs to supplier disputes…'); none belong to the Sites page. Code review of /app/frontend/src/desktop/sites-desktop.tsx confirms table columns are: Site, Address, Postcode, (Business when p.showBusiness), chevron — no meter/MPAN column present.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_32.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "sites.tsx filter still searches on meter_point_number/mpan/mprn fields (lines 77); harmless (no column) but can be dropped for consistency with the requirement.",
+    "sites-desktop.tsx is well-scoped (~120 lines); no DRY/size concerns."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Test account e2e_test_1786703401@example.com has 0 sites and 2 businesses so 'All businesses (2)' chip appears, biz-switcher opens biz-switcher-dialog, and sites-empty + sites-add-first are shown. For DOM-level verification of 'no Meter/MPAN/MPRN' always scope the query to [data-testid=\"sites-desktop\"] because other mounted screens (dashboard action-meter, support help card) legitimately contain the word 'Meter'.",
+  "rca_of_issue": "N/A — reported removal is confirmed in both code (columns array in sites-desktop.tsx) and runtime DOM."
+}

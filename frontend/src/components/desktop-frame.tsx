@@ -4,6 +4,7 @@ import { usePathname } from "expo-router";
 
 import { useAuth } from "@/src/auth/auth-context";
 import { PortalSidebar, PortalTopBar } from "@/src/desktop/portal-shell";
+import { BillUploadProvider } from "@/src/desktop/upload-bill";
 import { dt } from "@/src/desktop/tokens";
 import { colors } from "@/src/theme/theme";
 import {
@@ -35,6 +36,7 @@ function WebFrame({ children }: { children: React.ReactNode }) {
   // Keep the same element tree in every state so the navigator never remounts.
   return (
     <ShellInsetContext.Provider value={shell ? SIDEBAR_W : 0}>
+      <BillUploadProvider>
       <View style={[styles.fill, isDesktop && styles.row, column && styles.backdrop, shell && styles.canvas]}>
         {shell ? <PortalSidebar /> : null}
         <View style={[styles.fill, styles.minW0]}>
@@ -42,6 +44,7 @@ function WebFrame({ children }: { children: React.ReactNode }) {
           <View testID={page ? "desktop-frame-page" : undefined} style={[styles.fill, column && styles.column, page && styles.page]}>{children}</View>
         </View>
       </View>
+      </BillUploadProvider>
     </ShellInsetContext.Provider>
   );
 }
