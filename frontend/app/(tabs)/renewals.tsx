@@ -19,6 +19,8 @@ import { ScreenHeader, EmptyState } from "@/src/components/screen";
 import { Icon, IconName } from "@/src/components/icon";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { RenewalsDesktopPage } from "@/src/desktop/renewals-desktop";
 
 const UTIL_META: Record<string, { label: string; icon: IconName; color: string }> = {
   electricity: { label: "Electricity", icon: "bolt", color: "#F59E0B" },
@@ -54,6 +56,7 @@ export default function Renewals() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const narrow = width < 360;
+  const isDesktop = useIsDesktop();
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +121,10 @@ export default function Renewals() {
     const sites = groups.reduce((n, g) => n + g.sites.length, 0);
     return `${items.length} contract${items.length === 1 ? "" : "s"} across ${sites} site${sites === 1 ? "" : "s"}${bizCount > 1 ? ` · ${bizCount} businesses` : ""}`;
   })();
+
+  if (isDesktop) {
+    return <RenewalsDesktopPage items={items} loading={loading} error={error} refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <View style={styles.root}>

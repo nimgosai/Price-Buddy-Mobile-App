@@ -23,7 +23,7 @@ type BusinessState = {
   activeBusiness: Business | null;
   ready: boolean;
   switchBusiness: (id: string) => void;
-  refreshBusinesses: () => Promise<void>;
+  refreshBusinesses: () => Promise<Business[]>;
   /** "?business_id=<id>" when a specific business is active, else "" */
   bizQuery: () => string;
 };
@@ -36,12 +36,15 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const [activeBizId, setActiveBizId] = useState<string>(ALL_BUSINESSES);
   const [ready, setReady] = useState(false);
 
-  const refreshBusinesses = useCallback(async () => {
+  const refreshBusinesses = useCallback(async (): Promise<Business[]> => {
     try {
       const res = await apiRequest<Business[]>("/businesses");
-      setBusinesses(Array.isArray(res) ? res : []);
+      const list = Array.isArray(res) ? res : [];
+      setBusinesses(list);
+      return list;
     } catch {
       setBusinesses([]);
+      return [];
     }
   }, []);
 
@@ -53,9 +56,15 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     (async () => {
-      const saved = await storage.getItem<string>(ACTIVE_BIZ_KEY, ALL_BUSINESSES);
-      setActiveBizId(saved || ALL_BUSINESSES);
-      await refreshBusinesses();
+      // Remember the last business viewed, per user (falls back to the legacy shared key).
+      const userKey = `${ACTIVE_BIZ_KEY}:${user.id || user.email || "me"}`;
+      const saved =
+        (await storage.getItem<string>(userKey, "")) ||
+        (await storage.getItem<string>(ACTIVE_BIZ_KEY, ALL_BUSINESSES));
+      const list = await refreshBusinesses();
+      // Only restore a business that still exists for this user.
+      const valid = saved && saved !== ALL_BUSINESSES && list.some((b) => b.id === saved);
+      setActiveBizId(valid ? saved : ALL_BUSINESSES);
       setReady(true);
     })();
   }, [user, refreshBusinesses]);
@@ -63,7 +72,8 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const switchBusiness = useCallback((id: string) => {
     setActiveBizId(id);
     storage.setItem(ACTIVE_BIZ_KEY, id).catch(() => {});
-  }, []);
+    if (user) storage.setItem(`${ACTIVE_BIZ_KEY}:${user.id || user.email || "me"}`, id).catch(() => {});
+  }, [user]);
 
   const activeBusiness =
     activeBizId === ALL_BUSINESSES ? null : businesses.find((b) => b.id === activeBizId) || null;

@@ -13,24 +13,7 @@ import { HaveAQueryPill } from "@/src/components/have-a-query-pill";
 import { dCard, dt } from "@/src/desktop/tokens";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
 import { DESKTOP_CONTENT_MAX } from "@/src/utils/use-desktop";
-
-const UTIL: Record<string, { label: string; icon: IconName; color: string }> = {
-  electricity: { label: "Electricity", icon: "bolt", color: "#F59E0B" },
-  electric: { label: "Electricity", icon: "bolt", color: "#F59E0B" },
-  gas: { label: "Gas", icon: "fire", color: "#F97316" },
-  water: { label: "Water", icon: "droplet", color: "#3B82F6" },
-  broadband: { label: "Broadband", icon: "wifi", color: "#0EA5E9" },
-  telecoms: { label: "Telecoms", icon: "phone", color: "#10B981" },
-};
-const util = (u?: string) => UTIL[(u || "").toLowerCase()] || { label: u ? u[0].toUpperCase() + u.slice(1) : "Utility", icon: "bolt" as IconName, color: "#64748B" };
-const gbp = (n: number) => `£${Math.round(Number(n) || 0).toLocaleString("en-GB")}`;
-const spendOf = (it: any) => Number(it.annual_spend ?? it.spend ?? it.total ?? it.amount ?? it.annual_cost ?? it.total_spend ?? 0);
-
-function tier(days: number) {
-  if (days <= 30) return { color: "#B91C1C", bg: "#FEF2F2", border: "#FECACA", label: days < 0 ? `${Math.abs(days)}d overdue` : `${days} days left` };
-  if (days <= 60) return { color: "#C2410C", bg: "#FFF7ED", border: "#FED7AA", label: `${days} days left` };
-  return { color: "#92400E", bg: "#FFFBEB", border: "#FDE68A", label: `${days} days left` };
-}
+import { gbp, spendOf, tier, util } from "@/src/desktop/ui";
 
 type Props = {
   scrollRef: React.RefObject<ScrollView | null>;
@@ -50,6 +33,7 @@ type Props = {
   onMeter: () => void;
   scanRef: React.RefObject<View | null>;
   showTryIt: boolean;
+  onOpenRenewals: () => void;
 };
 
 export function DesktopDashboard(p: Props) {
@@ -70,7 +54,7 @@ export function DesktopDashboard(p: Props) {
         <View style={s.grid}>
           <View style={s.main}>
             <TasksCard {...p} />
-            <RenewalsCard items={p.items} loading={p.loading} contractCount={p.contractCount} />
+            <RenewalsCard items={p.items} loading={p.loading} contractCount={p.contractCount} onViewAll={p.onOpenRenewals} />
             <SpendCard spend={p.spend} />
           </View>
           <View style={s.side}>
@@ -111,7 +95,7 @@ function TasksCard(p: Props) {
       key: "renewals", icon: "warning", tint: "#B91C1C", bg: "#FEF2F2",
       title: `${p.items.length} contract${p.items.length === 1 ? "" : "s"} ending soon`,
       sub: typeof d === "number" ? `Earliest ends ${d < 0 ? `${Math.abs(d)} days ago` : `in ${d} days`} — lock in new rates to avoid price rises.` : "Lock in new rates to avoid out-of-contract price rises.",
-      cta: "Review rates", onPress: () => router.push("/renewals"),
+      cta: "Review rates", onPress: p.onOpenRenewals,
     });
   }
   if (p.docsToSign > 0) {
@@ -184,12 +168,12 @@ function TasksCard(p: Props) {
   );
 }
 
-function RenewalsCard({ items, loading, contractCount }: { items: any[]; loading: boolean; contractCount: number | null }) {
+function RenewalsCard({ items, loading, contractCount, onViewAll }: { items: any[]; loading: boolean; contractCount: number | null; onViewAll: () => void }) {
   const router = useRouter();
   const rows = items.slice(0, 6);
   return (
     <View style={s.card} testID="desk-renewals-card">
-      <CardHead title="Upcoming renewals" count={items.length} link={items.length ? "View all" : undefined} onLink={() => router.push("/renewals")} testID="desk-renewals-viewall" />
+      <CardHead title="Upcoming renewals" count={items.length} link={items.length ? "View all" : undefined} onLink={onViewAll} testID="desk-renewals-viewall" />
       {loading ? (
         <View style={s.loadingBox}><ActivityIndicator color={colors.brandPrimary} /></View>
       ) : rows.length === 0 ? (

@@ -695,3 +695,11 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 ## Pending — Phases 3–4
 - Phase 3: forms/overlays as desktop dialogs (max 600–720px, 2-col field pairs, close X), Renewals + contract rate cards as right slide-over drawers.
 - Phase 4: data tables / horizontal metric cards on Sites, Reports, Renewals, site detail rates.
+
+## Desktop Phases 3–4 + Sign-in + Remember Business — DONE (iteration_31)
+- Desktop dialogs (`src/desktop/overlays.tsx` DesktopDialog/SlideOver): Message us (600px), Meter installation (720px, paired rows), Request change (620px, 2x2 options), Business switcher (520px). Close X on every overlay.
+- Slide-overs: Renewals drawer from dashboard; contract rate drawer on site detail.
+- Desktop tables/metrics: Sites table, Reports (metric cards, side-by-side breakdowns, contracts table), Renewals page (summary metrics + table), Site detail (metrics + contracts & rates table).
+- Sign-in / Sign-up: two-panel brand + form layout on desktop.
+- Remember business: saved per user and restored only if it still exists.
+- Forms/support/profile pages framed at max 760px. Mobile unchanged.

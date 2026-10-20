@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 
 import { Icon, IconName } from "@/src/components/icon";
 import { colors, font } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
 
 type TabKey = "dashboard" | "sites" | "reports" | "support" | "profile";
 
@@ -21,6 +22,12 @@ const TABS: { key: TabKey; label: string; icon: IconName; route: string }[] = [
  * while browsing. `active` highlights the parent tab.
  */
 export function AppTabBar({ active }: { active?: TabKey }) {
+  // Desktop web uses the persistent left sidebar instead.
+  if (useIsDesktop()) return null;
+  return <MobileTabBar active={active} />;
+}
+
+function MobileTabBar({ active }: { active?: TabKey }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 10 : 0);

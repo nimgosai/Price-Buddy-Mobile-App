@@ -30,6 +30,7 @@ import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
 import { useIsDesktop } from "@/src/utils/use-desktop";
 import { greeting } from "@/src/utils/greeting";
 import { DesktopDashboard } from "@/src/desktop/dashboard-desktop";
+import { RenewalsDrawer } from "@/src/desktop/renewals-desktop";
 import { sidebarSitesRef } from "@/src/desktop/portal-shell";
 import { dt } from "@/src/desktop/tokens";
 import { documentSigningService as docSvc } from "@/src/features/documents/service";
@@ -73,6 +74,7 @@ export default function Dashboard() {
   // Desktop-only widgets (spend breakdown + documents awaiting signature).
   const [spend, setSpend] = useState<any | null>(null);
   const [docsToSign, setDocsToSign] = useState(0);
+  const [renewalsOpen, setRenewalsOpen] = useState(false);
 
   // Guided spotlight tour
   const scanRef = useRef<View>(null);
@@ -456,7 +458,9 @@ export default function Dashboard() {
           onMeter={() => setMeter(true)}
           scanRef={scanRef}
           showTryIt={showTryIt}
+          onOpenRenewals={() => setRenewalsOpen(true)}
         />
+        {renewalsOpen ? <RenewalsDrawer items={items} onClose={() => setRenewalsOpen(false)} /> : null}
         {overlays}
       </View>
     );

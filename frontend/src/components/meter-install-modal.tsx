@@ -15,6 +15,8 @@ import { Icon, IconName } from "@/src/components/icon";
 import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { DesktopDialog, DialogButton, FieldLabel, dialogStyles } from "@/src/desktop/overlays";
 
 type Opt = { key: string; label: string; icon: IconName; bg: string; fg: string };
 
@@ -47,6 +49,7 @@ export function MeterInstallModal({
   businessId?: string | null;
 }) {
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
   const [installType, setInstallType] = useState("smart_meter");
   const [fuel, setFuel] = useState("electricity");
   const [notes, setNotes] = useState("");
@@ -104,6 +107,114 @@ export function MeterInstallModal({
       setSending(false);
     }
   };
+
+  // DESKTOP WEB ONLY: centred dialog with paired form rows.
+  if (visible && isDesktop) {
+    return (
+      <DesktopDialog
+        testID="meter-install-modal"
+        title={done ? "Request sent" : "Meter installation"}
+        subtitle={done ? "Our team will be in touch soon." : "Tell us what you need and how to reach you."}
+        icon="meter"
+        iconBg={colors.pastel.blue}
+        iconColor={colors.pastel.blueIcon}
+        maxWidth={720}
+        onClose={close}
+        footer={done ? undefined : (
+          <>
+            <DialogButton label="Cancel" variant="ghost" onPress={close} disabled={sending} />
+            <DialogButton testID="mi-submit" label="Send request" onPress={submit} loading={sending} />
+          </>
+        )}
+      >
+        {done ? (
+          <View style={styles.doneWrap}>
+            <View style={styles.doneIcon}><Icon name="check" size={36} color={colors.pastel.mintIcon} /></View>
+          </View>
+        ) : (
+          <>
+            <View>
+              <FieldLabel>What do you need?</FieldLabel>
+              <View style={dialogStyles.row}>
+                {TYPES.map((t) => {
+                  const active = installType === t.key;
+                  return (
+                    <Pressable
+                      key={t.key}
+                      testID={`mi-type-${t.key}`}
+                      onPress={() => setInstallType(t.key)}
+                      style={[styles.typeCard, styles.typeCardDesk, active && styles.cardActive]}
+                    >
+                      <View style={[styles.typeIcon, { backgroundColor: t.bg }]}><Icon name={t.icon} size={18} color={t.fg} /></View>
+                      <Text style={styles.typeLabel}>{t.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={dialogStyles.row}>
+              <View style={dialogStyles.col}>
+                <FieldLabel>Fuel type</FieldLabel>
+                {showFuel ? (
+                  <View style={styles.fuelRow}>
+                    {FUELS.map((f) => {
+                      const active = fuel === f.key;
+                      return (
+                        <Pressable key={f.key} testID={`mi-fuel-${f.key}`} onPress={() => setFuel(f.key)} style={[styles.contactBtn, styles.fuelChipDesk, active && styles.contactBtnActive]}>
+                          <Icon name={f.icon} size={14} color={f.fg} />
+                          <Text style={[styles.contactText, active && styles.contactTextActive]}>{f.label}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.subtitle}>Not needed for this request.</Text>
+                )}
+              </View>
+              <View style={dialogStyles.col}>
+                <FieldLabel>Best contact</FieldLabel>
+                <View style={styles.contactRow}>
+                  {CONTACTS.map((c) => {
+                    const active = contact === c.key;
+                    return (
+                      <Pressable key={c.key} testID={`mi-contact-${c.key}`} onPress={() => setContact(c.key)} style={[styles.contactBtn, active && styles.contactBtnActive]}>
+                        <Text style={[styles.contactText, active && styles.contactTextActive]}>{c.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+            <View style={dialogStyles.row}>
+              <View style={dialogStyles.col}>
+                <FieldLabel>Notes (optional)</FieldLabel>
+                <TextInput
+                  testID="mi-notes"
+                  defaultValue=""
+                  onChangeText={setNotes}
+                  placeholder="e.g. our smart meter has been faulty for 2 months"
+                  placeholderTextColor={colors.muted}
+                  multiline
+                  style={[dialogStyles.input, { height: 96, textAlignVertical: "top" }]}
+                />
+              </View>
+              <View style={dialogStyles.col}>
+                <FieldLabel>Best time (optional)</FieldLabel>
+                <TextInput
+                  testID="mi-time"
+                  value={bestTime}
+                  onChangeText={setBestTime}
+                  placeholder="e.g. mornings, after 5pm"
+                  placeholderTextColor={colors.muted}
+                  style={dialogStyles.input}
+                />
+              </View>
+            </View>
+          </>
+        )}
+      </DesktopDialog>
+    );
+  }
 
   return visible ? (
     <Portal>
@@ -265,6 +376,9 @@ const styles = StyleSheet.create({
   cardActive: { borderWidth: 2, borderColor: colors.heading },
   typeIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   typeLabel: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
+  // desktop dialog variants
+  typeCardDesk: { width: undefined, flex: 1, borderRadius: 10 },
+  fuelChipDesk: { flexDirection: "row", gap: 6 },
   mini: { fontFamily: font.semibold, fontSize: type.sm, color: colors.onSurfaceSecondary, marginBottom: 6, marginTop: spacing.sm },
   fuelRow: { flexDirection: "row", gap: spacing.sm },
   fuelCard: { flex: 1, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, paddingVertical: spacing.md, alignItems: "center", gap: spacing.xs },

@@ -14,9 +14,12 @@ import { Icon } from "@/src/components/icon";
 import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { DesktopDialog, DialogButton, FieldLabel, dialogStyles } from "@/src/desktop/overlays";
 
 export function HaveAQueryPill() {
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -57,7 +60,52 @@ export function HaveAQueryPill() {
         </Text>
       </Pressable>
 
-      {open ? (
+      {open && isDesktop ? (
+        <DesktopDialog
+          testID="concierge-sheet"
+          title={success ? "Message sent" : "Message us directly"}
+          subtitle={success ? undefined : "Ask about a bill, a renewal, or a change to your account — we'll get back to you."}
+          icon="chat"
+          iconBg="#F5F3FF"
+          iconColor="#7C3AED"
+          maxWidth={600}
+          onClose={close}
+          footer={
+            success ? (
+              <DialogButton testID="concierge-done" label="Done" onPress={close} />
+            ) : (
+              <>
+                <DialogButton label="Cancel" variant="ghost" onPress={close} disabled={sending} />
+                <DialogButton testID="concierge-send" label="Send message" onPress={send} disabled={!text.trim()} loading={sending} />
+              </>
+            )
+          }
+        >
+          {success ? (
+            <View style={styles.doneWrap}>
+              <View style={styles.doneIcon}>
+                <Icon name="check" size={26} color={colors.pastel.mintIcon} />
+              </View>
+              <Text style={styles.doneSub}>
+                Thanks! A member of our team will review your query and reply within 1 business day.
+              </Text>
+            </View>
+          ) : (
+            <View>
+              <FieldLabel>Your message</FieldLabel>
+              <TextInput
+                testID="concierge-input"
+                defaultValue=""
+                onChangeText={setText}
+                placeholder="Type your message…"
+                placeholderTextColor={colors.muted}
+                multiline
+                style={[dialogStyles.input, dialogStyles.textarea, { height: 160 }]}
+              />
+            </View>
+          )}
+        </DesktopDialog>
+      ) : open ? (
         <Portal>
           <View style={StyleSheet.absoluteFill}>
             <Pressable style={styles.backdrop} onPress={close}>

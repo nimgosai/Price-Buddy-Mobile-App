@@ -22,12 +22,15 @@ import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
 import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { SitesDesktop } from "@/src/desktop/sites-desktop";
 
 export default function Sites() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeBizId, bizQuery, businesses } = useBusiness();
   const scrollRef = useTabScrollToTop();
+  const isDesktop = useIsDesktop();
 
   const [sites, setSites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +114,28 @@ export default function Sites() {
       }),
     [router],
   );
+
+  if (isDesktop) {
+    return (
+      <View style={styles.root}>
+        <SitesDesktop
+          sites={sites}
+          filtered={filtered}
+          loading={loading}
+          error={error}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          query={query}
+          setQuery={setQuery}
+          showBusiness={isAll && businesses.length > 1}
+          bizName={(s) => s.business_name || businesses.find((b) => b.id === s.business_id)?.company_name || "—"}
+          openSite={openSite}
+          onAdd={() => setSheet(true)}
+        />
+        <SiteActionsSheet visible={sheet} onClose={() => setSheet(false)} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>

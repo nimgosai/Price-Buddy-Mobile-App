@@ -18,6 +18,8 @@ import { RequestChangeModal } from "@/src/components/request-change-modal";
 import { AppTabBar } from "@/src/components/app-tab-bar";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { SiteDetailDesktop } from "@/src/desktop/site-detail-desktop";
 
 type UMeta = { label: string; icon: IconName; color: string };
 const UTIL_ORDER = ["electricity", "gas", "water", "broadband", "telecoms"] as const;
@@ -38,6 +40,7 @@ function fmt(d?: string) {
 export default function SiteDetail() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; name?: string; address?: string }>();
+  const isDesktop = useIsDesktop();
 
   const [property, setProperty] = useState<any>(null);
   const [utilities, setUtilities] = useState<Record<string, any>>({});
@@ -83,6 +86,27 @@ export default function SiteDetail() {
   // Which utilities to show: those with a contract, else all
   const present = UTIL_ORDER.filter((u) => utilities[u]);
   const shown = present.length > 0 ? present : UTIL_ORDER;
+
+  if (isDesktop) {
+    return (
+      <View style={styles.root}>
+        <SiteDetailDesktop
+          siteId={String(params.id)}
+          title={title}
+          subtitle={subtitle}
+          property={property}
+          utilities={utilities}
+          order={UTIL_ORDER}
+          loading={loading}
+          error={error}
+          reload={load}
+          onBack={() => router.navigate("/sites")}
+          onRequestChange={(c) => setRcContract({ ...c, property_id: c.property_id || params.id })}
+        />
+        <RequestChangeModal visible={!!rcContract} contract={rcContract} onClose={() => setRcContract(null)} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>

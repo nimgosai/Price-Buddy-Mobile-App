@@ -18,6 +18,8 @@ import { useBusiness } from "@/src/business/business-context";
 import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { apiRequest, ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { ReportsDesktop } from "@/src/desktop/reports-desktop";
 
 type Spend = {
   total_annual_spend: number;
@@ -82,6 +84,7 @@ export default function Reports() {
   const router = useRouter();
   const { activeBizId, bizQuery } = useBusiness();
   const scrollRef = useTabScrollToTop();
+  const isDesktop = useIsDesktop();
 
   const [data, setData] = useState<Spend | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +124,10 @@ export default function Reports() {
   const isEmpty = !loading && !error && total === 0 && byUtility.length === 0;
 
   const goBack = () => router.push("/dashboard");
+
+  if (isDesktop) {
+    return <ReportsDesktop data={data} loading={loading} error={error} refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <View style={styles.root}>

@@ -14,6 +14,7 @@ import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { ApiError } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { DesktopAuthSplit } from "@/src/desktop/auth-split";
 
 const BUSINESS_TYPES = [
   { key: "limited_company", label: "Limited company" },
@@ -93,6 +94,7 @@ export default function SignUp() {
   };
 
   return (
+    <DesktopAuthSplit>
     <View style={styles.root}>
       <ScreenHeader
         testID="signup-header"
@@ -227,6 +229,7 @@ export default function SignUp() {
         </KeyboardStickyView>
       ) : null}
     </View>
+    </DesktopAuthSplit>
   );
 }
 

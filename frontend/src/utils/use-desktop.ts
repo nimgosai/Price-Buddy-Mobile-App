@@ -9,8 +9,8 @@ export const DESKTOP_MIN_WIDTH = 1024;
 export const DESKTOP_COLUMN_WIDTH = 640;
 /** Max content width for screens that have a dedicated wide layout. */
 export const DESKTOP_CONTENT_MAX = 1120;
-/** Max content width for portal pages that don't have a dedicated wide layout yet. */
-export const DESKTOP_PAGE_MAX = 960;
+/** Max content width for portal pages without a dedicated wide layout (forms, support, profile). */
+export const DESKTOP_PAGE_MAX = 760;
 /** Persistent left sidebar width (desktop portal shell). */
 export const SIDEBAR_W = 248;
 
@@ -25,9 +25,15 @@ export function isAuthRoute(pathname: string): boolean {
     || pathname === "/" || pathname === "";
 }
 
+/** Sign-in / sign-up render their own full-width two-panel desktop layout. */
+export function isSplitAuthRoute(pathname: string): boolean {
+  return /^\/(signin|signup)\/?$/.test(pathname);
+}
+
 /** Routes that render their own wide desktop layout (full width of the portal content area). */
 export function isWideDesktopRoute(pathname: string): boolean {
-  if (/^\/dashboard\/?$/.test(pathname)) return true;
+  if (/^\/(dashboard|sites|reports|renewals)\/?$/.test(pathname)) return true;
+  if (/^\/sites\/(?!new\/?$)[^/]+\/?$/.test(pathname)) return true; // site detail
   if (/^\/documents\/?$/.test(pathname)) return true;
   if (/^\/documents\/[^/]+\/review\/?$/.test(pathname)) return true;
   return false;

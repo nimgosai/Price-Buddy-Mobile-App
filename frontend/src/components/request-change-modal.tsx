@@ -15,6 +15,8 @@ import { Icon } from "@/src/components/icon";
 import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { DesktopDialog, DialogButton, FieldLabel, dialogStyles } from "@/src/desktop/overlays";
 
 const TYPES = [
   { key: "rate_correction", label: "Unit rate / standing charge looks wrong" },
@@ -33,6 +35,7 @@ export function RequestChangeModal({
   contract: any;
 }) {
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
   const [type, setType] = useState("rate_correction");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -72,6 +75,59 @@ export function RequestChangeModal({
       setSending(false);
     }
   };
+
+  // DESKTOP WEB ONLY: centred dialog.
+  if (visible && isDesktop) {
+    return (
+      <DesktopDialog
+        testID="rc-modal"
+        title={done ? "Submitted for review" : "Request a change"}
+        subtitle={done ? "We'll be in touch within 24 hours." : "Tariff details are managed by our team to protect your renewal cycle. Tell us what you'd like updated."}
+        icon="lock"
+        maxWidth={620}
+        onClose={close}
+        footer={done ? undefined : (
+          <>
+            <DialogButton label="Cancel" variant="ghost" onPress={close} disabled={sending} />
+            <DialogButton testID="rc-submit" label="Submit for review" onPress={submit} disabled={!message.trim()} loading={sending} />
+          </>
+        )}
+      >
+        {done ? (
+          <View style={styles.doneWrap}><Icon name="check" size={44} color={colors.pastel.mintIcon} /></View>
+        ) : (
+          <>
+            <View>
+              <FieldLabel>What needs changing?</FieldLabel>
+              <View style={styles.optGridDesk}>
+                {TYPES.map((t) => {
+                  const active = type === t.key;
+                  return (
+                    <Pressable key={t.key} testID={`rc-type-${t.key}`} onPress={() => setType(t.key)} style={[styles.opt, styles.optDesk, active && styles.optActive]}>
+                      <Ionicons name={active ? "radio-button-on" : "radio-button-off"} size={18} color={active ? colors.brandPrimary : colors.muted} />
+                      <Text style={styles.optText}>{t.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View>
+              <FieldLabel>Details</FieldLabel>
+              <TextInput
+                testID="rc-message"
+                defaultValue=""
+                onChangeText={setMessage}
+                placeholder="e.g. The day rate on my bill is 32.4p but the app shows 28.1p"
+                placeholderTextColor={colors.muted}
+                multiline
+                style={[dialogStyles.input, dialogStyles.textarea]}
+              />
+            </View>
+          </>
+        )}
+      </DesktopDialog>
+    );
+  }
 
   return visible ? (
     <Portal>
@@ -173,6 +229,8 @@ const styles = StyleSheet.create({
   opt: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
   optActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
   optText: { flex: 1, fontFamily: font.medium, fontSize: type.base, color: colors.heading },
+  optGridDesk: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  optDesk: { flexBasis: "48%", flexGrow: 1, borderRadius: 8 },
   textarea: {
     height: 96,
     borderWidth: 1,

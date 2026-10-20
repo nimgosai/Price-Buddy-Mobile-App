@@ -7,7 +7,7 @@ import { PortalSidebar, PortalTopBar } from "@/src/desktop/portal-shell";
 import { dt } from "@/src/desktop/tokens";
 import { colors } from "@/src/theme/theme";
 import {
-  DESKTOP_COLUMN_WIDTH, DESKTOP_PAGE_MAX, SIDEBAR_W, isAuthRoute, isWideDesktopRoute, useIsDesktop,
+  DESKTOP_COLUMN_WIDTH, DESKTOP_PAGE_MAX, SIDEBAR_W, isAuthRoute, isSplitAuthRoute, isWideDesktopRoute, useIsDesktop,
 } from "@/src/utils/use-desktop";
 
 /** Width taken by the desktop sidebar (0 when no portal shell is shown). */
@@ -30,7 +30,7 @@ function WebFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const shell = isDesktop && !!user && !isAuthRoute(pathname);
-  const column = isDesktop && !shell;
+  const column = isDesktop && !shell && !isSplitAuthRoute(pathname);
   const page = shell && !isWideDesktopRoute(pathname);
   // Keep the same element tree in every state so the navigator never remounts.
   return (
@@ -39,7 +39,7 @@ function WebFrame({ children }: { children: React.ReactNode }) {
         {shell ? <PortalSidebar /> : null}
         <View style={[styles.fill, styles.minW0]}>
           {shell ? <PortalTopBar /> : null}
-          <View style={[styles.fill, column && styles.column, page && styles.page]}>{children}</View>
+          <View testID={page ? "desktop-frame-page" : undefined} style={[styles.fill, column && styles.column, page && styles.page]}>{children}</View>
         </View>
       </View>
     </ShellInsetContext.Provider>

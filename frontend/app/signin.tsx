@@ -10,6 +10,7 @@ import { useToast } from "@/src/components/toast";
 import { useAuth } from "@/src/auth/auth-context";
 import { ApiError } from "@/src/api/client";
 import { colors, font, spacing, type } from "@/src/theme/theme";
+import { DesktopAuthSplit } from "@/src/desktop/auth-split";
 
 export default function SignIn() {
   const insets = useSafeAreaInsets();
@@ -64,6 +65,7 @@ export default function SignIn() {
   };
 
   return (
+    <DesktopAuthSplit>
     <View style={styles.root}>
       <KeyboardAwareScrollView
         contentContainerStyle={[
@@ -177,6 +179,7 @@ export default function SignIn() {
         </Pressable>
       </KeyboardAwareScrollView>
     </View>
+    </DesktopAuthSplit>
   );
 }
 

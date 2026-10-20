@@ -8,6 +8,8 @@ import { AddBusinessModal } from "@/src/components/add-business-modal";
 import { useToast } from "@/src/components/toast";
 import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useIsDesktop } from "@/src/utils/use-desktop";
+import { DesktopDialog } from "@/src/desktop/overlays";
 
 type Variant = "sites" | "reports";
 
@@ -36,54 +38,67 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
   const toast = useToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
 
   if (businesses.length <= 1) return null;
 
   const name =
     activeBizId === ALL_BUSINESSES ? `All businesses (${businesses.length})` : activeBusiness?.company_name || "—";
 
-  const renderSheet = () => (
+  const optionsEl = (
+    <>
+    <Option
+      testID="biz-option-all"
+      label={`All businesses (${businesses.length})`}
+      sub="See everything in one list"
+      active={activeBizId === ALL_BUSINESSES}
+      onPress={() => { switchBusiness(ALL_BUSINESSES); setOpen(false); }}
+    />
+    {businesses.map((b) => (
+      <Option
+        key={b.id}
+        testID={`biz-option-${b.id}`}
+        label={b.company_name}
+        sub={`${b.site_count ?? 0} site${(b.site_count ?? 0) === 1 ? "" : "s"} · ${b.contract_count ?? 0} contract${(b.contract_count ?? 0) === 1 ? "" : "s"}`}
+        active={activeBizId === b.id}
+        onPress={() => { switchBusiness(b.id); setOpen(false); }}
+      />
+    ))}
+    <Pressable testID="biz-add-site" onPress={() => { setOpen(false); router.push("/sites/new"); }} style={styles.addRow}>
+      <View style={styles.addIcon}>
+        <Icon name="mapPin" size={16} color={colors.brandPrimary} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.addLabel}>Add a new site</Text>
+        <Text style={styles.addSub}>A branch, premises or meter for this business</Text>
+      </View>
+    </Pressable>
+    <Pressable testID="biz-add-business" onPress={() => { setOpen(false); setAddBiz(true); }} style={styles.addRow}>
+      <View style={styles.addIcon}>
+        <Icon name="plus" size={16} color={colors.brandPrimary} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.addLabel}>Add a new business</Text>
+        <Text style={styles.addSub}>A separate legal company you manage</Text>
+      </View>
+    </Pressable>
+    </>
+  );
+
+  const renderSheet = () => isDesktop ? (
+    open ? (
+      <DesktopDialog testID="biz-switcher-dialog" title="Switch business" subtitle="Choose which business to view" icon="building" maxWidth={520} onClose={() => setOpen(false)}>
+        {optionsEl}
+      </DesktopDialog>
+    ) : null
+  ) : (
     <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
       <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
         <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}}>
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle}>Switch business</Text>
           <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-            <Option
-              testID="biz-option-all"
-              label={`All businesses (${businesses.length})`}
-              sub="See everything in one list"
-              active={activeBizId === ALL_BUSINESSES}
-              onPress={() => { switchBusiness(ALL_BUSINESSES); setOpen(false); }}
-            />
-            {businesses.map((b) => (
-              <Option
-                key={b.id}
-                testID={`biz-option-${b.id}`}
-                label={b.company_name}
-                sub={`${b.site_count ?? 0} site${(b.site_count ?? 0) === 1 ? "" : "s"} · ${b.contract_count ?? 0} contract${(b.contract_count ?? 0) === 1 ? "" : "s"}`}
-                active={activeBizId === b.id}
-                onPress={() => { switchBusiness(b.id); setOpen(false); }}
-              />
-            ))}
-            <Pressable testID="biz-add-site" onPress={() => { setOpen(false); router.push("/sites/new"); }} style={styles.addRow}>
-              <View style={styles.addIcon}>
-                <Icon name="mapPin" size={16} color={colors.brandPrimary} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.addLabel}>Add a new site</Text>
-                <Text style={styles.addSub}>A branch, premises or meter for this business</Text>
-              </View>
-            </Pressable>
-            <Pressable testID="biz-add-business" onPress={() => { setOpen(false); setAddBiz(true); }} style={styles.addRow}>
-              <View style={styles.addIcon}>
-                <Icon name="plus" size={16} color={colors.brandPrimary} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.addLabel}>Add a new business</Text>
-                <Text style={styles.addSub}>A separate legal company you manage</Text>
-              </View>
-            </Pressable>
+            {optionsEl}
           </ScrollView>
         </Pressable>
       </Pressable>
