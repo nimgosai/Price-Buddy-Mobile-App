@@ -159,15 +159,7 @@ type Task = { key: string; icon: IconName; tint: string; bg: string; title: stri
 function TasksCard(p: Props) {
   const router = useRouter();
   const tasks: Task[] = [];
-  if (p.items.length > 0) {
-    const d = p.items[0]?.days_until_expiry;
-    tasks.push({
-      key: "renewals", icon: "warning", tint: "#B91C1C", bg: "#FEF2F2",
-      title: `${p.items.length} contract${p.items.length === 1 ? "" : "s"} ending soon`,
-      sub: typeof d === "number" ? `Earliest ends ${d < 0 ? `${Math.abs(d)} days ago` : `in ${d} days`} — lock in new rates to avoid price rises.` : "Lock in new rates to avoid out-of-contract price rises.",
-      cta: "Review rates", onPress: p.onOpenRenewals,
-    });
-  }
+  // Renewals are surfaced by the red banner above, so tasks stay focused on other actions.
   if (p.docsToSign > 0) {
     tasks.push({
       key: "docs", icon: "document", tint: "#7C3AED", bg: "#F5F3FF",
@@ -266,6 +258,7 @@ function RenewalsCard({ items, loading, contractCount, onViewAll }: { items: any
             <Text style={[s.th, s.cSite]}>Site</Text>
             <Text style={[s.th, s.cDate]}>Ends</Text>
             <Text style={[s.th, s.cStatus]}>Status</Text>
+            <Text style={[s.th, s.cAction, { textAlign: "right" }]}>Action</Text>
           </View>
           {rows.map((c: any, i: number) => {
             const m = util(c.utility_type);
@@ -273,11 +266,10 @@ function RenewalsCard({ items, loading, contractCount, onViewAll }: { items: any
             const days = c.days_until_expiry ?? (end ? dayjs(end).startOf("day").diff(dayjs().startOf("day"), "day") : 0);
             const t = tier(days);
             return (
-              <Pressable
+              <View
                 key={c.contract_id || c.id || i}
                 testID={`desk-renewal-row-${i}`}
-                onPress={() => c.property_id && router.push(`/sites/${c.property_id}`)}
-                style={(st: any) => [s.tr, s.rowDivider, st.hovered && { backgroundColor: dt.canvas }]}
+                style={[s.tr, s.rowDivider]}
               >
                 <View style={[s.cUtil, s.utilCell]}>
                   <View style={[s.utilDot, { backgroundColor: `${m.color}1F` }]}><Icon name={m.icon} size={13} color={m.color} /></View>
@@ -289,7 +281,23 @@ function RenewalsCard({ items, loading, contractCount, onViewAll }: { items: any
                 <View style={s.cStatus}>
                   <View style={[s.statusPill, { backgroundColor: t.bg, borderColor: t.border }]}><Text style={[s.statusText, { color: t.color }]}>{t.label}</Text></View>
                 </View>
-              </Pressable>
+                <View style={[s.cAction, s.actionCell]}>
+                  <Pressable
+                    testID={`desk-renewal-review-${i}`}
+                    onPress={() => c.property_id && router.push(`/sites/${c.property_id}`)}
+                    style={(st: any) => [s.rowBtnGhost, st.hovered && { backgroundColor: dt.hover }]}
+                  >
+                    <Text style={s.rowBtnGhostText}>Review</Text>
+                  </Pressable>
+                  <Pressable
+                    testID={`desk-renewal-quote-${i}`}
+                    onPress={() => router.push({ pathname: "/quote/new", params: { propertyId: String(c.property_id || ""), utility: c.utility_type || "", contractId: c.contract_id || c.id || "", incumbent: c.supplier_name || "" } })}
+                    style={(st: any) => [s.rowBtn, st.hovered && { backgroundColor: colors.brandPrimaryPressed }]}
+                  >
+                    <Text style={s.rowBtnText}>Get quote</Text>
+                  </Pressable>
+                </View>
+              </View>
             );
           })}
         </View>
@@ -454,7 +462,7 @@ const s = StyleSheet.create({
   loadingBox: { height: 80, alignItems: "center", justifyContent: "center" },
 
   emptyRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: dt.canvas, borderRadius: 10, padding: spacing.lg, borderWidth: 1, borderColor: dt.subtle },
-  taskRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md },
+  taskRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.lg },
   rowDivider: { borderTopWidth: 1, borderTopColor: dt.subtle },
   taskIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   taskTitle: { fontFamily: font.semibold, fontSize: type.base, color: dt.text },
@@ -475,6 +483,12 @@ const s = StyleSheet.create({
   cSite: { flex: 2 },
   cDate: { flex: 1.1 },
   cStatus: { flex: 1.1, alignItems: "flex-start" },
+  cAction: { flex: 1.7 },
+  actionCell: { flexDirection: "row", justifyContent: "flex-end", gap: 6 },
+  rowBtn: { height: 30, paddingHorizontal: 10, borderRadius: 6, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  rowBtnText: { fontFamily: font.semibold, fontSize: type.kicker, color: "#FFFFFF" },
+  rowBtnGhost: { height: 30, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: dt.border, backgroundColor: dt.card, alignItems: "center", justifyContent: "center" },
+  rowBtnGhostText: { fontFamily: font.semibold, fontSize: type.kicker, color: dt.text },
   utilCell: { flexDirection: "row", alignItems: "center", gap: 8 },
   utilDot: { width: 26, height: 26, borderRadius: 7, alignItems: "center", justifyContent: "center" },
   statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, borderWidth: 1 },

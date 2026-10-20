@@ -725,3 +725,6 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 ## Desktop sheets + Profile/Settings split — DONE (iteration_36)
 - `src/desktop/sheet.ts` useDesktopSheet(): bottom sheets become centred cards on desktop (delete account, add business, site actions, select pickers, onboarding callback).
 - Desktop Profile vs Settings are separate views (/profile?section=profile | settings). Mobile unchanged.
+
+## Dashboard refinement — DONE (iteration_37)
+- Desktop Active tasks exclude renewals (red banner covers them); Upcoming renewals table rows have Review + Get quote actions (row itself not clickable).

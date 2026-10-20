@@ -1,0 +1,24 @@
+{
+  "summary": "Verified desktop dashboard-desktop.tsx changes at 1440x900 and mobile 390x844 against live backend. Desktop: desk-tasks-card visible, NO desk-task-renewals present (confirmed via DOM scan inside desk-tasks-card). Tasks card shows two actionable rows for this account - desk-task-docs ('10 documents awaiting your signature') and desk-task-first-site ('Add your first site'). desk-task-docs-cta ('Review & sign') successfully navigates to /documents and the My Documents screen renders. Column order verified by bounding-box Y positions: desk-tasks-card y=244 < desk-renewals-card y=497 < desk-spend-card y=680. Test account has no urgent renewals so UrgentRenewalBanner (desk-urgent-renewals) does NOT render and the Upcoming renewals table shows the empty state 'No contracts ending in the next 90 days' (verified via desk-renewals-card inner text; no desk-renewal-row-* nodes). Code review of /app/frontend/src/desktop/dashboard-desktop.tsx confirms the renewals-row contract matches the spec: table header renders a right-aligned 'Action' column (line 261), each row includes testID=desk-renewal-review-{i} that routes to /sites/{property_id} (lines 287-291) and testID=desk-renewal-quote-{i} that routes to /quote/new with params propertyId/utility/contractId/incumbent (lines 294-299); the TasksCard no longer pushes a renewals task (comment at line 162 and no `desk-task-renewals` string anywhere in /app/frontend). Mobile 390x844: dashboard renders original mobile layout (dashboard-greeting, quick-action-scan, action-meter, home-my-documents etc.) with ZERO desk-* testIDs on the page. No functional console errors observed; only pre-existing deprecation warnings (shadow* style props, props.pointerEvents, expo-notifications web, Animated useNativeDriver).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_37.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "dashboard-desktop.tsx line 63 gates UrgentRenewalBanner on items.length>0; correct — empty-state account shows no banner.",
+    "TasksCard (lines 161-189) builds the tasks array from docsToSign/audits[0]/contractCount only. The renewals branch has been intentionally removed (comment line 162) and no desk-task-renewals testID exists anywhere in /app/frontend.",
+    "RenewalsCard header row (lines 255-262) now includes `<Text style={[s.th, s.cAction, { textAlign: 'right' }]}>Action</Text>` and each row's trailing cell (lines 285-300) renders both desk-renewal-review-{i} and desk-renewal-quote-{i} buttons with the exact nav targets requested (push(`/sites/${property_id}`) and push({pathname:'/quote/new', params:{propertyId, utility, contractId, incumbent}}).",
+    "Row-level outer Pressable (line 269-274) still navigates to /sites on click; the inner Review Pressable duplicates the same action which is harmless. The Get-quote inner Pressable does NOT stopPropagation so clicking it will also fire the outer row navigation to /sites/{id} on web (both are routed through expo-router.push). If the intent is that only /quote/new fires on Get-quote tap, consider adding e.stopPropagation or splitting out the row navigation — purely cosmetic for empty-state account but worth noting for accounts with renewals."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Desktop login: /signin?notour=1 with e2e_test_1786703401@example.com / Password123!. This account has 10 awaiting-signature mock docs and 0 contracts/sites so Active tasks shows desk-task-docs + desk-task-first-site, Upcoming renewals shows the no-contracts empty state, Spend breakdown shows 'No spend data yet'. desk-tasks-card y=244, desk-renewals-card y=497, desk-spend-card y=680 at 1440x900. If renewal rows need to be exercised, seed a contract via broker/backend first; the Review/Get-quote testIDs are desk-renewal-review-{i} / desk-renewal-quote-{i}. Mobile layout at 390x844 is completely untouched (no desk-* testIDs rendered)."
+}
