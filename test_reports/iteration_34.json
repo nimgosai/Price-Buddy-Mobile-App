@@ -1,0 +1,64 @@
+{
+  "summary": "Verified all requested desktop + mobile features for the new /quotes page, desktop /quote/new live summary panel, sites/renewals empty states and profile → /quotes link. All 5 flows pass. Minor: sidebar-quotes active state is applied via styling (activeKey matches both /quotes and /quote/new) but aria-selected does not propagate to the web DOM via accessibilityState in React Native Web — visual active still works. Code review: /app/frontend/app/quote/new.tsx is 1101 lines (>700 guideline) and should be split.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "PortalSidebar quotes nav item", "issue": "accessibilityState={{selected: on}} does not render as aria-selected on web for Pressable with role=link; visual active state (navActive) is applied correctly, but screen-reader/aria assertion fails. Reference: /app/frontend/src/desktop/portal-shell.tsx:65-67"}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Consider splitting /app/frontend/app/quote/new.tsx (1101 lines) into smaller modules (SupplierPicker, MeterGroup/MeterFields, ReviewStep, SupplierStep already exist inline — move to /app/frontend/src/quote/*).",
+    "Optional: add testID-based active marker (e.g. aria-current='page') to desktop sidebar nav items so screen-reader state is exposed on web; current implementation only sets accessibilityState which RN-Web ignores for links."
+  ],
+  "critical_code_review_comments": [
+    "quote/new.tsx exceeds 700-line guideline (1101 lines)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Signin selectors are signin-email-input / signin-password-input / signin-submit-button. Test account e2e_test_1786703401@example.com has ~15 pending quotes and 0 sites/renewals. CSV download works via page.expect_download. Live backend is at EXPO_PUBLIC_BACKEND_URL (https://wide-doc-signing.preview.emergentagent.com).",
+  "detailed_results": {
+    "desktop_quotes_page": {
+      "quotes-desktop_visible": true,
+      "quotes-table_visible": true,
+      "row_count": 15,
+      "default_sort_requested_desc_indicator": "▼ (header text 'REQUESTED\\n▼')",
+      "site_sort_asc_header": "'BUSINESS / SITE\\n▲'",
+      "site_sort_desc_header": "'BUSINESS / SITE\\n▼'",
+      "site_sort_reorders_rows": true,
+      "status_sort_works": true,
+      "csv_filename": "quote-requests-2026-10-20.csv (matches quote-requests-YYYY-MM-DD.csv)",
+      "csv_header": "Requested,Business / site,Postcode,Services,Status",
+      "csv_total_lines": 16,
+      "quotes-new_navigates_to_/quote/new": true,
+      "sidebar-quotes_aria-selected": "None (but navActive style applied; activeKey regex matches /quotes and /quote/new)"
+    },
+    "desktop_quote_new": {
+      "quote-summary-panel_visible": true,
+      "selecting_electric_populates_summary_services": "'Electric' chip shown in quote-summary-services",
+      "typing_business_name_updates_quote-summary-site": "'Acme Testing Ltd' reflected in quote-summary-site"
+    },
+    "sites_renewals_empty": {
+      "sites-empty_visible": true, "sites-table_hidden": true, "sites-export_hidden": true,
+      "renewals-empty_visible": true, "renewals-table_hidden": true, "renewals-export_hidden": true,
+      "code_review": "Both desktop files wire useSort + downloadCsv correctly; export buttons gated by items.length > 0 / sites.length > 0."
+    },
+    "profile_quotes_link": {
+      "profile-quotes_present": true,
+      "navigates_to": "/quotes (not /quote/new) — correct"
+    },
+    "mobile_390x844": {
+      "quotes-header_visible": true,
+      "quote-card-0_visible": true,
+      "card_shows_Pending_review_pill": true,
+      "quotes-table_absent_on_mobile": true,
+      "quote-summary-panel_absent_on_mobile_/quote/new": true
+    }
+  }
+}

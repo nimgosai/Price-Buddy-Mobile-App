@@ -11,6 +11,7 @@ import {
 } from "@/src/desktop/ui";
 import { colors, font, spacing, type } from "@/src/theme/theme";
 import { useBillCapture } from "@/src/desktop/upload-bill";
+import { downloadCsv, today, useSort } from "@/src/desktop/table-tools";
 
 const endOf = (c: any) => c.end_date || c.contract_end_date || c.renewal_date;
 export function daysLeft(c: any): number {
@@ -20,22 +21,36 @@ export function daysLeft(c: any): number {
 }
 const fmtDate = (d?: string) => (d && dayjs(d).isValid() ? dayjs(d).format("D MMM YYYY") : "—");
 
+export const renewalCsv = (items: any[]) =>
+  downloadCsv(`renewals-${today()}.csv`, ["Utility", "Supplier", "Site", "Postcode", "Business", "Contract end date", "Days left"],
+    items.map((c) => [util(c.utility_type).label, c.supplier_name || "", c.property_name || "", c.postcode || "", c.business_name || "", endOf(c) || "", daysLeft(c)]));
+
 export function RenewalsTable({ items, testID = "renewals-table" }: { items: any[]; testID?: string }) {
   const router = useRouter();
+  const { sorted, sort, onSort } = useSort(items, {
+    u: (c) => util(c.utility_type).label,
+    s: (c) => c.supplier_name,
+    site: (c) => c.property_name,
+    b: (c) => c.business_name,
+    e: (c) => daysLeft(c),
+    st: (c) => daysLeft(c),
+  });
   return (
     <Table
       testID={testID}
+      sort={sort}
+      onSort={onSort}
       cols={[
-        { key: "u", label: "Utility", flex: 1.2 },
-        { key: "s", label: "Supplier", flex: 1.4 },
-        { key: "site", label: "Site", flex: 2 },
-        { key: "b", label: "Business", flex: 1.5 },
-        { key: "e", label: "Ends", flex: 1.1 },
-        { key: "st", label: "Status", flex: 1.1 },
+        { key: "u", label: "Utility", flex: 1.2, sortable: true },
+        { key: "s", label: "Supplier", flex: 1.4, sortable: true },
+        { key: "site", label: "Site", flex: 2, sortable: true },
+        { key: "b", label: "Business", flex: 1.5, sortable: true },
+        { key: "e", label: "Ends", flex: 1.1, sortable: true },
+        { key: "st", label: "Status", flex: 1.1, sortable: true },
         { key: "a", label: "", flex: 1, align: "right" },
       ]}
     >
-      {items.map((c, i) => (
+      {sorted.map((c, i) => (
         <TRow key={c.contract_id || c.id || i} testID={`renewal-row-${i}`} onPress={() => c.property_id && router.push(`/sites/${c.property_id}`)}>
           <Cell flex={1.2}><UtilCell utility={c.utility_type} /></Cell>
           <Cell flex={1.4} strong>{c.supplier_name || "Supplier TBC"}</Cell>
@@ -80,7 +95,12 @@ export function RenewalsDesktopPage({ items, loading, error, refreshing, onRefre
       subtitle="Contracts ending in the next 90 days, soonest first."
       refreshing={refreshing}
       onRefresh={onRefresh}
-      actions={<HeaderButton label="Upload a bill" icon="document" onPress={() => bill.open()} testID="renewals-scan-button" />}
+      actions={
+        <>
+          {items.length > 0 ? <HeaderButton label="Export CSV" icon="document" onPress={() => renewalCsv(items)} testID="renewals-export" /> : null}
+          <HeaderButton label="Upload a bill" icon="document" onPress={() => bill.open()} testID="renewals-scan-button" />
+        </>
+      }
     >
       {loading ? (
         <View style={s.loading}><ActivityIndicator size="large" color={colors.brandPrimary} /></View>

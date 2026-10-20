@@ -14,11 +14,12 @@ import { useBillCapture } from "@/src/desktop/upload-bill";
 /** Measured by the dashboard spotlight tour to highlight "Sites" on desktop. */
 export const sidebarSitesRef = createRef<View>();
 
-type NavKey = "home" | "sites" | "reports" | "support" | "profile" | "settings";
+type NavKey = "home" | "sites" | "reports" | "quotes" | "support" | "profile" | "settings";
 const NAV: { key: NavKey; label: string; icon: IconName; href: Href }[] = [
   { key: "home", label: "Home", icon: "home", href: "/dashboard" },
   { key: "sites", label: "Sites", icon: "building", href: "/sites" },
   { key: "reports", label: "Reports", icon: "bolt", href: "/reports" },
+  { key: "quotes", label: "Quotes", icon: "document", href: "/quotes" },
   { key: "support", label: "Support", icon: "phone", href: "/support" },
   { key: "profile", label: "Profile", icon: "user", href: "/profile" },
   { key: "settings", label: "Settings", icon: "lock", href: { pathname: "/profile", params: { section: "settings" } } },
@@ -28,6 +29,7 @@ function activeKey(pathname: string, section?: string): NavKey | null {
   if (/^\/(dashboard|renewals|documents)(\/|$)/.test(pathname)) return "home";
   if (/^\/(sites|contracts)(\/|$)/.test(pathname)) return "sites";
   if (/^\/reports(\/|$)/.test(pathname)) return "reports";
+  if (/^\/(quotes|quote)(\/|$)/.test(pathname)) return "quotes";
   if (/^\/support(\/|$)/.test(pathname)) return "support";
   if (/^\/profile(\/|$)/.test(pathname)) return section === "settings" ? "settings" : "profile";
   return null;

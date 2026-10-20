@@ -71,15 +71,35 @@ export function Panel({ title, right, children, testID, pad = true }: { title?: 
   );
 }
 
-export type Col = { key: string; label: string; flex?: number; align?: "left" | "right" };
+export type Col = { key: string; label: string; flex?: number; align?: "left" | "right"; sortable?: boolean };
 
-export function Table({ cols, children, testID }: { cols: Col[]; children: React.ReactNode; testID?: string }) {
+export function Table({ cols, children, testID, sort, onSort }: {
+  cols: Col[]; children: React.ReactNode; testID?: string;
+  sort?: { key: string; dir: "asc" | "desc" } | null; onSort?: (key: string) => void;
+}) {
   return (
     <View style={s.table} testID={testID}>
       <View style={[s.tr, s.thead]}>
-        {cols.map((c) => (
-          <Text key={c.key} style={[s.th, { flex: c.flex ?? 1 }, c.align === "right" && { textAlign: "right" }]} numberOfLines={1}>{c.label}</Text>
-        ))}
+        {cols.map((c) => {
+          const style = [s.th, c.align === "right" && { textAlign: "right" as const }];
+          if (!c.sortable || !onSort) {
+            return <Text key={c.key} style={[...style, { flex: c.flex ?? 1 }]} numberOfLines={1}>{c.label}</Text>;
+          }
+          const on = sort?.key === c.key;
+          return (
+            <Pressable
+              key={c.key}
+              testID={`${testID || "table"}-sort-${c.key}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Sort by ${c.label}`}
+              onPress={() => onSort(c.key)}
+              style={(st: any) => [s.thBtn, { flex: c.flex ?? 1 }, st.hovered && { opacity: 0.75 }]}
+            >
+              <Text style={[...style, on && { color: dt.text }]} numberOfLines={1}>{c.label}</Text>
+              <Text style={[s.sortArrow, on && { color: colors.brandPrimary }]}>{on ? (sort!.dir === "asc" ? "▲" : "▼") : "↕"}</Text>
+            </Pressable>
+          );
+        })}
       </View>
       {children}
     </View>
@@ -183,6 +203,8 @@ const s = StyleSheet.create({
   thead: { backgroundColor: dt.canvas, minHeight: 40, borderBottomWidth: 1, borderBottomColor: dt.border },
   trBody: { minHeight: 52, borderTopWidth: 1, borderTopColor: dt.subtle },
   th: { fontFamily: font.semibold, fontSize: type.kicker, letterSpacing: 0.6, textTransform: "uppercase", color: dt.muted },
+  thBtn: { flexDirection: "row", alignItems: "center", gap: 4, minWidth: 0, height: 40 },
+  sortArrow: { fontSize: 10, color: "#94A3B8" },
   td: { fontFamily: font.medium, fontSize: type.sm, color: dt.text },
   tdMuted: { fontFamily: font.regular, color: dt.muted },
   tdStrong: { fontFamily: font.semibold },

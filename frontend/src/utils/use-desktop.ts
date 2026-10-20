@@ -32,7 +32,8 @@ export function isSplitAuthRoute(pathname: string): boolean {
 
 /** Routes that render their own wide desktop layout (full width of the portal content area). */
 export function isWideDesktopRoute(pathname: string): boolean {
-  if (/^\/(dashboard|sites|reports|renewals)\/?$/.test(pathname)) return true;
+  if (/^\/(dashboard|sites|reports|renewals|quotes)\/?$/.test(pathname)) return true;
+  if (/^\/quote\/new\/?$/.test(pathname)) return true; // two-column quote form
   if (/^\/sites\/(?!new\/?$)[^/]+\/?$/.test(pathname)) return true; // site detail
   if (/^\/documents\/?$/.test(pathname)) return true;
   if (/^\/documents\/[^/]+\/review\/?$/.test(pathname)) return true;

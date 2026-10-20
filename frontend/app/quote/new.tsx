@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Icon, IconName } from "@/src/components/icon";
 import { ScreenHeader } from "@/src/components/screen";
+import { QuoteDesktopLayout } from "@/src/desktop/quote-desktop";
 import { SelectField } from "@/src/components/select-field";
 import { CtaShimmer } from "@/src/components/cta-shimmer";
 import { useAuth } from "@/src/auth/auth-context";
@@ -403,6 +404,18 @@ export default function QuoteWizard() {
   const subtitle = y ? `Step ${Math.max(1, step)} of ${flow.length - 1}` : `Step ${step + 1} of ${flow.length}`;
 
   return (
+    <QuoteDesktopLayout
+      summary={{
+        services: SERVICES.filter((sv) => selected.has(sv.key)),
+        contact,
+        siteName,
+        address: addr,
+        meters,
+        waterSupplier,
+        telecomsSupplier,
+        stepLabel: subtitle,
+      }}
+    >
     <View style={styles.root}>
       <ScreenHeader testID="quote-header" title="Get a Quote" subtitle={subtitle} onBack={back} />
       <View style={styles.pips}>
@@ -646,6 +659,7 @@ export default function QuoteWizard() {
         </View>
       </KeyboardAwareScrollView>
     </View>
+    </QuoteDesktopLayout>
   );
 }
 

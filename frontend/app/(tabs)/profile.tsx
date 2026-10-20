@@ -164,7 +164,7 @@ export default function Profile() {
 
         <LinkRow icon="building" bg={colors.pastel.blue} fg={colors.pastel.blueIcon} label="My sites" onPress={() => router.push("/sites")} testID="profile-sites" />
         <LinkRow icon="plus" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="Add a business" onPress={() => setAddBiz(true)} testID="profile-add-business" />
-        <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My quote requests" onPress={() => router.push("/quote/new")} testID="profile-quotes" />
+        <LinkRow icon="document" bg={colors.pastel.mint} fg={colors.pastel.mintIcon} label="My quote requests" onPress={() => router.push("/quotes")} testID="profile-quotes" />
         <LinkRow icon="scan" bg={colors.pastel.peach} fg={colors.pastel.peachIcon} label="Replay product tour" onPress={async () => { await storage.setItem("uch_tour_replay", true); router.push("/dashboard"); }} testID="profile-tour" />
         <LinkRow icon="phone" bg={colors.pastel.lavender} fg={colors.pastel.lavenderIcon} label="Contact support" onPress={() => router.push("/support")} testID="profile-contact" />
 

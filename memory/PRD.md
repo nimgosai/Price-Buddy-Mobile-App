@@ -708,3 +708,10 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 - Desktop Sites table: Meter/MPAN column removed (details shown on site page).
 - Desktop: "Upload bill" everywhere (top bar, quick actions, reports/renewals headers, site "No contract on file" chips) opens drag-and-drop uploader (PDF/JPG/PNG, 1 PDF or up to 4 images, 12MB) → same /scans extraction → /scan/review/:id. /scan on desktop renders uploader page. Mobile keeps "Scan Bill" camera flow. (`src/desktop/upload-bill.tsx`, provider in desktop-frame)
 - Desktop home: red shimmering UrgentRenewalBanner with pulse dot when renewals exist; button opens renewals drawer.
+
+## Quote History + Table sort/export + Desktop Quote Form — DONE (iteration_34)
+- /quotes "My quote requests" (GET /api/quotes): desktop metrics + sortable table + CSV export; mobile card list. Sidebar "Quotes" item; Profile link fixed (was /quote/new).
+- Sortable headers + "Export CSV" on desktop Sites, Renewals, Quotes tables (`src/desktop/table-tools.ts`).
+- Desktop /quote/new: wizard card left + live "Your request" summary panel right (`src/desktop/quote-desktop.tsx`).
+- Upload autofill: existing flow already opens prefilled review form (/scan/review/:id) that creates the site — no change.
+- Backlog: split app/quote/new.tsx (1100 lines).

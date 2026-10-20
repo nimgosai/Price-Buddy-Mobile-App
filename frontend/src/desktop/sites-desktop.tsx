@@ -7,6 +7,7 @@ import { DialogButton } from "@/src/desktop/overlays";
 import { dCard, dt } from "@/src/desktop/tokens";
 import { Cell, DesktopPage, EmptyPanel, HeaderButton, TRow, Table } from "@/src/desktop/ui";
 import { colors, font, spacing, type } from "@/src/theme/theme";
+import { downloadCsv, today, useSort } from "@/src/desktop/table-tools";
 
 type Props = {
   sites: any[];
@@ -24,6 +25,15 @@ type Props = {
 };
 
 export function SitesDesktop(p: Props) {
+  const { sorted, sort, onSort } = useSort(p.filtered, {
+    n: (x) => x.property_name || x.address,
+    a: (x) => x.address,
+    p: (x) => x.postcode,
+    b: (x) => p.bizName(x),
+  }, { key: "n", dir: "asc" });
+  const exportCsv = () =>
+    downloadCsv(`sites-${today()}.csv`, ["Site", "Address", "Postcode", "Business"],
+      sorted.map((x) => [x.property_name || x.address || "Site", x.address || "", x.postcode || "", p.bizName(x)]));
   return (
     <DesktopPage
       testID="sites-desktop"
@@ -31,7 +41,12 @@ export function SitesDesktop(p: Props) {
       subtitle={`${p.sites.length} ${p.sites.length === 1 ? "site" : "sites"} across your portfolio`}
       refreshing={p.refreshing}
       onRefresh={p.onRefresh}
-      actions={<HeaderButton testID="sites-add-new" label="Add site" icon="plus" primary onPress={p.onAdd} />}
+      actions={
+        <>
+          {p.sites.length > 0 ? <HeaderButton testID="sites-export" label="Export CSV" icon="document" onPress={exportCsv} /> : null}
+          <HeaderButton testID="sites-add-new" label="Add site" icon="plus" primary onPress={p.onAdd} />
+        </>
+      }
     >
       <View style={s.toolbar}>
         <View style={{ minWidth: 220 }}><BusinessSwitcherChip variant="sites" /></View>
@@ -78,15 +93,17 @@ export function SitesDesktop(p: Props) {
         <View style={s.card}>
           <Table
             testID="sites-table"
+            sort={sort}
+            onSort={onSort}
             cols={[
-              { key: "n", label: "Site", flex: 2 },
-              { key: "a", label: "Address", flex: 2.6 },
-              { key: "p", label: "Postcode", flex: 1 },
-              ...(p.showBusiness ? [{ key: "b", label: "Business", flex: 1.6 }] : []),
+              { key: "n", label: "Site", flex: 2, sortable: true },
+              { key: "a", label: "Address", flex: 2.6, sortable: true },
+              { key: "p", label: "Postcode", flex: 1, sortable: true },
+              ...(p.showBusiness ? [{ key: "b", label: "Business", flex: 1.6, sortable: true }] : []),
               { key: "x", label: "", flex: 0.4, align: "right" as const },
             ]}
           >
-            {p.filtered.map((site) => (
+            {sorted.map((site) => (
               <TRow key={site.id || site._id} testID={`site-card-${site.id || site._id}`} onPress={() => p.openSite(site)}>
                 <Cell flex={2}>
                   <View style={s.nameCell}>
