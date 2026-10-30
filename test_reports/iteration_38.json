@@ -1,0 +1,15 @@
+{
+  "summary": "Iteration 38 — preview smoke test, frontend only, against https://wide-doc-signing.preview.emergentagent.com. All 3 flows PASS. (1) 1440x900: root returns HTTP 200 (0.18s) and redirects to /landing, which renders fully (logo, hero, badges, features, Get Started/Sign In) in a centered DesktopFrame column with 0 page errors. (2) /signin?notour=1 with e2e_test_1786703401@example.com / Password123!: login succeeded on the first try with no CORS retry and went to /dashboard. The desktop sidebar (Home/Sites/Reports/Quotes/Support/Profile/Settings, help card, user footer), header (Upload bill, Get a quote) and Overview cards (Active tasks, Upcoming renewals, Spend breakdown, Quick actions, Account team) all render. (3) 390x844: the mobile landing renders with no horizontal overflow (scrollWidth 390). Tapping landing-signin opens /signin with signin-email-input visible. expo and backend are RUNNING (expo had restarted about 2 min before the test). The preview is up, so the user's problem is likely transient (Metro cold start after restart) or on the Emergent UI side.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": [],
+  "action_items": ["None required. The public preview URL serves HTTP 200 and renders correctly at desktop and mobile sizes."],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not tested)", "frontend": "100% (3/3 smoke flows)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The hostname 'wide-doc-signing' contains the substring 'signin'. Do NOT use `'signin' in page.url` to detect login success. Check for the '/dashboard' path instead. testIDs: signin-email-input, signin-password-input, signin-submit-button. Root redirects to /landing.",
+  "rca_of_issue": "Could not reproduce. The preview URL is up and the app renders."
+}
