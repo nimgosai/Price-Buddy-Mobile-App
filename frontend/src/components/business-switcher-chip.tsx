@@ -8,8 +8,9 @@ import { AddBusinessModal } from "@/src/components/add-business-modal";
 import { useToast } from "@/src/components/toast";
 import { ALL_BUSINESSES, useBusiness } from "@/src/business/business-context";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
-import { useIsDesktop } from "@/src/utils/use-desktop";
+import { useIsTabletUp } from "@/src/utils/use-desktop";
 import { DesktopDialog } from "@/src/desktop/overlays";
+import { useDesktopSheet } from "@/src/desktop/sheet";
 
 type Variant = "sites" | "reports" | "desktop";
 
@@ -46,7 +47,8 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
   const toast = useToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const isDesktop = useIsDesktop();
+  const isDesktop = useIsTabletUp();
+  const dsheet = useDesktopSheet(); // web phone tier: keep the sheet inside the 480px column
 
   if (businesses.length <= 1) return null;
 
@@ -101,8 +103,8 @@ export function BusinessSwitcherChip({ variant = "sites", testID }: { variant?: 
     ) : null
   ) : (
     <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-      <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-        <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]} onPress={() => {}}>
+      <Pressable style={[styles.backdrop, dsheet.backdrop]} onPress={() => setOpen(false)}>
+        <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }, dsheet.sheet]} onPress={() => {}}>
           <View style={styles.grabber} />
           <Text style={styles.sheetTitle}>Switch business</Text>
           <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>

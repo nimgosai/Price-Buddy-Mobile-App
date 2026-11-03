@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -8,12 +8,14 @@ import { DocumentPageCanvas } from "@/src/features/documents/DocumentPageCanvas"
 import { documentSigningService as svc } from "@/src/features/documents/service";
 import type { ViewOnlyDocument } from "@/src/features/documents/types";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
+import { useFrameWidth } from "@/src/utils/use-desktop";
 
 export default function ViewOnlyDocumentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [doc, setDoc] = useState<ViewOnlyDocument | null>(null);
+  const screenW = useFrameWidth(); // native: full window; web: app column
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -27,7 +29,6 @@ export default function ViewOnlyDocumentScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  const screenW = Dimensions.get("window").width;
   const pageW = Math.min(screenW - spacing.lg * 2, 520);
 
   return (

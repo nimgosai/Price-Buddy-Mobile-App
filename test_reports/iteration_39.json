@@ -1,0 +1,102 @@
+{
+  "summary": "Iteration 39: frontend-only test of the responsive web tiers (preview host, live backend, mock signing adapter). All 7 requested flows pass for the core layout. (1) 700x900 phone tier: 'web-app-shell' is 480px wide at x=110 (centred), the backdrop shows on both sides, the 5 bottom tabs sit inside the column, and there is no horizontal overflow. (2) 900x1000 tablet tier: the shell is 820px at x=40. 'dashboard-tablet-grid' shows the 'Add a site' CTA next to Quick actions; My Documents and the query pill span the full width. There is no sidebar and the bottom tabs show. /documents shows cards in 2 columns. 'concierge-sheet' is a centred 600px dialog and 'concierge-sheet-close' closes it. The meter-install and business-switcher pop-ups are also centred dialogs at 900px. (3) Tablet review of sr_loa_01: the page is 520px inside the 820 column. 'next-field' opens the signature pad (320x180 canvas). A mouse stroke, then Apply, gives 4/4 fields, and the declaration enables submit. On sr_sc_01, ack, initials, sign1 and sign2 complete strictly in order (1/5 to 5/5). Tapping a field out of order shows 'lock-hint'. (4) 700px review: the page is 448px with no overflow. (5) 1440x900: desktop-sidebar and desktop-topbar render, there is no web-app-shell, the quotes-table rows render and the sites desktop view renders. (6) 390x844: the shell is 390px, there is no tablet grid, and all 5 tabs navigate. (7) /splash at 700px: each slide is 480px and Next moves exactly 480px. Boundaries: 767px = phone, 768-1023px = tablet, 1024px = desktop. MAIN BUG: on the web phone tier (480-767px), the concierge sheet, meter-install modal and business-switcher sheet ignore the 480 column and stretch to the full viewport width. Sheets built on useDesktopSheet (add-business) are capped correctly. No deprecated Expo packages were found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Concierge bottom sheet",
+        "issue": "Web phone tier (700px): the sheet renders at full viewport width (x=0, w=700), outside the 480 shell. The mobile branch uses <Portal> + styles.sheet with no width cap. Reference: /app/frontend/src/components/have-a-query-pill.tsx:108-117",
+        "testID": "concierge-sheet",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Meter installation sheet",
+        "issue": "Web phone tier (700px): the sheet spans the full 700px instead of the 480 column (the kav is width 100% in a root Portal). Reference: /app/frontend/src/components/meter-install-modal.tsx:220,361",
+        "testID": "meter-install-modal",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Business switcher sheet",
+        "issue": "Web phone tier (700px): the 'Switch business' sheet spans the full viewport. The mobile branch of renderSheet has no phone cap. Reference: /app/frontend/src/components/business-switcher-chip.tsx:96",
+        "testID": "sites-business-chip",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Other Portal sheets (not opened)",
+        "issue": "Likely the same issue in request-change-modal.tsx and app/documents/[id]/status.tsx (they use Portal with no phone cap).",
+        "testID": "n/a",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Review zoom",
+        "issue": "Phone/tablet web: zooming in makes the page wider than the column (700px viewport: 558px page at x=71). The vertical-only ScrollView with alignItems:center clips both edges, so they can't be reached. This existed before but is more visible now. Reference: app/documents/[id]/review.tsx:395",
+        "testID": "zoom-in",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Review & sign",
+        "issues": [
+          "The 'next-field' touch target is 120x16 and needs at least 44 height or a hitSlop.",
+          "At 448px the date field text is cut off ('Filled automatically o...'), and the 'Fill now' badge on the small checkbox field wraps onto 2 lines (sr_sc_01, page 1)."
+        ]
+      },
+      {
+        "screen": "Web shell",
+        "issues": [
+          "The shell has 1px left/right borders, so the real inner width is 478/818. useFrameWidth returns 480/820, so splash slides and other frame-width layouts are 2px too wide (clipped)."
+        ]
+      },
+      {
+        "screen": "Dashboard tablet grid",
+        "issues": [
+          "The Quick actions cards (100px tall) are shorter than the CTA card (150px), which leaves empty space below them."
+        ]
+      },
+      {
+        "screen": "Phone sheets (meter / add business)",
+        "issues": [
+          "The type cards use width:'48%', so the right column ends about 10px short of the full-width inputs."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    ".screenshots/p700_concierge.png",
+    ".screenshots/p700_meter.png",
+    ".screenshots/p700_switcher.png",
+    ".screenshots/t900_dash.png",
+    ".screenshots/t900_docs.png",
+    ".screenshots/t900_concierge.png",
+    ".screenshots/t900_sig.png",
+    ".screenshots/d1440_dash.png",
+    ".screenshots/m390_dash.png"
+  ],
+  "action_items": [
+    "HIGH: On web phone tier, cap these bottom sheets to the 480 column: have-a-query-pill.tsx, meter-install-modal.tsx and business-switcher-chip.tsx. Check request-change-modal.tsx and documents/[id]/status.tsx too. Use the useDesktopSheet() phone styles (backdrop alignItems:center; sheet width 100%, maxWidth 480, alignSelf center). Leave native untouched. Another option: render the Portal host inside web-app-shell.",
+    "LOW: Fix zoom clipping on phone/tablet web. Use horizontal scroll or flex-start alignment when pageW is wider than the column.",
+    "LOW: Make the next-field hit area at least 44px tall.",
+    "LOW: Subtract the 1px shell borders in useFrameWidth."
+  ],
+  "critical_code_review_comments": [
+    "Portal content mounts outside 'web-app-shell', so any Portal-based sheet skips the phone-tier cap unless it applies useDesktopSheet styles.",
+    "desktop/sheet.ts phoneKav has alignSelf center + maxWidth but no width:'100%'. Add it so the KAV can't shrink to its content.",
+    "Native is preserved: DesktopFrame passes children through on non-web, and useFrameWidth returns the full window."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A",
+    "frontend": "88% (all 7 requested flows pass; 3 sheets not capped at phone tier)"
+  },
+  "seed_data_creation": "None. Signing ran on the mock adapter and was never submitted.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login: signin-email-input / signin-password-input / signin-submit-button (retry once). Tabs are [role=tab] matched by text. Tab screens stay in the DOM, so scope 'talk-to-human' with [data-testid=dashboard-scroll]. The signature canvas is the parent of the svg inside [data-testid=signature-pad]. The page element is field-*.parentElement.parentElement. Retest the concierge/meter/switcher sheets at 700px; expected w=480 at x=110.",
+  "rca_of_issue": "DesktopFrame caps the navigator to a 480 'web-app-shell', but <Portal> renders at the PortalProvider root outside the shell. The mobile styles of those sheets use width 100% with no maxWidth, so they fill the viewport. Repro: 700x900, log in, tap the dashboard 'Have a query?' pill; the sheet is at x=0 with w=700."
+}

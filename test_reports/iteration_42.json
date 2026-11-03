@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 42: frontend-only retest of the 2 LOW polish items from iteration_41 on the 'Add a business' sheet (new-biz-modal), opened from Profile > profile-add-business. Logged in with the test account. Nothing was created. BOTH FIXED. (1) Tile alignment: the right tile (Sole Trader/Charity) right edge now matches the new-biz-name input right edge exactly (delta 0px), and the left edges also match (0px). Values: 1440 -> 1013 vs 1013; 1024 -> 805 vs 805; 800 -> 693 vs 693; 700 -> 574 vs 574; 390 -> 374 vs 374. (2) Grabber: no 40x4 grabber at 1440, 1024 or 800 (centred card, w=620). The grabber is present at 700 and 390 (bottom sheet). NOTE: the review request expected 700px to be the tablet centred card. 700 is below 768, so the app uses the phone web shell there: a 480px bottom sheet at x=110 with the grabber visible. This matches the tier spec and iteration_41, so tablet was checked at 800px instead. Functional checks: choosing a type swaps the optional field correctly (ltd -> new-biz-ch, sole_trader -> new-biz-vat, charity -> new-biz-charity). Submitting with an empty name shows new-biz-error 'Please enter a name for the business'. Cancel closes the sheet and clears the form on reopen. Tapping the backdrop closes the sheet. No deprecated Expo packages were found in the files reviewed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [".screenshots/i42_d1440.png", ".screenshots/i42_t800.png", ".screenshots/i42_t700.png", ".screenshots/i42_p390.png"],
+  "action_items": [
+    "Optional, LOW: add testID (e.g. 'new-biz-cancel') to the Cancel Pressable in add-business-modal.tsx line 196 for testability."
+  ],
+  "critical_code_review_comments": [
+    "typeCardWeb uses calc(50% - 4px), which is gap/2 for gap=spacing.sm(8). It is web-only, so the native 48% layout stays frozen. Correct.",
+    "Grabber is gated on !dsheet.isDesktop, which is true for web tablet and desktop (≥768). Native and phone web keep the grabber. Correct."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None. No business was created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Open the sheet with '[data-testid=profile-add-business]:visible' on /profile. Scope measurements to '[data-testid=new-biz-modal]:visible'. 700px is the phone web shell (bottom sheet + grabber). Tablet tier starts at 768."
+}

@@ -27,7 +27,7 @@ import { apiRequest } from "@/src/api/client";
 import { storage } from "@/src/utils/storage";
 import { useTabScrollToTop } from "@/src/utils/use-tab-scroll-to-top";
 import { colors, font, radius, shadow, spacing, type } from "@/src/theme/theme";
-import { useIsDesktop } from "@/src/utils/use-desktop";
+import { useFrameWidth, useIsDesktop, useWebTier } from "@/src/utils/use-desktop";
 import { greeting } from "@/src/utils/greeting";
 import { DesktopDashboard } from "@/src/desktop/dashboard-desktop";
 import { RenewalsDrawer } from "@/src/desktop/renewals-desktop";
@@ -61,6 +61,8 @@ export default function Dashboard() {
   const { width, height } = useWindowDimensions();
   const scrollRef = useTabScrollToTop();
   const isDesktop = useIsDesktop();
+  const isTablet = useWebTier() === "tablet";
+  const frameW = useFrameWidth(); // native: full width (unchanged)
 
   const [items, setItems] = useState<any[]>([]);
   const [contractCount, setContractCount] = useState<number | null>(null);
@@ -96,9 +98,10 @@ export default function Dashboard() {
   const startTour = useCallback(async () => {
     const [scan, cta, sidebarSites] = await Promise.all([measure(scanRef), measure(ctaRef), isDesktop ? measure(sidebarSitesRef) : null]);
     const tabH = 60 + Math.max(insets.bottom, Platform.OS === "android" ? 10 : 0);
-    const tabW = width / 5;
+    const tabW = frameW / 5;
+    const colOffset = (width - frameW) / 2; // web: tab bar sits inside the centred app column (0 on native)
     // Desktop web highlights "Sites" in the left sidebar instead of the bottom tab bar.
-    const sitesRect = sidebarSites ?? { x: tabW * 1, y: height - tabH + 4, w: tabW, h: 52 };
+    const sitesRect = sidebarSites ?? { x: colOffset + tabW * 1, y: height - tabH + 4, w: tabW, h: 52 };
     setTourSteps([
       {
         title: "All your sites & contracts",
@@ -117,7 +120,7 @@ export default function Dashboard() {
       },
     ]);
     setTourOpen(true);
-  }, [insets.bottom, width, height, isDesktop]);
+  }, [insets.bottom, width, height, isDesktop, frameW]);
 
   const closeTour = useCallback(
     async () => {
@@ -481,11 +484,24 @@ export default function Dashboard() {
       >
           {greetEl}
           {nudgeEl}
-          {statusEl}
-          {auditEl}
-          {promoEl}
-          {quickEl}
-          {docCardEl}
+          {isTablet ? (
+            // Web tablets (768–1023px): cards wrap into a balanced 2-column grid.
+            <View style={tab.grid} testID="dashboard-tablet-grid">
+              {statusEl ? <View style={tab.cell}>{statusEl}</View> : null}
+              {auditEl ? <View style={tab.cell}>{auditEl}</View> : null}
+              <View style={tab.cell}>{promoEl}</View>
+              <View style={tab.cell}>{quickEl}</View>
+              <View style={tab.cell}>{docCardEl}</View>
+            </View>
+          ) : (
+            <>
+              {statusEl}
+              {auditEl}
+              {promoEl}
+              {quickEl}
+              {docCardEl}
+            </>
+          )}
 
           {/* Support / chat — subtle banner near the bottom */}
           <HaveAQueryPill />
@@ -671,3 +687,8 @@ const styles = StyleSheet.create({
   promoBtnText: { fontFamily: font.semibold, fontSize: type.base, color: "#FFFFFF" },
 });
 
+// Web tablet only (768–1023px). Never applied on iOS/Android.
+const tab = StyleSheet.create({
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 14, alignItems: "stretch" },
+  cell: { flexBasis: "47%", flexGrow: 1, minWidth: 0, gap: 12 },
+});

@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 40: frontend-only retest of the iteration_39 HIGH bug and the responsive tiers (preview host, live backend; no data created, no messages sent). Fixed: at 700x900 'concierge-sheet' is now at x=110 with w=480 and its overlay ancestors are also 110/480. 'meter-install-modal' is at x=110 with w=480, and its mi-* controls sit inside the column (x 126 to 574). STILL BROKEN: at 700px the business switcher sheet (Sites tab 'sites-business-chip') spans the full 700px. 'biz-option-all' is at x=16 with w=668. The cause is that business-switcher-chip.tsx uses an RN <Modal>, not <Portal>, so the Portal outlet inset doesn't apply to it, and its sheet style has no phone cap or useDesktopSheet. All other checks pass. Splash at 700px: 'web-app-shell' has clientWidth 480 (border 0, boxShadow outline), the scroller is 480/1440, and Next moves scrollLeft exactly 0 to 480 to 960 with no clipping. At 900px the shell is 820px at x=40. 'dashboard-tablet-grid' is a row with 2 columns of 387px, plus a full-width 788px child. Concierge is a centred 600px dialog at x=150. At 390x844 the shell is 390 with no tablet grid, and the concierge bottom sheet is x=0, w=390. At 1440x900 desktop-sidebar (248) and desktop-topbar render, there is no web-app-shell, and concierge is a centred 600px dialog at x=420. No deprecated Expo packages were found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Business switcher sheet (web phone tier)",
+        "issue": "At 700x900 the 'Switch business' bottom sheet still spans the full viewport (option rows x=16, w=668) instead of the 480 column. It is an RN <Modal>, so the PortalOutlet inset fix does not cover it, and styles.sheet has no maxWidth. Reference: /app/frontend/src/components/business-switcher-chip.tsx:103-113",
+        "testID": "sites-business-chip",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    ".screenshots/i40_p700_concierge.png",
+    ".screenshots/i40_p700_meter.png",
+    ".screenshots/i40_p700_switcher.png",
+    ".screenshots/i40_splash0.png",
+    ".screenshots/i40_splash1.png",
+    ".screenshots/i40_splash2.png",
+    ".screenshots/i40_t900_concierge.png",
+    ".screenshots/i40_m390_concierge.png",
+    ".screenshots/i40_d1440_dash.png",
+    ".screenshots/i40_d1440_concierge.png"
+  ],
+  "action_items": [
+    "MEDIUM: Cap the business-switcher mobile sheet to the 480 column on the web phone tier. Apply the useDesktopSheet() styles, as profile.tsx, site-actions-sheet.tsx, add-business-modal.tsx, select-field.tsx and onboarding/[token].tsx already do. Another option: switch to <Portal>. Leave native untouched. Reference: src/components/business-switcher-chip.tsx:103-105"
+  ],
+  "critical_code_review_comments": [
+    "portal.tsx: the outlet inset is computed with (width - frameW)/2 only on the phone tier, which is correct. On tablet and desktop the inset is 0 and the dialogs centre themselves. Native is unaffected because useWebTier returns 'native'.",
+    "The RN <Modal> users other than business-switcher-chip already use useDesktopSheet, so business-switcher-chip.tsx is the only remaining uncapped sheet.",
+    "desktop-frame.tsx: the phone and tablet columns use boxShadow '0 0 0 1px', so inner width now equals useFrameWidth (480/820). This resolves the iteration_39 2px clipping."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "90% (9/10 checks pass; business switcher still full width at 700px)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login: signin-email-input / signin-password-input / signin-submit-button (retry once). Scope 'talk-to-human' with [data-testid=dashboard-scroll]. Meter: click [data-testid=action-meter] without force after a 2.5s wait (a force click right after closing concierge did not open it). Switcher: go to /sites and tap sites-business-chip, then check the biz-option-all box. Expected at 700px: x=126, w=448.",
+  "rca_of_issue": "Business switcher: the web phone-tier fix was added to PortalOutlet, but BusinessSwitcherChip renders its mobile sheet in a react-native <Modal>, which mounts at the document root outside both the shell and the Portal outlet. Its styles.backdrop/styles.sheet have no maxWidth, so it fills the viewport. Repro: 700x900, log in, go to /sites, tap 'Switch'."
+}

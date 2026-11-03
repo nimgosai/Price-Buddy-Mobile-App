@@ -15,7 +15,7 @@ import { Icon } from "@/src/components/icon";
 import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
-import { useIsDesktop } from "@/src/utils/use-desktop";
+import { useIsTabletUp } from "@/src/utils/use-desktop";
 import { DesktopDialog, DialogButton, FieldLabel, dialogStyles } from "@/src/desktop/overlays";
 
 const TYPES = [
@@ -35,7 +35,7 @@ export function RequestChangeModal({
   contract: any;
 }) {
   const insets = useSafeAreaInsets();
-  const isDesktop = useIsDesktop();
+  const isDesktop = useIsTabletUp(); // centred dialog on web ≥768px
   const [type, setType] = useState("rate_correction");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);

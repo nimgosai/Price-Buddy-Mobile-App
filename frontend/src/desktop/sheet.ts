@@ -1,22 +1,27 @@
 import { StyleSheet } from "react-native";
 
-import { useIsDesktop } from "@/src/utils/use-desktop";
+import { PHONE_COLUMN_WIDTH, useWebTier } from "@/src/utils/use-desktop";
 
 /**
  * Desktop web (≥1024px): turns a mobile bottom sheet into a centred dialog card
  * instead of stretching edge-to-edge. Returns `false` styles on mobile (no change).
  */
 export function useDesktopSheet(maxWidth = 560) {
-  const isDesktop = useIsDesktop();
+  const tier = useWebTier();
+  const isDesktop = tier === "tablet" || tier === "desktop"; // centred card on web ≥768px
+  const phoneWeb = tier === "phone"; // web phone: bottom sheet capped to the app column
   return {
     isDesktop,
-    backdrop: isDesktop && s.backdrop,
-    kav: isDesktop && s.kav,
-    sheet: isDesktop && [s.sheet, { maxWidth }],
+    backdrop: isDesktop ? s.backdrop : phoneWeb && s.phoneBackdrop,
+    kav: isDesktop ? s.kav : phoneWeb && s.phoneKav,
+    sheet: isDesktop ? [s.sheet, { maxWidth }] : phoneWeb && s.phoneSheet,
   };
 }
 
 const s = StyleSheet.create({
+  phoneBackdrop: { alignItems: "center" },
+  phoneKav: { alignSelf: "center", maxWidth: PHONE_COLUMN_WIDTH },
+  phoneSheet: { width: "100%", maxWidth: PHONE_COLUMN_WIDTH, alignSelf: "center" },
   backdrop: { justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: "rgba(15,23,42,0.45)" },
   kav: { flex: 1, width: "100%", alignItems: "center", justifyContent: "center" },
   sheet: {

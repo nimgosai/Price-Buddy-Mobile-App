@@ -7,7 +7,7 @@ import { Icon } from "@/src/components/icon";
 import { documentSigningService as svc } from "@/src/features/documents/service";
 import type { DocumentFilter, DocumentStatus, DocumentSummary } from "@/src/features/documents/types";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
-import { DESKTOP_CONTENT_MAX, useIsDesktop } from "@/src/utils/use-desktop";
+import { DESKTOP_CONTENT_MAX, useIsTabletUp } from "@/src/utils/use-desktop";
 
 const FILTERS: { key: DocumentFilter; label: string }[] = [
   { key: "all", label: "All documents" },
@@ -30,7 +30,7 @@ const TYPE_LABEL = { loa: "LOA", supplier_contract: "Supplier contract", quote: 
 export default function MyDocuments() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const isDesktop = useIsDesktop();
+  const isDesktop = useIsTabletUp(); // 2-column card grid on web ≥768px
   const [docs, setDocs] = useState<DocumentSummary[] | null>(null);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<DocumentFilter>("all");

@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 41: frontend-only retest of the iteration_40 MEDIUM bug, run on the preview host against the live backend. No data was created or submitted. FIXED: at 700x900 the test account has 2 businesses, so 'sites-business-chip' is shown. Tapping it opens the 'Switch business' RN Modal sheet at x=110 with w=480, and its option rows (biz-option-all, biz-add-site, biz-add-business) are at x=126 with w=448, matching the chip. Its ancestors above the sheet are the full 700px backdrop. Tapping the backdrop closes the sheet. Code review: business-switcher-chip.tsx lines 106-107 apply dsheet.backdrop and dsheet.sheet from useDesktopSheet(), and on the phone web tier that resolves to phoneBackdrop/phoneSheet (maxWidth 480, centred). At 700px, the switcher's 'Add a new business' and Profile's 'Add a business' sheets (new-biz-modal) both appear at x=110, w=480. Regression: at 390x844 new-biz-modal is a full-width bottom sheet (x=0, w=390). At 1440x900 new-biz-modal is a centred card (x=410, w=620) and the switcher uses the centred DesktopDialog 'biz-switcher-dialog' (x=460, w=520). No deprecated Expo packages were found in the files reviewed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Add a business sheet (new-biz-modal), pre-existing and cosmetic",
+        "issues": [
+          "In the business-type grid, the right-hand cards (e.g. Sole Trader) end about 11 to 16px short of the right edge of the inputs below them. At 700px they end at x≈563 while the inputs end at x≈574; at 1440px it is ≈997 vs ≈1013. The grid tiles probably use a fixed percentage width combined with a gap.",
+          "At 1440 the centred card still shows the bottom-sheet grabber bar, which has no purpose on a dialog."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    ".screenshots/i41_p700_switcher.png",
+    ".screenshots/i41_p700_addbiz.png",
+    ".screenshots/i41_m390_addbiz.png",
+    ".screenshots/i41_d1440_addbiz.png",
+    ".screenshots/i41_d1440_switcher.png"
+  ],
+  "action_items": [
+    "Optional, LOW: make the new-biz type-grid tiles span the full form width, and hide the grabber when useDesktopSheet().isDesktop is true."
+  ],
+  "critical_code_review_comments": [
+    "business-switcher-chip.tsx calls useDesktopSheet() before the early return (businesses.length <= 1), so hook order stays stable. This is correct.",
+    "On tablet and desktop the chip renders DesktopDialog, so the dsheet tablet styles on the Modal branch are never used there. That is harmless, and native receives false styles, so nothing changes on device."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% (6/6 checks pass)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The account has 2 businesses ('My business', "Bayo's Cleaning Ltd"), so the switcher chip is visible. At 1440, dashboard-business-chip exists in the DOM but is hidden; use '[data-testid=sites-business-chip]:visible'. The session sometimes persists between runs and sometimes does not, so check for signin-email-input before logging in.",
+  "rca_of_issue": "The iteration_40 bug is resolved. The RN Modal sheet now merges useDesktopSheet() phone-tier styles (alignItems centre on the backdrop, maxWidth 480 on the sheet)."
+}

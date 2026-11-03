@@ -19,6 +19,41 @@ export function useIsDesktop(): boolean {
   return Platform.OS === "web" && width >= DESKTOP_MIN_WIDTH;
 }
 
+/** Web below the desktop portal: phone (<768px) or tablet (768–1023px). */
+export const TABLET_MIN_WIDTH = 768;
+/** Web phone-width browsers: app shell is capped at this width and centred. */
+export const PHONE_COLUMN_WIDTH = 480;
+/** Web tablets: comfortable centred content column. */
+export const TABLET_COLUMN_WIDTH = 820;
+
+export type WebTier = "native" | "phone" | "tablet" | "desktop";
+
+export function useWebTier(): WebTier {
+  const { width } = useWindowDimensions();
+  if (Platform.OS !== "web") return "native";
+  if (width >= DESKTOP_MIN_WIDTH) return "desktop";
+  if (width >= TABLET_MIN_WIDTH) return "tablet";
+  return "phone";
+}
+
+/** Web ≥768px: pop-ups render as centred dialogs instead of full-width bottom sheets. */
+export function useIsTabletUp(): boolean {
+  const t = useWebTier();
+  return t === "tablet" || t === "desktop";
+}
+
+/**
+ * Width actually available to mobile layouts. Native = full window (unchanged);
+ * web phone/tablet = the centred app column; desktop = full window.
+ */
+export function useFrameWidth(): number {
+  const { width } = useWindowDimensions();
+  const tier = useWebTier();
+  if (tier === "phone") return Math.min(width, PHONE_COLUMN_WIDTH);
+  if (tier === "tablet") return Math.min(width, TABLET_COLUMN_WIDTH);
+  return width;
+}
+
 /** Entry / auth routes that never show the portal shell. */
 export function isAuthRoute(pathname: string): boolean {
   return /^\/(signin|signup|landing|splash|forgot-password|reset-password|welcome-back|confirm-device|biometric|onboarding|share)(\/|$)/.test(pathname)

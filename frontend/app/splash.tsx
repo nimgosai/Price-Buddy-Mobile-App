@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@react-native-vector-icons/ionicons";
@@ -9,6 +9,7 @@ import { useAuth } from "@/src/auth/auth-context";
 import { storage } from "@/src/utils/storage";
 import { SEEN_SPLASH_KEY } from "./index";
 import { colors, font, spacing, type } from "@/src/theme/theme";
+import { useFrameWidth } from "@/src/utils/use-desktop";
 
 const SLIDES = [
   {
@@ -32,7 +33,7 @@ export default function Splash() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
+  const width = useFrameWidth(); // native: full window; web: app column
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
 

@@ -728,3 +728,10 @@ User confirmed physical-Android testing passed (multi-stroke touch, sequential g
 
 ## Dashboard refinement — DONE (iteration_37)
 - Desktop Active tasks exclude renewals (red banner covers them); Upcoming renewals table rows have Review + Get quote actions (row itself not clickable).
+
+## Web responsive tiers — DONE (iteration_39–41)
+- Web <768px: app shell capped 480px centred on neutral backdrop; 768–1023px: 820px centred column, 2-col dashboard grid + 2-col document cards, pop-ups as centred dialogs; ≥1024px desktop portal unchanged. Native untouched.
+- `useWebTier()/useFrameWidth()/useIsTabletUp()` in `src/utils/use-desktop.ts`; Portal outlet + useDesktopSheet keep sheets inside the 480 column.
+
+## Polish (iteration_42)
+- Add-a-business modal: type tiles now line up with the inputs on web (web-only style); drag bar hidden when the sheet shows as a centred card (web ≥768px). Native mobile unchanged.

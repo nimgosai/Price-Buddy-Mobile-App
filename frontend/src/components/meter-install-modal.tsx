@@ -15,7 +15,7 @@ import { Icon, IconName } from "@/src/components/icon";
 import { Portal } from "@/src/components/portal";
 import { apiRequest } from "@/src/api/client";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
-import { useIsDesktop } from "@/src/utils/use-desktop";
+import { useIsTabletUp } from "@/src/utils/use-desktop";
 import { DesktopDialog, DialogButton, FieldLabel, dialogStyles } from "@/src/desktop/overlays";
 
 type Opt = { key: string; label: string; icon: IconName; bg: string; fg: string };
@@ -49,7 +49,7 @@ export function MeterInstallModal({
   businessId?: string | null;
 }) {
   const insets = useSafeAreaInsets();
-  const isDesktop = useIsDesktop();
+  const isDesktop = useIsTabletUp(); // centred dialog on web ≥768px
   const [installType, setInstallType] = useState("smart_meter");
   const [fuel, setFuel] = useState("electricity");
   const [notes, setNotes] = useState("");

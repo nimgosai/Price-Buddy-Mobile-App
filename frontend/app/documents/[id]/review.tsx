@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, Animated, Dimensions, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
+  ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -14,7 +14,7 @@ import { documentSigningService as svc, generateIdempotencyKey } from "@/src/fea
 import { docDebug } from "@/src/features/documents/debug";
 import type { FieldDefinition, SigningRequest } from "@/src/features/documents/types";
 import { colors, font, radius, spacing, type } from "@/src/theme/theme";
-import { useIsDesktop } from "@/src/utils/use-desktop";
+import { useFrameWidth, useIsDesktop } from "@/src/utils/use-desktop";
 import { useShellInset } from "@/src/components/desktop-frame";
 
 const DESKTOP_PANEL_W = 380; // right-hand signing panel (desktop web only)
@@ -28,6 +28,7 @@ export default function ReviewSign() {
   const router = useRouter();
   const { width: winW } = useWindowDimensions();
   const isDesktop = useIsDesktop();
+  const frameW = useFrameWidth(); // native: full window (unchanged); web: centred app column
   const shellInset = useShellInset(); // desktop sidebar width (0 on mobile)
 
   const [req, setReq] = useState<SigningRequest | null>(null);
@@ -144,7 +145,7 @@ export default function ReviewSign() {
   const activeIndex = ordered.findIndex((f) => !values[f.id]);
   const activeField = activeIndex >= 0 ? ordered[activeIndex] : null;
 
-  const screenW = Dimensions.get("window").width;
+  const screenW = frameW;
   // Desktop web: the document fills the left column (panel on the right).
   const docColW = Math.min(winW - shellInset, DESKTOP_BODY_MAX) - DESKTOP_PANEL_W - spacing.xl * 2;
   const pageW = isDesktop

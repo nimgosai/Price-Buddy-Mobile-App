@@ -30,3 +30,11 @@ component; the original mobile JSX below is untouched. Inactive tab scenes are h
 - `?notour=1` on the first URL disables the guided tour (for automated web tests).
 - No backend changes were made. Endpoints used: `/properties`, `/properties/{id}/utilities`,
   `/renewals/urgent`, `/reports/spend`, `/quotes`, `/scans`, `/businesses`.
+
+## Web layout tiers (all web only — native iOS/Android untouched)
+| Width | Layout |
+|---|---|
+| < 768px | Mobile UI in a centred app shell, max 480px (`web-app-shell`), neutral backdrop. Sheets stay inside the column (Portal outlet inset + `useDesktopSheet`). |
+| 768–1023px | Mobile UI in a centred 820px column; dashboard + document cards in 2-column grids; pop-ups as centred dialogs (`useIsTabletUp`). |
+| ≥ 1024px | Desktop portal (sidebar, tables). |
+Use `useFrameWidth()` instead of window width for any width-based mobile layout (splash carousel, document page width).

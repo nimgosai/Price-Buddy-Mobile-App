@@ -8,7 +8,9 @@ import React, {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
+
+import { useFrameWidth, useWebTier } from "@/src/utils/use-desktop";
 
 /**
  * Lightweight root portal. Renders overlay content at the app root INSIDE the
@@ -81,10 +83,16 @@ function PortalOutlet({ store }: { store: PortalStore }) {
     () => store.version,
   );
 
+  // Web phone tier (481–767px): keep portal sheets inside the centred 480px app column.
+  const { width } = useWindowDimensions();
+  const tier = useWebTier();
+  const frameW = useFrameWidth();
+  const inset = tier === "phone" ? Math.max(0, (width - frameW) / 2) : 0;
+
   return (
     <>
       {Array.from(store.nodes.entries()).map(([key, node]) => (
-        <View key={key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <View key={key} style={[StyleSheet.absoluteFill, inset > 0 && { left: inset, right: inset }]} pointerEvents="box-none">
           {node}
         </View>
       ))}

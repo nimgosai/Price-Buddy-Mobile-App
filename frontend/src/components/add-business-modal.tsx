@@ -111,7 +111,7 @@ export function AddBusinessModal({
             onPress={() => {}}
             testID="new-biz-modal"
           >
-            <View style={styles.grabber} />
+            {!dsheet.isDesktop && <View style={styles.grabber} />}
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={styles.title}>Add a business</Text>
               <Text style={styles.subtitle}>What type of business is it?</Text>
@@ -124,7 +124,7 @@ export function AddBusinessModal({
                       key={t.key}
                       testID={`new-biz-type-${t.key}`}
                       onPress={() => setBusinessType(t.key)}
-                      style={[styles.typeCard, active && styles.typeCardActive]}
+                      style={[styles.typeCard, Platform.OS === "web" && styles.typeCardWeb, active && styles.typeCardActive]}
                     >
                       <View style={[styles.typeIcon, { backgroundColor: t.bg }]}>
                         <Icon name={t.icon} size={18} color={t.fg} />
@@ -247,6 +247,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
+  // Web only: two tiles + one gap fill the full form width (native layout frozen).
+  typeCardWeb: { width: `calc(50% - ${spacing.sm / 2}px)` as any },
   typeCardActive: { borderWidth: 2, borderColor: colors.heading },
   typeIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   typeLabel: { fontFamily: font.semibold, fontSize: type.base, color: colors.heading },
