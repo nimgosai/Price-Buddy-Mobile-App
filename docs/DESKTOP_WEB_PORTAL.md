@@ -38,3 +38,6 @@ component; the original mobile JSX below is untouched. Inactive tab scenes are h
 | 768–1023px | Mobile UI in a centred 820px column; dashboard + document cards in 2-column grids; pop-ups as centred dialogs (`useIsTabletUp`). |
 | ≥ 1024px | Desktop portal (sidebar, tables). |
 Use `useFrameWidth()` instead of window width for any width-based mobile layout (splash carousel, document page width).
+
+## Polish (latest)
+- `src/components/add-business-modal.tsx`: on web, the business-type tiles use `calc(50% - 4px)` so they line up with the inputs; the drag bar is hidden when the sheet shows as a centred dialog (web >= 768px). Native styles unchanged.
